@@ -59,20 +59,20 @@ This implementation plan prioritizes achieving 100% test coverage and comprehens
     - **Property 8: Long-Only Mode Behavior**
     - **Validates: Requirements 3.2, 3.3**
 
-- [ ] 4. Implement advanced feature property tests
-  - [ ] 4.1 Write property test for GNU W-extension
+- [x] 4. Implement advanced feature property tests
+  - [x] 4.1 Write property test for GNU W-extension
     - **Property 9: GNU W-Extension Support**
     - **Validates: Requirements 4.1**
 
-  - [ ] 4.2 Write property test for negative arguments
+  - [x] 4.2 Write property test for negative arguments
     - **Property 10: Negative Argument Support**
     - **Validates: Requirements 4.3**
 
-  - [ ] 4.3 Write property test for character validation
+  - [x] 4.3 Write property test for character validation
     - **Property 11: Character Validation**
     - **Validates: Requirements 4.4**
 
-  - [ ] 4.4 Write property test for option redefinition
+  - [x] 4.4 Write property test for option redefinition
     - **Property 12: Option Redefinition Handling**
     - **Validates: Requirements 4.5**
 

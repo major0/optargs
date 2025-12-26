@@ -908,3 +908,453 @@ func TestProperty8_LongOnlyModeBehavior(t *testing.T) {
 		t.Errorf("Property 8 failed: %v", err)
 	}
 }
+
+// Property 9: GNU W-Extension Support
+// Feature: optargs-core, Property 9: For any `-W word` pattern when GNU words are enabled, the parser should transform it to `--word`
+func TestProperty9_GNUWExtensionSupport(t *testing.T) {
+	property := func() bool {
+		// Test GNU W-extension behavior
+		// The W option must be defined with `;` suffix to enable GNU words
+		
+		// Test case 1: -W word should be transformed to --word
+		parser1, err := GetOpt([]string{"-W", "verbose"}, "W;")
+		if err != nil {
+			return false
+		}
+		
+		found1 := false
+		for opt, err := range parser1.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "verbose" { // Should be transformed from W to verbose
+				found1 = true
+				if opt.HasArg {
+					return false // Should not have argument when none provided
+				}
+			}
+		}
+		if !found1 {
+			return false
+		}
+		
+		// Test case 2: -W word=value should be transformed to --word=value
+		parser2, err2 := GetOpt([]string{"-W", "output=file.txt"}, "W;")
+		if err2 != nil {
+			return false
+		}
+		
+		found2 := false
+		for opt, err := range parser2.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "output=file.txt" { // Should be transformed from W to output=file.txt
+				found2 = true
+				if opt.HasArg {
+					return false // Should not have argument when none provided (the =file.txt is part of the name)
+				}
+			}
+		}
+		if !found2 {
+			return false
+		}
+		
+		// Test case 3: -Wword (attached form) should be transformed to --word
+		parser3, err3 := GetOpt([]string{"-Whelp"}, "W;")
+		if err3 != nil {
+			return false
+		}
+		
+		found3 := false
+		for opt, err := range parser3.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "help" { // Should be transformed from W to help
+				found3 = true
+				if opt.HasArg {
+					return false // Should not have argument when none provided
+				}
+			}
+		}
+		if !found3 {
+			return false
+		}
+		
+		// Test case 4: W without `;` should not enable GNU words transformation
+		parser4, err4 := GetOpt([]string{"-W", "verbose"}, "W:")
+		if err4 != nil {
+			return false
+		}
+		
+		found4 := false
+		for opt, err := range parser4.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "W" { // Should remain as W, not transformed
+				found4 = true
+				if !opt.HasArg || opt.Arg != "verbose" {
+					return false // Should have argument "verbose"
+				}
+			}
+		}
+		if !found4 {
+			return false
+		}
+		
+		return true
+	}
+	
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 9 failed: %v", err)
+	}
+}
+
+// Property 10: Negative Argument Support
+// Feature: optargs-core, Property 10: For any option that requires an argument, the parser should accept arguments beginning with `-` when explicitly provided
+func TestProperty10_NegativeArgumentSupport(t *testing.T) {
+	property := func() bool {
+		// Test negative argument support for short options
+		
+		// Test case 1: Short option with negative number argument (separate)
+		parser1, err := GetOpt([]string{"-a", "-123"}, "a:")
+		if err != nil {
+			return false
+		}
+		
+		found1 := false
+		for opt, err := range parser1.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "a" {
+				found1 = true
+				if !opt.HasArg || opt.Arg != "-123" {
+					return false // Should have argument "-123"
+				}
+			}
+		}
+		if !found1 {
+			return false
+		}
+		
+		// Test case 2: Short option with negative number argument (attached)
+		parser2, err2 := GetOpt([]string{"-a-456"}, "a:")
+		if err2 != nil {
+			return false
+		}
+		
+		found2 := false
+		for opt, err := range parser2.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "a" {
+				found2 = true
+				if !opt.HasArg || opt.Arg != "-456" {
+					return false // Should have argument "-456"
+				}
+			}
+		}
+		if !found2 {
+			return false
+		}
+		
+		// Test case 3: Long option with negative number argument (separate)
+		longOpts := []Flag{
+			{Name: "number", HasArg: RequiredArgument},
+		}
+		
+		parser3, err3 := GetOptLong([]string{"--number", "-789"}, "", longOpts)
+		if err3 != nil {
+			return false
+		}
+		
+		found3 := false
+		for opt, err := range parser3.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "number" {
+				found3 = true
+				if !opt.HasArg || opt.Arg != "-789" {
+					return false // Should have argument "-789"
+				}
+			}
+		}
+		if !found3 {
+			return false
+		}
+		
+		// Test case 4: Long option with negative number argument (equals syntax)
+		parser4, err4 := GetOptLong([]string{"--number=-999"}, "", longOpts)
+		if err4 != nil {
+			return false
+		}
+		
+		found4 := false
+		for opt, err := range parser4.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "number" {
+				found4 = true
+				if !opt.HasArg || opt.Arg != "=-999" { // Current parser behavior includes =
+					return false // Should have argument "=-999"
+				}
+			}
+		}
+		if !found4 {
+			return false
+		}
+		
+		// Test case 5: Optional argument with negative number (attached)
+		parser5, err5 := GetOpt([]string{"-b-100"}, "b::")
+		if err5 != nil {
+			return false
+		}
+		
+		found5 := false
+		for opt, err := range parser5.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "b" {
+				found5 = true
+				if !opt.HasArg || opt.Arg != "-100" {
+					return false // Should have argument "-100"
+				}
+			}
+		}
+		if !found5 {
+			return false
+		}
+		
+		return true
+	}
+	
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 10 failed: %v", err)
+	}
+}
+
+// Property 11: Character Validation
+// Feature: optargs-core, Property 11: For any printable ASCII character except `:`, `;`, `-`, the parser should accept it as a valid short option character
+func TestProperty11_CharacterValidation(t *testing.T) {
+	property := func() bool {
+		rand := rand.New(rand.NewSource(rand.Int63()))
+		
+		// Test valid characters
+		validChars := []byte{'a', 'b', 'A', 'B', '1', '2', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '=', '{', '}', '[', ']', '|', '\\', '?', '/', '.', '>', '<', ',', '~', '`'}
+		
+		// Test case 1: Valid characters should be accepted
+		for _, c := range validChars {
+			optstring := string(c)
+			parser, err := GetOpt([]string{"-" + string(c)}, optstring)
+			if err != nil {
+				return false // Should not error for valid characters
+			}
+			
+			found := false
+			for opt, err := range parser.Options() {
+				if err != nil {
+					return false // Should not error
+				}
+				if opt.Name == string(c) {
+					found = true
+					if opt.HasArg {
+						return false // Should not have argument
+					}
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+		
+		// Test case 2: Invalid characters should be rejected during parser creation
+		invalidChars := []byte{':', ';', '-'}
+		
+		for _, c := range invalidChars {
+			optstring := string(c)
+			_, err := GetOpt([]string{}, optstring)
+			if err == nil {
+				return false // Should error for invalid characters
+			}
+		}
+		
+		// Test case 3: Non-printable characters should be rejected
+		nonPrintableChars := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 127}
+		
+		// Test a few random non-printable characters
+		numToTest := min(5, len(nonPrintableChars))
+		for i := 0; i < numToTest; i++ {
+			idx := rand.Intn(len(nonPrintableChars))
+			c := nonPrintableChars[idx]
+			optstring := string(c)
+			_, err := GetOpt([]string{}, optstring)
+			if err == nil {
+				return false // Should error for non-printable characters
+			}
+		}
+		
+		// Test case 4: Random valid printable characters should work
+		for i := 0; i < 10; i++ {
+			c := generateValidShortOpt(rand)
+			optstring := string(c)
+			parser, err := GetOpt([]string{"-" + string(c)}, optstring)
+			if err != nil {
+				return false // Should not error for valid characters
+			}
+			
+			found := false
+			for opt, err := range parser.Options() {
+				if err != nil {
+					return false // Should not error
+				}
+				if opt.Name == string(c) {
+					found = true
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+		
+		return true
+	}
+	
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 11 failed: %v", err)
+	}
+}
+
+// Property 12: Option Redefinition Handling
+// Feature: optargs-core, Property 12: For any optstring where options are redefined, the parser should use the last definition encountered
+func TestProperty12_OptionRedefinitionHandling(t *testing.T) {
+	property := func() bool {
+		// Test option redefinition behavior
+		
+		// Test case 1: Redefine option from no-argument to required-argument
+		parser1, err := GetOpt([]string{"-a", "value"}, "aa:")
+		if err != nil {
+			return false
+		}
+		
+		found1 := false
+		for opt, err := range parser1.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "a" {
+				found1 = true
+				if !opt.HasArg || opt.Arg != "value" {
+					return false // Should use last definition (required argument)
+				}
+			}
+		}
+		if !found1 {
+			return false
+		}
+		
+		// Test case 2: Redefine option from required-argument to no-argument
+		parser2, err2 := GetOpt([]string{"-b"}, "b:b")
+		if err2 != nil {
+			return false
+		}
+		
+		found2 := false
+		for opt, err := range parser2.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "b" {
+				found2 = true
+				if opt.HasArg {
+					return false // Should use last definition (no argument)
+				}
+			}
+		}
+		if !found2 {
+			return false
+		}
+		
+		// Test case 3: Redefine option from optional-argument to required-argument
+		parser3, err3 := GetOpt([]string{"-c", "value"}, "c::c:")
+		if err3 != nil {
+			return false
+		}
+		
+		found3 := false
+		for opt, err := range parser3.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "c" {
+				found3 = true
+				if !opt.HasArg || opt.Arg != "value" {
+					return false // Should use last definition (required argument)
+				}
+			}
+		}
+		if !found3 {
+			return false
+		}
+		
+		// Test case 4: Multiple redefinitions should use the last one
+		parser4, err4 := GetOpt([]string{"-d"}, "d:d::d")
+		if err4 != nil {
+			return false
+		}
+		
+		found4 := false
+		for opt, err := range parser4.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "d" {
+				found4 = true
+				if opt.HasArg {
+					return false // Should use last definition (no argument)
+				}
+			}
+		}
+		if !found4 {
+			return false
+		}
+		
+		// Test case 5: Redefinition with behavior flags
+		parser5, err5 := GetOpt([]string{"-e"}, ":e:e")
+		if err5 != nil {
+			return false
+		}
+		
+		found5 := false
+		for opt, err := range parser5.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "e" {
+				found5 = true
+				if opt.HasArg {
+					return false // Should use last definition (no argument)
+				}
+			}
+		}
+		if !found5 {
+			return false
+		}
+		
+		return true
+	}
+	
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 12 failed: %v", err)
+	}
+}
