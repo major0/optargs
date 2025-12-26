@@ -30,7 +30,7 @@ func TestParserInitShortOpts(t *testing.T) {
 		}
 
 		var hasArg ArgType
-		switch i%3 {
+		switch i % 3 {
 		case 0:
 			hasArg = NoArgument
 		case 1:
@@ -86,7 +86,7 @@ func TestParserInitLongOpts(t *testing.T) {
 	for c, i := range genOpts() {
 		s := string(byte(c))
 		var hasArg ArgType
-		switch i%3 {
+		switch i % 3 {
 		case 0:
 			hasArg = NoArgument
 		case 1:
@@ -196,8 +196,6 @@ func TestParserNonOpt(t *testing.T) {
 	}
 }
 
-
-
 func TestParserPosixNonOpt(t *testing.T) {
 	shopts := map[byte]*Flag{
 		'a': &Flag{Name: "a", HasArg: NoArgument},
@@ -251,7 +249,7 @@ func TestParserLongOptsLongPrefix(t *testing.T) {
 
 func TestParserLongOptsPrefix(t *testing.T) {
 	var longOpts = map[string]*Flag{
-		"foo": &Flag{Name: "foo", HasArg: RequiredArgument},
+		"foo":  &Flag{Name: "foo", HasArg: RequiredArgument},
 		"foo=": &Flag{Name: "foo=", HasArg: NoArgument},
 	}
 
