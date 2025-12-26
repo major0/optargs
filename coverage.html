@@ -59,7 +59,7 @@
 				
 				<option value="file1">github.com/major0/optargs/misc.go (100.0%)</option>
 				
-				<option value="file2">github.com/major0/optargs/parser.go (98.5%)</option>
+				<option value="file2">github.com/major0/optargs/parser.go (98.6%)</option>
 				
 				</select>
 			</div>
@@ -582,8 +582,14 @@ func (p *Parser) Options() iter.Seq2[Option, error] <span class="cov8" title="1"
         slog.Debug("Iterator")
         return func(yield func(Option, error) bool) </span><span class="cov8" title="1">{
                 var err error
+                cleanupDone := false
+                defer func() </span><span class="cov8" title="1">{
+                        if !cleanupDone </span><span class="cov8" title="1">{
+                                p.Args = append(p.nonOpts, p.Args...)
+                        }</span>
+                }()
 
-                slog.Debug("Options", "args", p.Args)
+                <span class="cov8" title="1">slog.Debug("Options", "args", p.Args)
         out:
                 for len(p.Args) &gt; 0 </span><span class="cov8" title="1">{
                         slog.Debug("Options", "arg[0]", p.Args[0])
@@ -592,6 +598,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] <span class="cov8" title="1"
                         case p.Args[0] == "--":<span class="cov8" title="1"> // Stop parsing options
                                 slog.Debug("Options", "break", true)
                                 p.Args = append(p.nonOpts, p.Args[1:]...)
+                                cleanupDone = true
                                 break out</span>
 
                         case strings.HasPrefix(p.Args[0], "--"):<span class="cov8" title="1">
@@ -602,8 +609,8 @@ func (p *Parser) Options() iter.Seq2[Option, error] <span class="cov8" title="1"
                                 }</span>
                                 <span class="cov8" title="1">p.Args, option, err = p.findLongOpt(p.Args[0][2:], remainingArgs)
                                 if !yield(option, err) </span><span class="cov8" title="1">{
-                                        break</span>
-                                }
+                                        return
+                                }</span>
 
                         case strings.HasPrefix(p.Args[0], "-"):<span class="cov8" title="1">
                                 slog.Debug("Options", "prefix", "-")
@@ -614,8 +621,8 @@ func (p *Parser) Options() iter.Seq2[Option, error] <span class="cov8" title="1"
                                         }</span>
                                         <span class="cov8" title="1">p.Args, option, err = p.findLongOpt(p.Args[0][1:], remainingArgs)
                                         if !yield(option, err) </span><span class="cov8" title="1">{
-                                                break</span>
-                                        }
+                                                return
+                                        }</span>
                                         <span class="cov8" title="1">continue</span>
                                 }
 
@@ -635,8 +642,8 @@ func (p *Parser) Options() iter.Seq2[Option, error] <span class="cov8" title="1"
                                         }</span>
 
                                         <span class="cov8" title="1">if !yield(option, err) </span><span class="cov8" title="1">{
-                                                goto out</span>
-                                        }
+                                                return
+                                        }</span>
                                 }
 
                         default:<span class="cov8" title="1">
@@ -650,8 +657,8 @@ func (p *Parser) Options() iter.Seq2[Option, error] <span class="cov8" title="1"
                                                 Arg:  p.Args[0],
                                         }
                                         if !yield(option, nil) </span><span class="cov0" title="0">{
-                                                break</span>
-                                        }
+                                                return
+                                        }</span>
 
                                 case ParsePosixlyCorrect:<span class="cov8" title="1">
                                         break out</span>
@@ -659,8 +666,9 @@ func (p *Parser) Options() iter.Seq2[Option, error] <span class="cov8" title="1"
                                 <span class="cov8" title="1">p.Args = p.Args[1:]</span>
                         }
                 }
-
-                <span class="cov8" title="1">p.Args = append(p.nonOpts, p.Args...)</span>
+                
+                <span class="cov8" title="1">cleanupDone = true
+                p.Args = append(p.nonOpts, p.Args...)</span>
         }
 }
 </pre>
