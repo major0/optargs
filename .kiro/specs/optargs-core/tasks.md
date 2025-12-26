@@ -38,24 +38,24 @@ This implementation plan prioritizes achieving 100% test coverage and comprehens
     - **Property 16: Environment Variable Behavior**
     - **Validates: Requirements 1.4**
 
-- [ ] 3. Implement long option property tests
-  - [ ] 3.1 Write property test for long option syntax
+- [x] 3. Implement long option property tests
+  - [x] 3.1 Write property test for long option syntax
     - **Property 5: Long Option Syntax Support**
     - **Validates: Requirements 2.2, 2.3**
 
-  - [ ] 3.2 Write property test for case sensitivity
+  - [x] 3.2 Write property test for case sensitivity
     - **Property 6: Case Sensitivity Handling**
     - **Validates: Requirements 2.4**
 
-  - [ ] 3.3 Write property test for partial matching
+  - [x] 3.3 Write property test for partial matching
     - **Property 7: Partial Long Option Matching**
     - **Validates: Requirements 2.5**
 
-  - [ ] 3.4 Write property test for ambiguity resolution
+  - [x] 3.4 Write property test for ambiguity resolution
     - **Property 17: Ambiguity Resolution**
     - **Validates: Requirements 3.5**
 
-  - [ ] 3.5 Write property test for long-only mode
+  - [x] 3.5 Write property test for long-only mode
     - **Property 8: Long-Only Mode Behavior**
     - **Validates: Requirements 3.2, 3.3**
 

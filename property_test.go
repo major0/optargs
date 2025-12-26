@@ -479,3 +479,464 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 		t.Errorf("Property 16 failed: %v", err)
 	}
 }
+
+// Property 5: Long Option Syntax Support
+// Feature: optargs-core, Property 5: For any valid long option, the parser should correctly handle both `--option=value` and `--option value` syntax forms
+func TestProperty5_LongOptionSyntaxSupport(t *testing.T) {
+	property := func() bool {
+		// Test both --option=value and --option value syntax forms
+		
+		// Test case 1: --option=value syntax with required argument
+		longOpts := []Flag{
+			{Name: "test", HasArg: RequiredArgument},
+		}
+		
+		parser1, err := GetOptLong([]string{"--test=value"}, "", longOpts)
+		if err != nil {
+			return false
+		}
+		
+		found1 := false
+		for opt, err := range parser1.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "test" {
+				found1 = true
+				if !opt.HasArg || opt.Arg != "value" {
+					return false // Should have argument "value"
+				}
+			}
+		}
+		if !found1 {
+			return false
+		}
+		
+		// Test case 2: --option value syntax with required argument
+		parser2, err := GetOptLong([]string{"--test", "value"}, "", longOpts)
+		if err != nil {
+			return false
+		}
+		
+		found2 := false
+		for opt, err := range parser2.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "test" {
+				found2 = true
+				if !opt.HasArg || opt.Arg != "value" {
+					return false // Should have argument "value"
+				}
+			}
+		}
+		if !found2 {
+			return false
+		}
+		
+		// Test case 3: --option=value syntax with optional argument
+		longOpts2 := []Flag{
+			{Name: "optional", HasArg: OptionalArgument},
+		}
+		
+		parser3, err := GetOptLong([]string{"--optional=value"}, "", longOpts2)
+		if err != nil {
+			return false
+		}
+		
+		found3 := false
+		for opt, err := range parser3.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "optional" {
+				found3 = true
+				if !opt.HasArg || opt.Arg != "value" {
+					return false // Should have argument "value"
+				}
+			}
+		}
+		if !found3 {
+			return false
+		}
+		
+		// Test case 4: --option without value for optional argument
+		parser4, err := GetOptLong([]string{"--optional"}, "", longOpts2)
+		if err != nil {
+			return false
+		}
+		
+		found4 := false
+		for opt, err := range parser4.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "optional" {
+				found4 = true
+				if opt.HasArg {
+					return false // Should not have argument when none provided
+				}
+			}
+		}
+		if !found4 {
+			return false
+		}
+		
+		return true
+	}
+	
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 5 failed: %v", err)
+	}
+}
+
+// Property 6: Case Sensitivity Handling
+// Feature: optargs-core, Property 6: For any long option name, the parser should handle case variations according to the configured case sensitivity settings
+func TestProperty6_CaseSensitivityHandling(t *testing.T) {
+	property := func() bool {
+		// Test case insensitive long options (default behavior)
+		longOpts := []Flag{
+			{Name: "Test", HasArg: NoArgument},
+		}
+		
+		// Test case 1: Default case insensitive behavior
+		parser1, err := GetOptLong([]string{"--test"}, "", longOpts)
+		if err != nil {
+			return false
+		}
+		
+		found1 := false
+		for opt, err := range parser1.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "Test" { // Should match original case
+				found1 = true
+				if opt.HasArg {
+					return false // Should not have argument
+				}
+			}
+		}
+		if !found1 {
+			return false
+		}
+		
+		// Test case 2: Different case variations should work
+		parser2, err := GetOptLong([]string{"--TEST"}, "", longOpts)
+		if err != nil {
+			return false
+		}
+		
+		found2 := false
+		for opt, err := range parser2.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "Test" { // Should match original case
+				found2 = true
+			}
+		}
+		if !found2 {
+			return false
+		}
+		
+		// Test case 3: Mixed case should work
+		parser3, err := GetOptLong([]string{"--tEsT"}, "", longOpts)
+		if err != nil {
+			return false
+		}
+		
+		found3 := false
+		for opt, err := range parser3.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "Test" { // Should match original case
+				found3 = true
+			}
+		}
+		if !found3 {
+			return false
+		}
+		
+		return true
+	}
+	
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 6 failed: %v", err)
+	}
+}
+
+// Property 7: Partial Long Option Matching
+// Feature: optargs-core, Property 7: For any unambiguous partial long option match, the parser should resolve to the correct full option name
+func TestProperty7_PartialLongOptionMatching(t *testing.T) {
+	property := func() bool {
+		// Test unambiguous partial matching
+		longOpts := []Flag{
+			{Name: "verbose", HasArg: NoArgument},
+			{Name: "version", HasArg: NoArgument},
+			{Name: "help", HasArg: NoArgument},
+		}
+		
+		// Test case 1: Unambiguous partial match "ver" should fail (ambiguous between verbose/version)
+		_, err := GetOptLong([]string{"--ver"}, "", longOpts)
+		if err == nil {
+			// This should error due to ambiguity, so if no error, the test fails
+			return false
+		}
+		
+		// Test case 2: Unambiguous partial match "verb" should match "verbose"
+		parser2, err := GetOptLong([]string{"--verb"}, "", longOpts)
+		if err != nil {
+			return false
+		}
+		
+		found2 := false
+		for opt, err := range parser2.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "verbose" {
+				found2 = true
+			}
+		}
+		if !found2 {
+			return false
+		}
+		
+		// Test case 3: Unambiguous partial match "vers" should match "version"
+		parser3, err := GetOptLong([]string{"--vers"}, "", longOpts)
+		if err != nil {
+			return false
+		}
+		
+		found3 := false
+		for opt, err := range parser3.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "version" {
+				found3 = true
+			}
+		}
+		if !found3 {
+			return false
+		}
+		
+		// Test case 4: Unambiguous partial match "h" should match "help"
+		parser4, err := GetOptLong([]string{"--h"}, "", longOpts)
+		if err != nil {
+			return false
+		}
+		
+		found4 := false
+		for opt, err := range parser4.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "help" {
+				found4 = true
+			}
+		}
+		if !found4 {
+			return false
+		}
+		
+		return true
+	}
+	
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 7 failed: %v", err)
+	}
+}
+
+// Property 17: Ambiguity Resolution
+// Feature: optargs-core, Property 17: For any ambiguous long option input, the parser should handle it according to GNU specifications for ambiguity resolution
+func TestProperty17_AmbiguityResolution(t *testing.T) {
+	property := func() bool {
+		// Test ambiguous long option resolution
+		longOpts := []Flag{
+			{Name: "verbose", HasArg: NoArgument},
+			{Name: "version", HasArg: NoArgument},
+			{Name: "value", HasArg: RequiredArgument},
+		}
+		
+		// Test case 1: Ambiguous prefix "v" should error
+		_, err := GetOptLong([]string{"--v"}, "", longOpts)
+		if err == nil {
+			return false // Should error due to ambiguity
+		}
+		
+		// Test case 2: Ambiguous prefix "ve" should error
+		_, err2 := GetOptLong([]string{"--ve"}, "", longOpts)
+		if err2 == nil {
+			return false // Should error due to ambiguity
+		}
+		
+		// Test case 3: Ambiguous prefix "ver" should error
+		_, err3 := GetOptLong([]string{"--ver"}, "", longOpts)
+		if err3 == nil {
+			return false // Should error due to ambiguity
+		}
+		
+		// Test case 4: Unambiguous prefix "verb" should work
+		parser4, err4 := GetOptLong([]string{"--verb"}, "", longOpts)
+		if err4 != nil {
+			return false // Should not error
+		}
+		
+		found4 := false
+		for opt, err := range parser4.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "verbose" {
+				found4 = true
+			}
+		}
+		if !found4 {
+			return false
+		}
+		
+		// Test case 5: Unambiguous prefix "vers" should work
+		parser5, err5 := GetOptLong([]string{"--vers"}, "", longOpts)
+		if err5 != nil {
+			return false // Should not error
+		}
+		
+		found5 := false
+		for opt, err := range parser5.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "version" {
+				found5 = true
+			}
+		}
+		if !found5 {
+			return false
+		}
+		
+		// Test case 6: Unambiguous prefix "val" should work
+		parser6, err6 := GetOptLong([]string{"--val", "test"}, "", longOpts)
+		if err6 != nil {
+			return false // Should not error
+		}
+		
+		found6 := false
+		for opt, err := range parser6.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "value" {
+				found6 = true
+				if !opt.HasArg || opt.Arg != "test" {
+					return false
+				}
+			}
+		}
+		if !found6 {
+			return false
+		}
+		
+		return true
+	}
+	
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 17 failed: %v", err)
+	}
+}
+
+// Property 8: Long-Only Mode Behavior
+// Feature: optargs-core, Property 8: For any single-dash option in long-only mode, the parser should treat multi-character options as long options and fall back to short option parsing for single characters
+func TestProperty8_LongOnlyModeBehavior(t *testing.T) {
+	property := func() bool {
+		// Test long-only mode behavior
+		longOpts := []Flag{
+			{Name: "verbose", HasArg: NoArgument},
+			{Name: "help", HasArg: NoArgument},
+		}
+		
+		// Test case 1: Single-dash multi-character should be treated as long option
+		parser1, err := GetOptLongOnly([]string{"-verbose"}, "", longOpts)
+		if err != nil {
+			return false
+		}
+		
+		found1 := false
+		for opt, err := range parser1.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "verbose" {
+				found1 = true
+			}
+		}
+		if !found1 {
+			return false
+		}
+		
+		// Test case 2: Single-dash single character should fall back to short option (if defined)
+		// Since we don't have short options defined, this should error
+		_, err2 := GetOptLongOnly([]string{"-h"}, "", longOpts)
+		if err2 == nil {
+			return false // Should error since 'h' is not defined as short option
+		}
+		
+		// Test case 3: Single-dash multi-character with argument
+		longOpts2 := []Flag{
+			{Name: "output", HasArg: RequiredArgument},
+		}
+		
+		parser3, err3 := GetOptLongOnly([]string{"-output", "file.txt"}, "", longOpts2)
+		if err3 != nil {
+			return false
+		}
+		
+		found3 := false
+		for opt, err := range parser3.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "output" {
+				found3 = true
+				if !opt.HasArg || opt.Arg != "file.txt" {
+					return false
+				}
+			}
+		}
+		if !found3 {
+			return false
+		}
+		
+		// Test case 4: Double-dash should still work normally
+		parser4, err4 := GetOptLongOnly([]string{"--verbose"}, "", longOpts)
+		if err4 != nil {
+			return false
+		}
+		
+		found4 := false
+		for opt, err := range parser4.Options() {
+			if err != nil {
+				return false
+			}
+			if opt.Name == "verbose" {
+				found4 = true
+			}
+		}
+		if !found4 {
+			return false
+		}
+		
+		return true
+	}
+	
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 8 failed: %v", err)
+	}
+}
