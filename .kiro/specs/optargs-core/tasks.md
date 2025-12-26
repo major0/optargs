@@ -76,16 +76,16 @@ This implementation plan prioritizes achieving 100% test coverage and comprehens
     - **Property 12: Option Redefinition Handling**
     - **Validates: Requirements 4.5**
 
-- [ ] 5. Implement error handling and API property tests
-  - [ ] 5.1 Write property test for error reporting
+- [x] 5. Implement error handling and API property tests
+  - [x] 5.1 Write property test for error reporting
     - **Property 13: Error Reporting Accuracy**
     - **Validates: Requirements 5.2**
 
-  - [ ] 5.2 Write property test for silent error mode
+  - [x] 5.2 Write property test for silent error mode
     - **Property 14: Silent Error Mode**
     - **Validates: Requirements 5.3**
 
-  - [ ] 5.3 Write property test for iterator correctness
+  - [x] 5.3 Write property test for iterator correctness
     - **Property 15: Iterator Correctness**
     - **Validates: Requirements 6.4**
 
