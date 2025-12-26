@@ -57,7 +57,7 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 	parser.shortOpts = shortOpts
 
 	// Regex pattern to find any character that is _not_ a graph or
-	// _is_ a space. Using regexp here is slightly faster than 
+	// _is_ a space. Using regexp here is slightly faster than
 	// terating the string char by char calling `isGraph()` on it, but
 	// ultimately has the same effect.
 	notGraph := regexp.MustCompile(`[^[:graph:]]`)
@@ -95,7 +95,7 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, Option, erro
 		//
 		// - name: `foo=`, hasArg: NoArgument
 		// - name: `foo`, hasArg: RequiredArgument
-		// 
+		//
 		// Should the user pass in `--foo=` then we need to make
 		// a decision as to which handler to use.
 		//
@@ -242,7 +242,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 		var err error
 
 		slog.Debug("Options", "args", p.Args)
-		out:
+	out:
 		for len(p.Args) > 0 {
 			slog.Debug("Options", "arg[0]", p.Args[0])
 			option := Option{}

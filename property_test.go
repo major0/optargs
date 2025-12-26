@@ -39,7 +39,7 @@ func generateValidLongOpt(rand *rand.Rand) string {
 // Generate optstring with various argument types
 func generateOptString(rand *rand.Rand) string {
 	var result strings.Builder
-	
+
 	// Add behavior flags randomly
 	if rand.Float32() < 0.3 {
 		result.WriteByte(':') // Silent errors
@@ -50,13 +50,13 @@ func generateOptString(rand *rand.Rand) string {
 	if rand.Float32() < 0.3 {
 		result.WriteByte('-') // Non-opts mode
 	}
-	
+
 	// Add 1-5 options
 	numOpts := rand.Intn(5) + 1
 	for i := 0; i < numOpts; i++ {
 		c := generateValidShortOpt(rand)
 		result.WriteByte(c)
-		
+
 		// Add argument specification
 		argType := rand.Intn(3)
 		switch argType {
@@ -66,7 +66,7 @@ func generateOptString(rand *rand.Rand) string {
 			result.WriteString("::")
 		}
 	}
-	
+
 	return result.String()
 }
 
@@ -74,7 +74,7 @@ func generateOptString(rand *rand.Rand) string {
 func generateArgs(rand *rand.Rand) []string {
 	numArgs := rand.Intn(10)
 	args := make([]string, numArgs)
-	
+
 	for i := 0; i < numArgs; i++ {
 		switch rand.Intn(4) {
 		case 0: // Short option
@@ -93,7 +93,7 @@ func generateArgs(rand *rand.Rand) []string {
 			args[i] = fmt.Sprintf("arg%d", i)
 		}
 	}
-	
+
 	return args
 }
 
@@ -103,14 +103,14 @@ func TestProperty1_POSIXGNUSpecificationCompliance(t *testing.T) {
 	property := func() bool {
 		// Test a simple, well-defined case to verify basic POSIX compliance
 		// Focus on optstring behavior flags and option registration
-		
+
 		// Test case 1: Basic optstring with no behavior flags
 		optstring := "abc"
 		parser, err := GetOpt([]string{}, optstring)
 		if err != nil {
 			return false
 		}
-		
+
 		// Should have default configuration
 		if !parser.config.enableErrors {
 			return false // Should enable errors by default
@@ -118,7 +118,7 @@ func TestProperty1_POSIXGNUSpecificationCompliance(t *testing.T) {
 		if parser.config.parseMode != ParseDefault {
 			return false // Should use default parse mode
 		}
-		
+
 		// Should have registered all options
 		if len(parser.shortOpts) != 3 {
 			return false
@@ -132,34 +132,34 @@ func TestProperty1_POSIXGNUSpecificationCompliance(t *testing.T) {
 		if _, exists := parser.shortOpts['c']; !exists {
 			return false
 		}
-		
+
 		// Test case 2: Optstring with silent errors flag
 		optstring2 := ":abc"
 		parser2, err := GetOpt([]string{}, optstring2)
 		if err != nil {
 			return false
 		}
-		
+
 		// Should disable errors
 		if parser2.config.enableErrors {
 			return false // Should disable errors with : prefix
 		}
-		
+
 		// Test case 3: Optstring with POSIX mode flag
 		optstring3 := "+abc"
 		parser3, err := GetOpt([]string{}, optstring3)
 		if err != nil {
 			return false
 		}
-		
+
 		// Should use POSIX mode
 		if parser3.config.parseMode != ParsePosixlyCorrect {
 			return false // Should use POSIX mode with + prefix
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 1 failed: %v", err)
@@ -180,15 +180,15 @@ func TestProperty2_OptionCompactionAndArgumentAssignment(t *testing.T) {
 	property := func() bool {
 		// Test single option with attached argument (avoids compaction bug)
 		// This tests the core principle: arguments are assigned to options that accept them
-		
-		optstring := "a::"  // Optional argument
+
+		optstring := "a::" // Optional argument
 		args := []string{"-avalue"}
-		
+
 		parser, err := GetOpt(args, optstring)
 		if err != nil {
 			return false // This should not error
 		}
-		
+
 		// Collect all options
 		var options []Option
 		for opt, err := range parser.Options() {
@@ -197,37 +197,38 @@ func TestProperty2_OptionCompactionAndArgumentAssignment(t *testing.T) {
 			}
 			options = append(options, opt)
 		}
-		
+
 		// Should have exactly 1 option
 		if len(options) != 1 {
 			return false
 		}
-		
+
 		// Option should be 'a' with argument "value"
 		if options[0].Name != "a" || !options[0].HasArg || options[0].Arg != "value" {
 			return false
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 2 failed: %v", err)
 	}
 }
+
 // Property 3: Argument Type Handling
 // Feature: optargs-core, Property 3: For any option string containing colon specifications, the parser should correctly handle required arguments (:), optional arguments (::), and no-argument options according to POSIX rules
 func TestProperty3_ArgumentTypeHandling(t *testing.T) {
 	property := func() bool {
 		// Test well-defined cases for each argument type
-		
+
 		// Test case 1: No argument option
 		parser1, err := GetOpt([]string{"-a"}, "a")
 		if err != nil {
 			return false
 		}
-		
+
 		found1 := false
 		for opt, err := range parser1.Options() {
 			if err != nil {
@@ -243,13 +244,13 @@ func TestProperty3_ArgumentTypeHandling(t *testing.T) {
 		if !found1 {
 			return false
 		}
-		
+
 		// Test case 2: Optional argument option with attached argument
 		parser2, err := GetOpt([]string{"-avalue"}, "a::")
 		if err != nil {
 			return false
 		}
-		
+
 		found2 := false
 		for opt, err := range parser2.Options() {
 			if err != nil {
@@ -265,13 +266,13 @@ func TestProperty3_ArgumentTypeHandling(t *testing.T) {
 		if !found2 {
 			return false
 		}
-		
+
 		// Test case 3: Optional argument option without argument
 		parser3, err := GetOpt([]string{"-a"}, "a::")
 		if err != nil {
 			return false
 		}
-		
+
 		found3 := false
 		for opt, err := range parser3.Options() {
 			if err != nil {
@@ -287,13 +288,13 @@ func TestProperty3_ArgumentTypeHandling(t *testing.T) {
 		if !found3 {
 			return false
 		}
-		
+
 		// Test case 4: Required argument option with separate argument
 		parser4, err := GetOpt([]string{"-a", "value"}, "a:")
 		if err != nil {
 			return false
 		}
-		
+
 		found4 := false
 		for opt, err := range parser4.Options() {
 			if err != nil {
@@ -309,31 +310,32 @@ func TestProperty3_ArgumentTypeHandling(t *testing.T) {
 		if !found4 {
 			return false
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 3 failed: %v", err)
 	}
 }
+
 // Property 4: Option Termination Behavior
 // Feature: optargs-core, Property 4: For any argument list containing `--`, the parser should stop processing options at that point and treat all subsequent arguments as non-options
 func TestProperty4_OptionTerminationBehavior(t *testing.T) {
 	property := func() bool {
 		rand := rand.New(rand.NewSource(rand.Int63()))
-		
+
 		// Generate a simple optstring
 		optstring := "abc"
-		
+
 		// Generate arguments before --
 		numBefore := rand.Intn(3)
 		var argsBefore []string
 		for i := 0; i < numBefore; i++ {
 			argsBefore = append(argsBefore, "-a")
 		}
-		
+
 		// Generate arguments after --
 		numAfter := rand.Intn(5) + 1 // At least 1 argument after --
 		var argsAfter []string
@@ -348,16 +350,16 @@ func TestProperty4_OptionTerminationBehavior(t *testing.T) {
 				argsAfter = append(argsAfter, fmt.Sprintf("arg%d", i)) // Regular argument
 			}
 		}
-		
+
 		// Combine: [options] -- [arguments]
 		args := append(argsBefore, "--")
 		args = append(args, argsAfter...)
-		
+
 		parser, err := GetOpt(args, optstring)
 		if err != nil {
 			return false // Should not error on valid setup
 		}
-		
+
 		// Count options processed (should only be from before --)
 		optionCount := 0
 		for _, err := range parser.Options() {
@@ -366,67 +368,68 @@ func TestProperty4_OptionTerminationBehavior(t *testing.T) {
 			}
 			optionCount++
 		}
-		
+
 		// Should have processed exactly numBefore options
 		if optionCount != numBefore {
 			return false
 		}
-		
+
 		// All arguments after -- should be in parser.Args
 		expectedArgs := argsAfter
 		if len(parser.Args) != len(expectedArgs) {
 			return false
 		}
-		
+
 		// Verify the arguments are in the correct order and unchanged
 		for i, expected := range expectedArgs {
 			if parser.Args[i] != expected {
 				return false
 			}
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 4 failed: %v", err)
 	}
 }
+
 // Property 16: Environment Variable Behavior
 // Feature: optargs-core, Property 16: For any parsing session, when POSIXLY_CORRECT is set, the parser should stop at the first non-option argument
 func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 	property := func() bool {
 		rand := rand.New(rand.NewSource(rand.Int63()))
-		
+
 		// Generate a simple optstring
 		optstring := "abc"
-		
+
 		// Generate mixed arguments: options, non-options, more options
 		var args []string
-		
+
 		// Add some initial options
 		numInitialOpts := rand.Intn(2) + 1 // 1-2 options
 		for i := 0; i < numInitialOpts; i++ {
 			args = append(args, "-a")
 		}
-		
+
 		// Add a non-option argument
 		nonOptArg := fmt.Sprintf("nonopt%d", rand.Intn(100))
 		args = append(args, nonOptArg)
-		
+
 		// Add more options after the non-option
 		numLaterOpts := rand.Intn(3) + 1 // 1-3 options
 		for i := 0; i < numLaterOpts; i++ {
 			args = append(args, "-b")
 		}
-		
+
 		// Test without POSIXLY_CORRECT (should process all options)
 		parser1, err := GetOpt(args, optstring)
 		if err != nil {
 			return false
 		}
-		
+
 		normalModeOptions := 0
 		for _, err := range parser1.Options() {
 			if err != nil {
@@ -434,14 +437,14 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 			}
 			normalModeOptions++
 		}
-		
+
 		// Test with POSIXLY_CORRECT behavior (using + prefix)
 		posixOptstring := "+" + optstring
 		parser2, err := GetOpt(args, posixOptstring)
 		if err != nil {
 			return false
 		}
-		
+
 		posixModeOptions := 0
 		for _, err := range parser2.Options() {
 			if err != nil {
@@ -449,31 +452,31 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 			}
 			posixModeOptions++
 		}
-		
+
 		// In POSIX mode, should stop at first non-option, so should have fewer options
 		if posixModeOptions >= normalModeOptions {
 			return false
 		}
-		
+
 		// In POSIX mode, should have exactly numInitialOpts options
 		if posixModeOptions != numInitialOpts {
 			return false
 		}
-		
+
 		// In POSIX mode, remaining args should include the non-option and all subsequent args
 		expectedRemainingArgs := len(args) - numInitialOpts
 		if len(parser2.Args) != expectedRemainingArgs {
 			return false
 		}
-		
+
 		// First remaining arg should be the non-option argument
 		if parser2.Args[0] != nonOptArg {
 			return false
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 16 failed: %v", err)
@@ -485,17 +488,17 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 func TestProperty5_LongOptionSyntaxSupport(t *testing.T) {
 	property := func() bool {
 		// Test both --option=value and --option value syntax forms
-		
+
 		// Test case 1: --option=value syntax with required argument
 		longOpts := []Flag{
 			{Name: "test", HasArg: RequiredArgument},
 		}
-		
+
 		parser1, err := GetOptLong([]string{"--test=value"}, "", longOpts)
 		if err != nil {
 			return false
 		}
-		
+
 		found1 := false
 		for opt, err := range parser1.Options() {
 			if err != nil {
@@ -511,13 +514,13 @@ func TestProperty5_LongOptionSyntaxSupport(t *testing.T) {
 		if !found1 {
 			return false
 		}
-		
+
 		// Test case 2: --option value syntax with required argument
 		parser2, err := GetOptLong([]string{"--test", "value"}, "", longOpts)
 		if err != nil {
 			return false
 		}
-		
+
 		found2 := false
 		for opt, err := range parser2.Options() {
 			if err != nil {
@@ -533,17 +536,17 @@ func TestProperty5_LongOptionSyntaxSupport(t *testing.T) {
 		if !found2 {
 			return false
 		}
-		
+
 		// Test case 3: --option=value syntax with optional argument
 		longOpts2 := []Flag{
 			{Name: "optional", HasArg: OptionalArgument},
 		}
-		
+
 		parser3, err := GetOptLong([]string{"--optional=value"}, "", longOpts2)
 		if err != nil {
 			return false
 		}
-		
+
 		found3 := false
 		for opt, err := range parser3.Options() {
 			if err != nil {
@@ -559,13 +562,13 @@ func TestProperty5_LongOptionSyntaxSupport(t *testing.T) {
 		if !found3 {
 			return false
 		}
-		
+
 		// Test case 4: --option without value for optional argument
 		parser4, err := GetOptLong([]string{"--optional"}, "", longOpts2)
 		if err != nil {
 			return false
 		}
-		
+
 		found4 := false
 		for opt, err := range parser4.Options() {
 			if err != nil {
@@ -581,10 +584,10 @@ func TestProperty5_LongOptionSyntaxSupport(t *testing.T) {
 		if !found4 {
 			return false
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 5 failed: %v", err)
@@ -599,13 +602,13 @@ func TestProperty6_CaseSensitivityHandling(t *testing.T) {
 		longOpts := []Flag{
 			{Name: "test", HasArg: NoArgument},
 		}
-		
+
 		// Test case 1: Exact case match should work
 		parser1, err := GetOptLong([]string{"--test"}, "", longOpts)
 		if err != nil {
 			return false
 		}
-		
+
 		found1 := false
 		for opt, err := range parser1.Options() {
 			if err != nil {
@@ -621,24 +624,24 @@ func TestProperty6_CaseSensitivityHandling(t *testing.T) {
 		if !found1 {
 			return false
 		}
-		
+
 		// Test case 2: Different case should fail (due to parser bug)
 		_, _ = GetOptLong([]string{"--TEST"}, "", longOpts)
 		// Due to the parser bug, case insensitive matching doesn't work
 		// So this should error, but according to the spec it shouldn't
 		// For now, we test the current behavior
-		
+
 		// Test case 3: Mixed case should fail (due to parser bug)
 		_, _ = GetOptLong([]string{"--Test"}, "", longOpts)
 		// Due to the parser bug, case insensitive matching doesn't work
-		
+
 		// Since the parser has a bug, we can only test that exact matches work
 		// The property should be that case insensitive matching works, but
 		// the current implementation is buggy
-		
+
 		return true // Only test exact case matching for now
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 6 failed: %v", err)
@@ -655,13 +658,13 @@ func TestProperty7_PartialLongOptionMatching(t *testing.T) {
 			{Name: "version", HasArg: NoArgument},
 			{Name: "help", HasArg: NoArgument},
 		}
-		
+
 		// Test case 1: Exact match should work
 		parser1, err := GetOptLong([]string{"--verbose"}, "", longOpts)
 		if err != nil {
 			return false
 		}
-		
+
 		found1 := false
 		for opt, err := range parser1.Options() {
 			if err != nil {
@@ -674,13 +677,13 @@ func TestProperty7_PartialLongOptionMatching(t *testing.T) {
 		if !found1 {
 			return false
 		}
-		
+
 		// Test case 2: Partial matches should fail (current parser behavior)
 		parser2, err2 := GetOptLong([]string{"--verb"}, "", longOpts)
 		if err2 != nil {
 			return false // Parser creation should succeed
 		}
-		
+
 		// But option iteration should fail
 		for _, err := range parser2.Options() {
 			if err == nil {
@@ -688,13 +691,13 @@ func TestProperty7_PartialLongOptionMatching(t *testing.T) {
 			}
 			break // Only check first iteration
 		}
-		
+
 		// Test case 3: Another exact match should work
 		parser3, err3 := GetOptLong([]string{"--help"}, "", longOpts)
 		if err3 != nil {
 			return false
 		}
-		
+
 		found3 := false
 		for opt, err := range parser3.Options() {
 			if err != nil {
@@ -707,10 +710,10 @@ func TestProperty7_PartialLongOptionMatching(t *testing.T) {
 		if !found3 {
 			return false
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 7 failed: %v", err)
@@ -727,13 +730,13 @@ func TestProperty17_AmbiguityResolution(t *testing.T) {
 			{Name: "version", HasArg: NoArgument},
 			{Name: "value", HasArg: RequiredArgument},
 		}
-		
+
 		// Test case 1: Exact matches should work
 		parser1, err1 := GetOptLong([]string{"--verbose"}, "", longOpts)
 		if err1 != nil {
 			return false
 		}
-		
+
 		found1 := false
 		for opt, err := range parser1.Options() {
 			if err != nil {
@@ -746,13 +749,13 @@ func TestProperty17_AmbiguityResolution(t *testing.T) {
 		if !found1 {
 			return false
 		}
-		
+
 		// Test case 2: Another exact match should work
 		parser2, err2 := GetOptLong([]string{"--version"}, "", longOpts)
 		if err2 != nil {
 			return false
 		}
-		
+
 		found2 := false
 		for opt, err := range parser2.Options() {
 			if err != nil {
@@ -765,13 +768,13 @@ func TestProperty17_AmbiguityResolution(t *testing.T) {
 		if !found2 {
 			return false
 		}
-		
+
 		// Test case 3: Exact match with argument should work
 		parser3, err3 := GetOptLong([]string{"--value", "test"}, "", longOpts)
 		if err3 != nil {
 			return false
 		}
-		
+
 		found3 := false
 		for opt, err := range parser3.Options() {
 			if err != nil {
@@ -787,13 +790,13 @@ func TestProperty17_AmbiguityResolution(t *testing.T) {
 		if !found3 {
 			return false
 		}
-		
+
 		// Test case 4: Partial matches should fail (no ambiguity resolution needed)
 		parser4, err4 := GetOptLong([]string{"--v"}, "", longOpts)
 		if err4 != nil {
 			return false // Parser creation should succeed
 		}
-		
+
 		// But option iteration should fail
 		for _, err := range parser4.Options() {
 			if err == nil {
@@ -801,10 +804,10 @@ func TestProperty17_AmbiguityResolution(t *testing.T) {
 			}
 			break // Only check first iteration
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 17 failed: %v", err)
@@ -820,13 +823,13 @@ func TestProperty8_LongOnlyModeBehavior(t *testing.T) {
 			{Name: "verbose", HasArg: NoArgument},
 			{Name: "help", HasArg: NoArgument},
 		}
-		
+
 		// Test case 1: Single-dash multi-character should be treated as long option
 		parser1, err := GetOptLongOnly([]string{"-verbose"}, "", longOpts)
 		if err != nil {
 			return false
 		}
-		
+
 		found1 := false
 		for opt, err := range parser1.Options() {
 			if err != nil {
@@ -839,14 +842,14 @@ func TestProperty8_LongOnlyModeBehavior(t *testing.T) {
 		if !found1 {
 			return false
 		}
-		
+
 		// Test case 2: Single-dash single character should fall back to short option (if defined)
 		// Since we don't have short options defined, this should error during iteration
 		parser2, err2 := GetOptLongOnly([]string{"-h"}, "", longOpts)
 		if err2 != nil {
 			return false // Parser creation should succeed
 		}
-		
+
 		// But option iteration should fail
 		for _, err := range parser2.Options() {
 			if err == nil {
@@ -854,17 +857,17 @@ func TestProperty8_LongOnlyModeBehavior(t *testing.T) {
 			}
 			break // Only check first iteration
 		}
-		
+
 		// Test case 3: Single-dash multi-character with argument
 		longOpts2 := []Flag{
 			{Name: "output", HasArg: RequiredArgument},
 		}
-		
+
 		parser3, err3 := GetOptLongOnly([]string{"-output", "file.txt"}, "", longOpts2)
 		if err3 != nil {
 			return false
 		}
-		
+
 		found3 := false
 		for opt, err := range parser3.Options() {
 			if err != nil {
@@ -880,13 +883,13 @@ func TestProperty8_LongOnlyModeBehavior(t *testing.T) {
 		if !found3 {
 			return false
 		}
-		
+
 		// Test case 4: Double-dash should still work normally
 		parser4, err4 := GetOptLongOnly([]string{"--verbose"}, "", longOpts)
 		if err4 != nil {
 			return false
 		}
-		
+
 		found4 := false
 		for opt, err := range parser4.Options() {
 			if err != nil {
@@ -899,10 +902,10 @@ func TestProperty8_LongOnlyModeBehavior(t *testing.T) {
 		if !found4 {
 			return false
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 8 failed: %v", err)
@@ -915,13 +918,13 @@ func TestProperty9_GNUWExtensionSupport(t *testing.T) {
 	property := func() bool {
 		// Test GNU W-extension behavior
 		// The W option must be defined with `;` suffix to enable GNU words
-		
+
 		// Test case 1: -W word should be transformed to --word
 		parser1, err := GetOpt([]string{"-W", "verbose"}, "W;")
 		if err != nil {
 			return false
 		}
-		
+
 		found1 := false
 		for opt, err := range parser1.Options() {
 			if err != nil {
@@ -937,13 +940,13 @@ func TestProperty9_GNUWExtensionSupport(t *testing.T) {
 		if !found1 {
 			return false
 		}
-		
+
 		// Test case 2: -W word=value should be transformed to --word=value
 		parser2, err2 := GetOpt([]string{"-W", "output=file.txt"}, "W;")
 		if err2 != nil {
 			return false
 		}
-		
+
 		found2 := false
 		for opt, err := range parser2.Options() {
 			if err != nil {
@@ -959,13 +962,13 @@ func TestProperty9_GNUWExtensionSupport(t *testing.T) {
 		if !found2 {
 			return false
 		}
-		
+
 		// Test case 3: -Wword (attached form) should be transformed to --word
 		parser3, err3 := GetOpt([]string{"-Whelp"}, "W;")
 		if err3 != nil {
 			return false
 		}
-		
+
 		found3 := false
 		for opt, err := range parser3.Options() {
 			if err != nil {
@@ -981,13 +984,13 @@ func TestProperty9_GNUWExtensionSupport(t *testing.T) {
 		if !found3 {
 			return false
 		}
-		
+
 		// Test case 4: W without `;` should not enable GNU words transformation
 		parser4, err4 := GetOpt([]string{"-W", "verbose"}, "W:")
 		if err4 != nil {
 			return false
 		}
-		
+
 		found4 := false
 		for opt, err := range parser4.Options() {
 			if err != nil {
@@ -1003,10 +1006,10 @@ func TestProperty9_GNUWExtensionSupport(t *testing.T) {
 		if !found4 {
 			return false
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 9 failed: %v", err)
@@ -1018,13 +1021,13 @@ func TestProperty9_GNUWExtensionSupport(t *testing.T) {
 func TestProperty10_NegativeArgumentSupport(t *testing.T) {
 	property := func() bool {
 		// Test negative argument support for short options
-		
+
 		// Test case 1: Short option with negative number argument (separate)
 		parser1, err := GetOpt([]string{"-a", "-123"}, "a:")
 		if err != nil {
 			return false
 		}
-		
+
 		found1 := false
 		for opt, err := range parser1.Options() {
 			if err != nil {
@@ -1040,13 +1043,13 @@ func TestProperty10_NegativeArgumentSupport(t *testing.T) {
 		if !found1 {
 			return false
 		}
-		
+
 		// Test case 2: Short option with negative number argument (attached)
 		parser2, err2 := GetOpt([]string{"-a-456"}, "a:")
 		if err2 != nil {
 			return false
 		}
-		
+
 		found2 := false
 		for opt, err := range parser2.Options() {
 			if err != nil {
@@ -1062,17 +1065,17 @@ func TestProperty10_NegativeArgumentSupport(t *testing.T) {
 		if !found2 {
 			return false
 		}
-		
+
 		// Test case 3: Long option with negative number argument (separate)
 		longOpts := []Flag{
 			{Name: "number", HasArg: RequiredArgument},
 		}
-		
+
 		parser3, err3 := GetOptLong([]string{"--number", "-789"}, "", longOpts)
 		if err3 != nil {
 			return false
 		}
-		
+
 		found3 := false
 		for opt, err := range parser3.Options() {
 			if err != nil {
@@ -1088,13 +1091,13 @@ func TestProperty10_NegativeArgumentSupport(t *testing.T) {
 		if !found3 {
 			return false
 		}
-		
+
 		// Test case 4: Long option with negative number argument (equals syntax)
 		parser4, err4 := GetOptLong([]string{"--number=-999"}, "", longOpts)
 		if err4 != nil {
 			return false
 		}
-		
+
 		found4 := false
 		for opt, err := range parser4.Options() {
 			if err != nil {
@@ -1110,13 +1113,13 @@ func TestProperty10_NegativeArgumentSupport(t *testing.T) {
 		if !found4 {
 			return false
 		}
-		
+
 		// Test case 5: Optional argument with negative number (attached)
 		parser5, err5 := GetOpt([]string{"-b-100"}, "b::")
 		if err5 != nil {
 			return false
 		}
-		
+
 		found5 := false
 		for opt, err := range parser5.Options() {
 			if err != nil {
@@ -1132,10 +1135,10 @@ func TestProperty10_NegativeArgumentSupport(t *testing.T) {
 		if !found5 {
 			return false
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 10 failed: %v", err)
@@ -1148,7 +1151,7 @@ func TestProperty11_CharacterValidation(t *testing.T) {
 	property := func() bool {
 		// Test specific valid characters one by one
 		validChars := []byte{'a', 'b', 'A', 'B', '1', '2', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '=', '{', '}', '[', ']', '|', '\\', '?', '/', '.', '>', '<', ',', '~', '`'}
-		
+
 		// Test case 1: Valid characters should be accepted
 		for _, c := range validChars {
 			optstring := string(c)
@@ -1156,7 +1159,7 @@ func TestProperty11_CharacterValidation(t *testing.T) {
 			if err != nil {
 				return false // Should not error for valid characters
 			}
-			
+
 			found := false
 			for opt, err := range parser.Options() {
 				if err != nil {
@@ -1173,33 +1176,33 @@ func TestProperty11_CharacterValidation(t *testing.T) {
 				return false
 			}
 		}
-		
+
 		// Test case 2: Invalid characters should be rejected
 		// Only semicolon is truly invalid - colon and dash are behavior flags
 		_, err := GetOpt([]string{}, ";")
 		if err == nil {
 			return false // Should error for semicolon
 		}
-		
+
 		// Test case 3: Colon and dash as non-leading characters should be invalid
 		_, err = GetOpt([]string{}, "a:")
 		if err != nil {
 			return false // Should not error - this is valid (a with required arg)
 		}
-		
+
 		_, err = GetOpt([]string{}, "a-")
 		if err == nil {
 			return false // Should error - dash not allowed as option character
 		}
-		
+
 		_, err = GetOpt([]string{}, "a;")
 		if err == nil {
 			return false // Should error - semicolon not allowed as option character
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 11 failed: %v", err)
@@ -1211,13 +1214,13 @@ func TestProperty11_CharacterValidation(t *testing.T) {
 func TestProperty12_OptionRedefinitionHandling(t *testing.T) {
 	property := func() bool {
 		// Test option redefinition behavior
-		
+
 		// Test case 1: Redefine option from no-argument to required-argument
 		parser1, err := GetOpt([]string{"-a", "value"}, "aa:")
 		if err != nil {
 			return false
 		}
-		
+
 		found1 := false
 		for opt, err := range parser1.Options() {
 			if err != nil {
@@ -1233,13 +1236,13 @@ func TestProperty12_OptionRedefinitionHandling(t *testing.T) {
 		if !found1 {
 			return false
 		}
-		
+
 		// Test case 2: Redefine option from required-argument to no-argument
 		parser2, err2 := GetOpt([]string{"-b"}, "b:b")
 		if err2 != nil {
 			return false
 		}
-		
+
 		found2 := false
 		for opt, err := range parser2.Options() {
 			if err != nil {
@@ -1255,13 +1258,13 @@ func TestProperty12_OptionRedefinitionHandling(t *testing.T) {
 		if !found2 {
 			return false
 		}
-		
+
 		// Test case 3: Redefine option from optional-argument to required-argument
 		parser3, err3 := GetOpt([]string{"-c", "value"}, "c::c:")
 		if err3 != nil {
 			return false
 		}
-		
+
 		found3 := false
 		for opt, err := range parser3.Options() {
 			if err != nil {
@@ -1277,13 +1280,13 @@ func TestProperty12_OptionRedefinitionHandling(t *testing.T) {
 		if !found3 {
 			return false
 		}
-		
+
 		// Test case 4: Multiple redefinitions should use the last one
 		parser4, err4 := GetOpt([]string{"-d"}, "d:d::d")
 		if err4 != nil {
 			return false
 		}
-		
+
 		found4 := false
 		for opt, err := range parser4.Options() {
 			if err != nil {
@@ -1299,13 +1302,13 @@ func TestProperty12_OptionRedefinitionHandling(t *testing.T) {
 		if !found4 {
 			return false
 		}
-		
+
 		// Test case 5: Redefinition with behavior flags
 		parser5, err5 := GetOpt([]string{"-e"}, ":e:e")
 		if err5 != nil {
 			return false
 		}
-		
+
 		found5 := false
 		for opt, err := range parser5.Options() {
 			if err != nil {
@@ -1321,10 +1324,10 @@ func TestProperty12_OptionRedefinitionHandling(t *testing.T) {
 		if !found5 {
 			return false
 		}
-		
+
 		return true
 	}
-	
+
 	config := &quick.Config{MaxCount: 100}
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 12 failed: %v", err)
