@@ -1,0 +1,694 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>optargs: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/major0/optargs/getopt.go (83.7%)</option>
+				
+				<option value="file1">github.com/major0/optargs/misc.go (100.0%)</option>
+				
+				<option value="file2">github.com/major0/optargs/parser.go (85.5%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Package optargs provides a collection of CLI parsing utilities in order
+// to aid in the development of command line applications.
+//
+// # POSIX/GNU GetOpt
+//
+// At the heart of the optargs package is a [Go] implementation of the
+// GNU glibc versions the [getopt(3)], [getopt_long(3)], and
+// [getopt_long_only(3)] functions.
+//
+// Leveraging GNU/POSIX conventions as the backend parser option means that
+// the parser has a very large degree of flexibility without restricting
+// application design choices.
+//
+// For example, POSIX/GNU allows for the following:
+//   - short-only options.
+//   - long-only options.
+//   - long and short options that do not require a value. I.e. it should
+//     be possoble to pass `--foo` and specify that it never takes a
+//     value, and any attempt to pass it a value should be ignored or
+//     or result in an error.
+//   - short-options of any character that is a valid `isgraph()`
+//     character; with the exception of `-`, `:` and `;`. This means that
+//     the following options are valid: -=, -+, -{, -}, -^, -!, -@, etc.
+//   - short-option compaction: `-abc` is the equivilant of `-a -b -c`
+//   - short-option compaction with optional args: `-abarg` is the
+//     equivilant of `-a -b arg`
+//   - arguments to short options that begin with `-`: `-a -1` should pass
+//     `-1` as an argument to `-a`
+//   - long-arguments that include any `isgraph()` character in the name,
+//     this includes allowing `=` in the name of the argument. For
+//     example, `--foo=bar=boo` should map `foo=bar` as the Flag, and
+//     `boo` as the value to the flag. This potentially also allows for
+//     curious long-arg syntax sych as: `--command:arg=value`.
+//   - many-to-one flag mappings. For example, the GNU `ls` command supports
+//     `--format=&lt;format&gt;` where each possible `&lt;format&gt;` options is also
+//     supported by a unique short-option. For example:
+//     `--format=across` = `-x`, `--format=commas` = `-m`,
+//     `--format=horizontal` = `-x`, `--format=long` = `-l`, etc.
+//   - The GNU `-W` flag which allows short-options to behave like an
+//     undefined long-option. E.g. `-W foo` should be interpretted as if
+//     `--foo` was passed to the application.
+//   - long-options that may look similar, but behave differently, from
+//     short options. E.g. `-c` and `--c` are allowed to behave
+//     differently.
+//
+// It is always possible to implement a Flag handler which imposes
+// opinionated rules atop a non-opinionated parser, but it is not possible
+// to write a less opinionated Flag handler atop an opinionated parser.
+// To that end, the [optarg] parsers do not make any judgements outside of
+// strictly adhearing to the POSIX/GNU conventions. Applications are free
+// to implement their own argument handler to best-fit their application's
+// needs.
+//
+// # Flags()
+//
+// Optargs supports traditional [Go] style flags which act as convenience
+// methods around [GetOpt], [GetOptLong], and [GetOptLongOnly] with the
+// aim of fully supporting drop-in replacements commonly used CLI tooling,
+// such as:
+//   - [alexflint/go-args]
+//   - [spf13/pflag]
+//   - [spf13/cobra]
+//
+// While these packages are quite useful, they have some fundemental
+// limitations and quirks that come from their design choices which aim to
+// be overcome by [optargs] and in the case of [spf13/pflag], those quirks
+// ultimately percolate up to the user, such as [spf13/pflag]'s boolean
+// flags. Or putting arbitrary restrictions on applications, such as
+// suporting long-only options, but not allowing short-only options. Or
+// not supporting true non-option flags. I.e. many (all?) of the existing
+// [Go] flag packages only allow an argument to a flag to be optional or
+// required and are not capable of handling flags that never require an
+// argument.
+//
+// [alexflint/go-args]: https://github.com/alexflint/go-args
+// [getopt(3)]: https://pubs.opengroup.org/onlinepubs/9699919799/functions/getopt.html
+// [getopt_long(3)]: https://pubs.opengroup.org/onlinepubs/9699919799/functions/getopt_long.html
+// [getopt_long_only(3)]: https://pubs.opengroup.org/onlinepubs/9699919799/functions/getopt_long_only.html
+// [Go]: https://golang.org/
+// [spf13/cobra]: https://github.com/spf13/cobra
+// [spf13/pflag]: https://github.com/spf13/pflag
+package optargs
+
+import (
+        "errors"
+        "log/slog"
+)
+
+type ArgType int
+
+const (
+        NoArgument ArgType = iota
+        RequiredArgument
+        OptionalArgument
+)
+
+type Flag struct {
+        Name   string
+        HasArg ArgType
+}
+
+type Option struct {
+        Name   string
+        HasArg bool
+        Arg    string
+}
+
+func GetOpt(args []string, optstring string) (*Parser, error) <span class="cov8" title="169">{
+        return getOpt(args, optstring, nil, false)
+}</span>
+
+func GetOptLong(args []string, optstring string, longopts []Flag) (*Parser, error) <span class="cov1" title="1">{
+        parser, err := getOpt(args, optstring, longopts, false)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov1" title="1">return parser, nil</span>
+}
+
+func GetOptLongOnly(args []string, optstring string, longopts []Flag) (*Parser, error) <span class="cov0" title="0">{
+        parser, err := getOpt(args, optstring, longopts, true)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return parser, nil</span>
+}
+
+// Handle parsing the traditional GetOpt/GetOptLong inputs into the parser
+// rules and return a new Parser.
+func getOpt(args []string, optstring string, longopts []Flag, longOnly bool) (*Parser, error) <span class="cov8" title="170">{
+        config := ParserConfig{
+                shortCaseIgnore: false,
+                longCaseIgnore:  true,
+                longOptsOnly:    longOnly,
+                enableErrors:    true,
+                gnuWords:        false,
+                parseMode:       ParseDefault,
+        }
+
+        // Itterate over the longOpts list populating the map
+        longOpts := make(map[string]*Flag)
+        for _, opt := range longopts </span><span class="cov0" title="0">{
+                longOpts[opt.Name] = &amp;opt
+        }</span>
+
+        // we need to inspect the start of the optstring for _behavior_
+        // flags. These flags must appear before any option characters.
+        // Flags:
+        // - `:` Supress automatic error generation, allow the app to
+        //       handle it.
+        // - `+` Behave as if POSIXLY_CORRECT has been set
+        // - `-` Treat all non-option arguments as an argument to a
+        //       a short-option with the opt name equal to the binary
+        //         value of `1`, i.e. `true`.
+        //       See `getopt_long(3)` for more information.
+        <span class="cov8" title="170">shortOpts := make(map[byte]*Flag)
+opt_prefix:
+        for len(optstring) &gt; 0 </span><span class="cov9" title="235">{
+                slog.Debug("GetOpt", "mode", true, "optstring", optstring)
+                switch optstring[0] </span>{
+                case ':':<span class="cov4" title="13">
+                        config.enableErrors = false</span>
+                case '+':<span class="cov6" title="27">
+                        config.parseMode = ParsePosixlyCorrect</span>
+                case '-':<span class="cov6" title="27">
+                        config.parseMode = ParseNonOpts</span>
+                default:<span class="cov8" title="168">
+                        break opt_prefix</span>
+                }
+                <span class="cov7" title="67">optstring = optstring[1:]</span>
+        }
+
+        // Itterate over optstring parsing it according to the libc
+        // getopt() spec. Note, the spec fully allows definitions to
+        // overwrite previous definitions. The code will not treat this as
+        // an error as this allows for the most flexibility.
+        <span class="cov8" title="170">for len(optstring) &gt; 0 </span><span class="cov10" title="340">{
+                slog.Debug("GetOpt", "optstring", optstring, "len", len(optstring))
+
+                if config.longOptsOnly </span><span class="cov0" title="0">{
+                        return nil, errors.New("non-empty option string found when long-only parsing was enabled")
+                }</span>
+
+                <span class="cov10" title="340">c := optstring[0]
+                optstring = optstring[1:]
+                if !isGraph(c) </span><span class="cov0" title="0">{
+                        return nil, errors.New("Invalid option character: " + string(c))
+                }</span>
+
+                <span class="cov10" title="340">slog.Debug("GetOpt", "c", string(c), "optstring", optstring, "len", len(optstring))
+                switch c </span>{
+                case ':', '-', ';':<span class="cov3" title="4"> // Dissallowed by the spec
+                        return nil, errors.New("Invalid option character: " + string(c))</span>
+                }
+
+                // look ahead to see if c is followed by ":" or "::"
+                <span class="cov9" title="336">var hasArg ArgType
+                switch </span>{
+                case len(optstring) &gt; 1 &amp;&amp; optstring[0] == ':' &amp;&amp; optstring[1] == ':':<span class="cov6" title="48">
+                        slog.Debug("GetOpt", "c", string(c), "hasArg", "optional")
+                        hasArg = OptionalArgument
+                        optstring = optstring[2:]</span>
+                case len(optstring) &gt; 0 &amp;&amp; optstring[0] == ':':<span class="cov6" title="47">
+                        slog.Debug("GetOpt", "c", string(c), "hasArg", "required")
+                        hasArg = RequiredArgument
+                        optstring = optstring[1:]</span>
+                case c == 'W' &amp;&amp; len(optstring) &gt; 0 &amp;&amp; optstring[0] == ';':<span class="cov4" title="9">
+                        slog.Debug("GetOpt", "c", c, "gnuWords", true)
+                        config.gnuWords = true
+                        hasArg = RequiredArgument
+                        optstring = optstring[1:]</span>
+                default:<span class="cov9" title="232">
+                        slog.Debug("GetOpt", "c", string(c), "hasArg", "none")
+                        hasArg = NoArgument</span>
+                }
+
+                <span class="cov9" title="336">shortOpts[c] = &amp;Flag{
+                        Name:   string(c),
+                        HasArg: hasArg,
+                }</span>
+        }
+
+        <span class="cov8" title="166">return NewParser(config, shortOpts, longOpts, args)</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package optargs
+
+import (
+        "strings"
+        "unicode"
+)
+
+// Go's isGraph() behaves differently than the C version.
+func isGraph(c byte) bool <span class="cov10" title="1568">{
+        r := rune(c)
+        return !unicode.IsSpace(r) &amp;&amp; unicode.IsPrint(r)
+}</span>
+
+// deal with the lack of case insenstivity in Go's string package
+func hasPrefix(s, prefix string, ignoreCase bool) bool <span class="cov4" title="12">{
+        if ignoreCase </span><span class="cov3" title="6">{
+                // Note: `strings.ToLower()` is expensive
+                s = strings.ToLower(s)
+                prefix = strings.ToLower(prefix)
+        }</span>
+
+        <span class="cov4" title="12">return strings.HasPrefix(s, prefix)</span>
+}
+
+func trimPrefix(s, prefix string, ignoreCase bool) string <span class="cov4" title="16">{
+        if ignoreCase </span><span class="cov3" title="8">{
+                // Note: `strings.ToLower()` is expensive
+                lower := strings.ToLower(s)
+                prefix = strings.ToLower(prefix)
+                if strings.HasPrefix(lower, prefix) </span><span class="cov3" title="7">{
+                        return s[len(prefix):]
+                }</span>
+                <span class="cov1" title="1">return s</span>
+        }
+
+        <span class="cov3" title="8">return strings.TrimPrefix(s, prefix)</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package optargs
+
+import (
+        "errors"
+        "fmt"
+        "iter"
+        "log/slog"
+        "regexp"
+        "strings"
+)
+
+type ParseMode int
+
+const (
+        ParseDefault ParseMode = iota
+        ParseNonOpts
+        ParsePosixlyCorrect
+)
+
+type ParserConfig struct {
+        enableErrors bool
+        parseMode    ParseMode
+
+        shortCaseIgnore bool
+        gnuWords        bool
+
+        longCaseIgnore bool
+        longOptsOnly   bool
+}
+
+type Parser struct {
+        Args       []string
+        nonOpts    []string
+        shortOpts  map[byte]*Flag
+        longOpts   map[string]*Flag
+        config     ParserConfig
+        lockConfig bool
+}
+
+func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string) (*Parser, error) <span class="cov9" title="180">{
+        parser := Parser{
+                Args:       args,
+                config:     config,
+                longOpts:   longOpts,
+                lockConfig: false,
+        }
+
+        for c, _ := range shortOpts </span><span class="cov10" title="336">{
+                if !isGraph(c) </span><span class="cov1" title="1">{
+                        return nil, parser.optErrorf("Invalid short option: %c", c)
+                }</span>
+                <span class="cov9" title="335">switch c </span>{
+                case ':', ';', '-':<span class="cov1" title="1">
+                        return nil, parser.optErrorf("Prohibited short option: %c", c)</span>
+                }
+        }
+        <span class="cov9" title="178">parser.shortOpts = shortOpts
+
+        // Regex pattern to find any character that is _not_ a graph or
+        // _is_ a space. Using regexp here is slightly faster than 
+        // terating the string char by char calling `isGraph()` on it, but
+        // ultimately has the same effect.
+        notGraph := regexp.MustCompile(`[^[:graph:]]`)
+        isSpace := regexp.MustCompile(`[[:space:]]`)
+        for s, _ := range longOpts </span><span class="cov4" title="11">{
+                if notGraph.MatchString(s) || isSpace.MatchString(s) </span><span class="cov1" title="1">{
+                        return nil, fmt.Errorf("Invalid long option: %s", s)
+                }</span>
+        }
+        <span class="cov9" title="177">parser.longOpts = longOpts
+
+        return &amp;parser, nil</span>
+}
+
+func (p *Parser) optError(msg string) error <span class="cov3" title="4">{
+        if p.config.enableErrors </span><span class="cov0" title="0">{
+                slog.Error(msg)
+        }</span>
+        <span class="cov3" title="4">return errors.New(msg)</span>
+}
+
+func (p *Parser) optErrorf(msg string, args ...interface{}) error <span class="cov2" title="2">{
+        return p.optError(fmt.Sprintf(msg, args...))
+}</span>
+
+func (p *Parser) findLongOpt(name string, args []string) ([]string, Option, error) <span class="cov4" title="9">{
+        var best Option
+        for opt := range p.longOpts </span><span class="cov5" title="14">{
+                // Filter through the options "ruling out" anything that
+                // is not a candidate.
+                //
+                // It is important to consider that the `=` sign is
+                // allowed in the option name, and as such it is possible
+                // to have _both_ of the following in the option list.
+                //
+                // - name: `foo=`, hasArg: NoArgument
+                // - name: `foo`, hasArg: RequiredArgument
+                // 
+                // Should the user pass in `--foo=` then we need to make
+                // a decision as to which handler to use.
+                //
+                // `--foo=bar` is easy as we can exclude the `NoArgument`
+                // option.
+                if len(opt) &gt; len(name) </span><span class="cov1" title="1">{
+                        // There is simply no way this can be a valid match.
+                        continue</span>
+                } else<span class="cov4" title="13"> if len(opt) == len(name) </span><span class="cov4" title="8">{
+                        if p.config.longCaseIgnore &amp;&amp; !strings.EqualFold(opt, name) </span><span class="cov0" title="0">{
+                                continue</span>
+                        } else<span class="cov4" title="8"> {
+                                if opt != name </span><span class="cov2" title="2">{
+                                        continue</span>
+                                }
+                        }
+                } else<span class="cov3" title="5"> {
+                        if name[len(opt)] != '=' </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+
+                        <span class="cov3" title="5">if p.config.longCaseIgnore &amp;&amp; !hasPrefix(name, opt, p.config.longCaseIgnore) </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+                }
+
+                // From here we have a possible candidate, but we do not
+                // yet know how to handle any potential `=` in the name
+                // until we look at how to handle the candidate based on
+                // the HasArg field.
+                <span class="cov4" title="11">option := Option{
+                        HasArg: false,
+                }
+                if p.longOpts[opt].HasArg != NoArgument </span><span class="cov4" title="8">{
+                        option.Name = opt
+                        if len(name) == len(opt) </span><span class="cov2" title="3">{
+                                if len(args) != 0 </span><span class="cov2" title="2">{
+                                        option.Arg = args[0]
+                                        args = args[1:]
+                                        option.HasArg = true
+                                }</span> else<span class="cov1" title="1"> if p.longOpts[opt].HasArg == RequiredArgument </span><span class="cov0" title="0">{
+                                        return args, option, p.optError("option requires an argument: " + name)
+                                }</span>
+                        } else<span class="cov3" title="5"> {
+                                option.Arg = name[len(opt):]
+                                option.HasArg = true
+                        }</span>
+                } else<span class="cov2" title="3"> if len(name) == len(opt) </span><span class="cov2" title="3">{
+                        // No argument allowed, but the names have already
+                        // been filtered, simply need to validate their
+                        // length matches.
+                        option.Name = opt
+                }</span>
+
+                // We need to continue processing candidates as the "last"
+                // defined canidate that is the "best" match must always
+                // be used.
+                <span class="cov4" title="11">if len(option.Name) &gt;= len(best.Name) </span><span class="cov4" title="11">{
+                        best = option
+                }</span>
+        }
+
+        <span class="cov4" title="9">if best.Name != "" </span><span class="cov4" title="8">{
+                return args, best, nil
+        }</span>
+        <span class="cov1" title="1">return args, Option{}, p.optError("unknown option: " + name)</span>
+}
+
+func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, string, Option, error) <span class="cov4" title="11">{
+        slog.Debug("findShortOpt", "c", string(c), "word", word, "args", args)
+
+        // POSIX disallows `-` as a short-opt option.
+        if c == '-' </span><span class="cov0" title="0">{
+                return args, word, Option{}, p.optError("invalid option: " + string(c))
+        }</span>
+
+        // We have to itterate the shortOpts in order to support case
+        // insensitive options.
+        <span class="cov4" title="11">for opt := range p.shortOpts </span><span class="cov4" title="13">{
+                if p.config.shortCaseIgnore </span><span class="cov0" title="0">{
+                        if !strings.EqualFold(string(c), string(opt)) </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+                } else<span class="cov4" title="13"> if c != opt </span><span class="cov2" title="2">{
+                        continue</span>
+                }
+
+                <span class="cov4" title="11">option := Option{
+                        Name:   string(opt),
+                        HasArg: false,
+                        Arg:    "",
+                }
+
+                switch p.shortOpts[opt].HasArg </span>{
+                case NoArgument:<span class="cov2" title="3">
+                        slog.Debug("findShortOpt", "hasArg", "none", "c", string(c), "opt", string(opt))</span>
+
+                case RequiredArgument:<span class="cov3" title="4">
+                        slog.Debug("findShortOpt", "hasArg", "required", "c", string(c), "opt", string(opt))
+                        var arg string
+                        if len(word) &gt; 0 </span><span class="cov1" title="1">{
+                                arg = word
+                                word = ""
+                        }</span> else<span class="cov2" title="3"> {
+                                if len(args) == 0 </span><span class="cov1" title="1">{
+                                        return args, word, option, p.optError("option requires an argument: " + string(c))
+                                }</span>
+                                <span class="cov2" title="2">arg = args[0]
+                                args = args[1:]</span>
+                        }
+
+                        <span class="cov2" title="3">option.Arg = arg
+                        option.HasArg = true</span>
+
+                case OptionalArgument:<span class="cov3" title="4">
+                        slog.Debug("findShortOpt", "hasArg", "optional", "c", string(c), "opt", string(opt))
+                        var arg string
+                        if len(word) &gt; 0 </span><span class="cov1" title="1">{
+                                arg = word
+                                word = ""
+                                option.HasArg = true
+                        }</span> else<span class="cov2" title="3"> if len(args) &gt; 0 </span><span class="cov2" title="2">{
+                                arg = args[0]
+                                args = args[1:]
+                                option.HasArg = true
+                        }</span>
+
+                        <span class="cov3" title="4">option.Arg = arg</span>
+
+                default:<span class="cov0" title="0">
+                        return args, word, option, p.optErrorf("unknown argument type: %d", p.shortOpts[c].HasArg)</span>
+                }
+
+                <span class="cov4" title="10">slog.Debug("findShortOpt", "args", args, "word", word, "option", option, "err", "yield")
+                return args, word, option, nil</span>
+        }
+
+        <span class="cov0" title="0">return args, word, Option{}, p.optError("unknown option: " + string(c))</span>
+}
+
+func (p *Parser) Options() iter.Seq2[Option, error] <span class="cov5" title="17">{
+        slog.Debug("Iterator")
+        return func(yield func(Option, error) bool) </span><span class="cov5" title="17">{
+                var err error
+
+                slog.Debug("Options", "args", p.Args)
+                out:
+                for len(p.Args) &gt; 0 </span><span class="cov5" title="24">{
+                        slog.Debug("Options", "arg[0]", p.Args[0])
+                        option := Option{}
+                        switch </span>{
+                        case p.Args[0] == "--":<span class="cov1" title="1"> // Stop parsing options
+                                slog.Debug("Options", "break", true)
+                                p.Args = append(p.nonOpts, p.Args[1:]...)
+                                break out</span>
+
+                        case strings.HasPrefix(p.Args[0], "--"):<span class="cov4" title="9">
+                                slog.Debug("Options", "prefix", "--")
+                                p.Args, option, err = p.findLongOpt(p.Args[0][2:], p.Args[1:])
+                                if !yield(option, err) </span><span class="cov0" title="0">{
+                                        break</span>
+                                }
+
+                        case strings.HasPrefix(p.Args[0], "-"):<span class="cov4" title="11">
+                                slog.Debug("Options", "prefix", "-")
+                                if p.config.longOptsOnly </span><span class="cov0" title="0">{
+                                        p.Args, option, err = p.findLongOpt(p.Args[0][1:], p.Args[1:])
+                                        if !yield(option, err) </span><span class="cov0" title="0">{
+                                                break</span>
+                                        }
+                                        <span class="cov0" title="0">continue</span>
+                                }
+
+                                // iterate over each character in the word looking
+                                // for short options
+                                <span class="cov4" title="11">for word := p.Args[0][1:]; len(word) &gt; 0; </span><span class="cov4" title="11">{
+                                        slog.Debug("Options", "word", word)
+                                        p.Args, word, option, err = p.findShortOpt(word[0], word[1:], p.Args[1:])
+
+                                        // Transform usages such as `-W foo` into `--foo`
+                                        if option.Name == "W" &amp;&amp; p.config.gnuWords </span><span class="cov0" title="0">{
+                                                option.Name = option.Arg
+                                        }</span>
+
+                                        <span class="cov4" title="11">if !yield(option, err) </span><span class="cov0" title="0">{
+                                                goto out</span>
+                                        }
+                                }
+
+                        default:<span class="cov2" title="3">
+                                switch p.config.parseMode </span>{
+                                case ParseDefault:<span class="cov1" title="1">
+                                        p.nonOpts = append(p.nonOpts, p.Args[0])</span>
+
+                                case ParseNonOpts:<span class="cov1" title="1">
+                                        option := Option{
+                                                Name: string(byte(1)),
+                                                Arg:  p.Args[0],
+                                        }
+                                        if !yield(option, nil) </span><span class="cov0" title="0">{
+                                                break</span>
+                                        }
+
+                                case ParsePosixlyCorrect:<span class="cov1" title="1">
+                                        break out</span>
+                                }
+                                <span class="cov2" title="2">p.Args = p.Args[1:]</span>
+                        }
+                }
+
+                <span class="cov5" title="17">p.Args = append(p.nonOpts, p.Args...)</span>
+        }
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
