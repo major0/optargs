@@ -8,189 +8,106 @@
 
 | File | Function | Coverage |
 |------|----------|----------|
-| getopt.go | GetOpt | 100.0% |
-| getopt.go | GetOptLong | 75.0% |
-| getopt.go | GetOptLongOnly | 0.0% |
-| getopt.go | getOpt | 92.5% |
-| misc.go | isGraph | 100.0% |
-| misc.go | hasPrefix | 100.0% |
-| misc.go | trimPrefix | 100.0% |
-| parser.go | NewParser | 100.0% |
-| parser.go | optError | 66.7% |
-| parser.go | optErrorf | 100.0% |
-| parser.go | findLongOpt | 87.5% |
-| parser.go | findShortOpt | 86.8% |
-| parser.go | Options | 77.8% |
+| getopt.go:108: | GetOpt | 100.0% |
+| getopt.go:112: | GetOptLong | 75.0% |
+| getopt.go:121: | GetOptLongOnly | 0.0% |
+| getopt.go:132: | getOpt | 92.5% |
+| misc.go:9: | isGraph | 100.0% |
+| misc.go:15: | hasPrefix | 100.0% |
+| misc.go:25: | trimPrefix | 100.0% |
+| parser.go:40: | NewParser | 100.0% |
+| parser.go:75: | optError | 66.7% |
+| parser.go:82: | optErrorf | 100.0% |
+| parser.go:86: | findLongOpt | 87.5% |
+| parser.go:167: | findShortOpt | 86.8% |
+| parser.go:239: | Options | 77.8% |
 
 ## Detailed Coverage Gaps Analysis
 
-### 1. Critical Uncovered Functions
+### Critical Functions Requiring 100% Coverage
 
-#### GetOptLongOnly (0.0% coverage)
-- **Location**: getopt.go:121-127
-- **Issue**: Completely untested function
-- **Impact**: High - This is a core API function
-- **Missing scenarios**: All long-only parsing functionality
+The following core parsing functions must achieve 100% line and branch coverage:
 
-### 2. Partially Covered Functions
+#### Public API Functions
+- **GetOpt**: POSIX getopt(3) implementation
+- **GetOptLong**: GNU getopt_long(3) implementation  
+- **GetOptLongOnly**: GNU getopt_long_only(3) implementation
 
-#### GetOptLong (75.0% coverage)
-- **Location**: getopt.go:112-118
-- **Uncovered lines**: Error handling path (lines 114-116)
-- **Missing scenarios**: Error conditions in getOpt call
+#### Core Parsing Functions
+- **getOpt**: Internal parsing orchestration
+- **findLongOpt**: Long option matching and resolution
+- **findShortOpt**: Short option processing and compaction
+- **Options**: Iterator-based option processing
 
-#### getOpt (92.5% coverage)
-- **Location**: getopt.go:132-225
-- **Uncovered lines**: 
-  - Line 144-146: Long options map population when longopts is nil
-  - Line 182-184: longOptsOnly validation error path
-- **Missing scenarios**: 
-  - Empty longopts slice handling
-  - Long-only mode with non-empty optstring validation
+#### Error Handling Functions
+- **optError**: Error reporting with logging
+- **optErrorf**: Formatted error reporting
 
-#### optError (66.7% coverage)
-- **Location**: parser.go:75-79
-- **Uncovered lines**: 76-78 (error logging when enableErrors is true)
-- **Missing scenarios**: Error reporting with logging enabled
+### Coverage Gap Categories
 
-#### findLongOpt (87.5% coverage)
-- **Location**: parser.go:86-164
-- **Uncovered lines**:
-  - Line 104-106: Case-insensitive option name filtering
-  - Line 108-109: Case-insensitive prefix matching
-  - Line 116-117: Case-insensitive equal fold comparison
-  - Line 120-121: Case-insensitive prefix validation
-  - Line 139-141: Optional argument handling edge case
-- **Missing scenarios**:
-  - Case-insensitive long option matching
-  - Complex option name patterns with equals signs
-  - Optional argument edge cases
+#### 1. Untested Functions (0% Coverage)
+Functions with no test coverage require immediate attention.
 
-#### findShortOpt (86.8% coverage)
-- **Location**: parser.go:167-236
-- **Uncovered lines**:
-  - Line 171-173: Invalid option character handling
-  - Line 178-180: Case-insensitive short option matching
-  - Line 228-229: Unknown argument type error
-  - Line 236: Unknown option error return
-- **Missing scenarios**:
-  - Case-insensitive short options
-  - Invalid argument type handling
-  - Unknown short option error paths
+#### 2. Partially Covered Functions (<100% Coverage)
+Functions with missing code paths, typically error handling or edge cases.
 
-#### Options (77.8% coverage)
-- **Location**: parser.go:239-309
-- **Uncovered lines**:
-  - Line 258-259: Long-only mode error handling
-  - Line 264-269: Long-only mode option processing
-  - Line 279-281: Option yielding break condition
-  - Line 283-284: GNU words transformation
-  - Line 298-299: ParsePosixlyCorrect break condition
-- **Missing scenarios**:
-  - Long-only mode parsing
-  - GNU W-extension transformation
-  - POSIXLY_CORRECT environment variable behavior
-  - Iterator break conditions
+#### 3. Advanced Features
+Complex functionality like case-insensitive matching, GNU extensions, and parse modes.
 
-## Uncovered Code Paths by Category
+### Testing Recommendations
 
-### 1. Error Handling Paths (High Priority)
-- GetOptLong error propagation
-- Long-only mode validation errors
-- Invalid argument type errors
-- Case-insensitive option matching errors
-- Unknown option error returns
+#### Immediate Priority (Critical)
+1. Add comprehensive tests for any 0% coverage functions
+2. Cover all error handling paths in partially tested functions
+3. Test all parsing modes and configuration options
 
-### 2. Advanced Features (Medium Priority)
-- GetOptLongOnly complete functionality
-- Case-insensitive option matching (both short and long)
-- GNU W-extension transformation
-- Complex long option name patterns with equals signs
+#### High Priority (Important)
+1. Add property-based tests for parsing correctness
+2. Test complex option combinations and edge cases
+3. Validate POSIX compliance with reference implementations
 
-### 3. Parse Mode Behaviors (Medium Priority)
-- ParsePosixlyCorrect mode termination
-- Long-only mode option processing
-- Iterator break conditions and early termination
+#### Medium Priority (Enhancement)
+1. Add performance benchmarks and memory validation
+2. Test cross-platform behavior consistency
+3. Add fuzz testing for robustness validation
 
-### 4. Edge Cases (Low Priority)
-- Empty longopts slice handling
-- Optional argument edge cases
-- Complex option compaction scenarios
+## Coverage Tracking Setup
 
-## Missing Test Scenarios
+### Automated Coverage Commands
 
-### 1. Integration Tests
-- End-to-end parsing workflows
-- Complex option combinations
-- Real-world usage patterns
-- Cross-platform behavior validation
+```bash
+# Generate coverage profile
+make coverage
 
-### 2. Error Condition Tests
-- Malformed input handling
-- Invalid option specifications
-- Memory allocation failures
-- Boundary condition testing
+# View HTML coverage report
+make coverage-html
 
-### 3. Performance Tests
-- Large argument list processing
-- Memory usage patterns
-- Iterator efficiency validation
-- Benchmark comparisons
+# Validate coverage targets
+make coverage-validate
 
-### 4. POSIX Compliance Tests
-- Full POSIX getopt(3) specification validation
-- GNU extension compatibility
-- Cross-reference with reference implementations
-- Edge case behavior matching
-
-## Recommendations for 100% Coverage
-
-### Immediate Actions (High Priority)
-1. **Add GetOptLongOnly tests** - Complete function coverage
-2. **Add error path tests** - Cover all error handling scenarios
-3. **Add case-insensitive option tests** - Both short and long options
-4. **Add long-only mode tests** - Complete parsing mode coverage
-
-### Secondary Actions (Medium Priority)
-1. **Add GNU W-extension tests** - Word-based option transformation
-2. **Add complex long option tests** - Options with equals signs in names
-3. **Add POSIXLY_CORRECT tests** - Environment variable behavior
-4. **Add iterator break condition tests** - Early termination scenarios
-
-### Validation Actions (Low Priority)
-1. **Add edge case tests** - Boundary conditions and unusual inputs
-2. **Add integration tests** - End-to-end workflows
-3. **Add performance tests** - Memory and speed validation
-4. **Add cross-platform tests** - Behavior consistency validation
-
-## Test Coverage Tracking Setup
+# Generate comprehensive analysis
+make coverage-report
+```
 
 ### Coverage Targets
+
 - **Core parsing functions**: 100% line and branch coverage
 - **Public API functions**: 100% coverage
 - **Error handling paths**: 100% coverage
-- **All parsing modes**: 100% coverage
+- **Overall project**: 95% minimum coverage
 
-### Coverage Validation
-- Automated coverage reporting in CI pipeline
+### CI Integration
+
+Coverage validation is integrated into the CI pipeline:
+- Automated coverage generation on every commit
 - Coverage regression detection
-- Minimum coverage thresholds enforcement
-- Regular coverage gap analysis
+- Minimum coverage threshold enforcement
+- Detailed gap reporting for failed builds
 
-## Files Requiring Additional Tests
+## Next Steps
 
-1. **getopt_long_test.go** - Expand with comprehensive long option tests
-2. **New file needed**: getopt_long_only_test.go - Complete GetOptLongOnly coverage
-3. **parser_test.go** - Add missing error path and edge case tests
-4. **New file needed**: integration_test.go - End-to-end workflow tests
-5. **New file needed**: posix_compliance_test.go - POSIX specification validation
+1. **Review detailed gaps**: Check `coverage_gaps_detailed.md` for specific missing scenarios
+2. **Add missing tests**: Focus on 0% coverage functions first
+3. **Validate coverage**: Run `make coverage-validate` after adding tests
+4. **Monitor progress**: Use `make coverage-func` for quick coverage checks
 
-## Property-Based Testing Opportunities
-
-Based on the coverage gaps, the following areas would benefit from property-based testing:
-1. Option compaction and expansion logic
-2. Case-insensitive option matching
-3. Long option name parsing with complex patterns
-4. Argument assignment in compacted options
-5. Parse mode behavior consistency
-6. Error handling consistency across all input types
