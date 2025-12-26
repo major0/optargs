@@ -187,21 +187,23 @@ func BenchmarkLargeArgumentLists(b *testing.B) {
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("Size%d", size), func(b *testing.B) {
 			// Generate large argument list
-			args := make([]string, size+1)
-			args[0] = "prog"
+			args := make([]string, 0, size+1)
+			args = append(args, "prog")
 			for i := 1; i <= size; i++ {
-				if i%3 == 0 {
-					args[i] = "-a"
-				} else if i%3 == 1 {
-					args[i] = "-b"
+				if i%4 == 0 {
+					args = append(args, "-a")
+				} else if i%4 == 1 {
+					args = append(args, "-b", "arg"+strconv.Itoa(i))
+				} else if i%4 == 2 {
+					args = append(args, "-c")
 				} else {
-					args[i] = "arg" + strconv.Itoa(i)
+					args = append(args, "arg"+strconv.Itoa(i))
 				}
 			}
 			
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				parser, err := GetOpt(args, "ab:")
+				parser, err := GetOpt(args, "ab:c")
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -219,7 +221,8 @@ func BenchmarkLargeArgumentLists(b *testing.B) {
 
 // BenchmarkMemoryAllocation benchmarks memory allocation patterns
 func BenchmarkMemoryAllocation(b *testing.B) {
-	args := []string{"prog", "-a", "arg1", "-b", "arg2", "-c", "arg3", "--long", "longarg"}
+	shortArgs := []string{"prog", "-a", "arg1", "-b", "arg2", "-c", "arg3"}
+	longArgs := []string{"prog", "-a", "arg1", "-b", "arg2", "-c", "arg3", "--long", "longarg"}
 	longOpts := []Flag{
 		{Name: "long", HasArg: RequiredArgument},
 		{Name: "verbose", HasArg: NoArgument},
@@ -229,7 +232,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			parser, err := GetOpt(args, "a:b:c:")
+			parser, err := GetOpt(shortArgs, "a:b:c:")
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -246,7 +249,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			parser, err := GetOptLong(args, "a:b:c:", longOpts)
+			parser, err := GetOptLong(longArgs, "a:b:c:", longOpts)
 			if err != nil {
 				b.Fatal(err)
 			}

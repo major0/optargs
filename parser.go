@@ -240,6 +240,12 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 	slog.Debug("Iterator")
 	return func(yield func(Option, error) bool) {
 		var err error
+		cleanupDone := false
+		defer func() {
+			if !cleanupDone {
+				p.Args = append(p.nonOpts, p.Args...)
+			}
+		}()
 
 		slog.Debug("Options", "args", p.Args)
 	out:
@@ -250,6 +256,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 			case p.Args[0] == "--": // Stop parsing options
 				slog.Debug("Options", "break", true)
 				p.Args = append(p.nonOpts, p.Args[1:]...)
+				cleanupDone = true
 				break out
 
 			case strings.HasPrefix(p.Args[0], "--"):
@@ -260,7 +267,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				}
 				p.Args, option, err = p.findLongOpt(p.Args[0][2:], remainingArgs)
 				if !yield(option, err) {
-					break
+					return
 				}
 
 			case strings.HasPrefix(p.Args[0], "-"):
@@ -272,7 +279,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 					}
 					p.Args, option, err = p.findLongOpt(p.Args[0][1:], remainingArgs)
 					if !yield(option, err) {
-						break
+						return
 					}
 					continue
 				}
@@ -293,7 +300,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 					}
 
 					if !yield(option, err) {
-						goto out
+						return
 					}
 				}
 
@@ -308,7 +315,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 						Arg:  p.Args[0],
 					}
 					if !yield(option, nil) {
-						break
+						return
 					}
 
 				case ParsePosixlyCorrect:
@@ -317,7 +324,8 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				p.Args = p.Args[1:]
 			}
 		}
-
+		
+		cleanupDone = true
 		p.Args = append(p.nonOpts, p.Args...)
 	}
 }
