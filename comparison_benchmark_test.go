@@ -211,13 +211,13 @@ func BenchmarkScalability(b *testing.B) {
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("OptArgs_Size%d", size), func(b *testing.B) {
 			// Generate args
-			args := make([]string, size+1)
-			args[0] = "prog"
+			args := make([]string, 0, size+1)
+			args = append(args, "prog")
 			for i := 1; i <= size; i++ {
-				if i%2 == 0 {
-					args[i] = "-a"
+				if i%3 == 0 {
+					args = append(args, "-a", "arg"+fmt.Sprintf("%d", i))
 				} else {
-					args[i] = "arg" + fmt.Sprintf("%d", i)
+					args = append(args, "arg"+fmt.Sprintf("%d", i))
 				}
 			}
 			
