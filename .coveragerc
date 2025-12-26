@@ -1,0 +1,57 @@
+# OptArgs Core Coverage Configuration
+# Defines coverage targets and validation rules
+
+[coverage:targets]
+# Core parsing functions must achieve 100% coverage
+core_functions = 100.0
+public_api = 100.0
+error_handling = 100.0
+
+# Overall project coverage targets
+minimum_overall = 90.0
+target_overall = 95.0
+ideal_overall = 100.0
+
+[coverage:functions]
+# Core parsing functions requiring 100% coverage
+GetOpt = 100.0
+GetOptLong = 100.0
+GetOptLongOnly = 100.0
+getOpt = 100.0
+findLongOpt = 100.0
+findShortOpt = 100.0
+Options = 100.0
+optError = 100.0
+optErrorf = 100.0
+
+# Utility functions
+isGraph = 100.0
+hasPrefix = 100.0
+trimPrefix = 100.0
+NewParser = 100.0
+
+[coverage:validation]
+# Validation rules for CI pipeline
+fail_under = 90.0
+regression_threshold = 1.0
+branch_coverage_required = true
+atomic_mode = true
+
+[coverage:reporting]
+# Report generation settings
+generate_html = true
+generate_analysis = true
+generate_gaps = true
+include_missing = true
+show_contexts = true
+
+[coverage:exclusions]
+# Patterns to exclude from coverage analysis
+# (Currently none - all code should be tested)
+
+[coverage:ci]
+# CI integration settings
+upload_to_codecov = true
+comment_on_pr = true
+check_regression = true
+update_badge = true

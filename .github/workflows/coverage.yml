@@ -1,0 +1,210 @@
+name: Test Coverage Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  coverage:
+    name: Test Coverage Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+        
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc
+        
+    - name: Run tests with coverage
+      run: make coverage
+      
+    - name: Generate coverage reports
+      run: make coverage-report
+      
+    - name: Validate coverage targets
+      run: make coverage-validate
+      
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        
+    - name: Upload coverage reports as artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-reports
+        path: |
+          coverage.out
+          coverage.html
+          coverage_analysis.md
+          coverage_gaps_detailed.md
+        retention-days: 30
+        
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read coverage analysis
+          let coverageReport = '';
+          try {
+            coverageReport = fs.readFileSync('coverage_analysis.md', 'utf8');
+          } catch (error) {
+            console.log('Coverage analysis file not found');
+            return;
+          }
+          
+          // Extract overall coverage percentage
+          const coverageMatch = coverageReport.match(/Overall Coverage: ([\d.]+%)/);
+          const overallCoverage = coverageMatch ? coverageMatch[1] : 'Unknown';
+          
+          // Create comment body
+          const commentBody = `## 📊 Test Coverage Report
+          
+          **Overall Coverage: ${overallCoverage}**
+          
+          ### Coverage Analysis
+          - ✅ Automated coverage validation completed
+          - 📈 Detailed coverage reports generated
+          - 🎯 Target: 100% for core parsing functions
+          
+          ### Artifacts
+          - Coverage profile: \`coverage.out\`
+          - HTML report: \`coverage.html\`
+          - Analysis report: \`coverage_analysis.md\`
+          - Gap analysis: \`coverage_gaps_detailed.md\`
+          
+          ### Quick Commands
+          \`\`\`bash
+          # View coverage locally
+          make coverage-html
+          
+          # Validate coverage targets
+          make coverage-validate
+          
+          # Generate analysis reports
+          make coverage-report
+          \`\`\`
+          
+          <details>
+          <summary>📋 View detailed coverage analysis</summary>
+          
+          \`\`\`
+          ${coverageReport.substring(0, 2000)}...
+          \`\`\`
+          
+          </details>`;
+          
+          // Post comment
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: commentBody
+          });
+
+  coverage-regression:
+    name: Coverage Regression Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout PR code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+        
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc
+        
+    - name: Generate PR coverage
+      run: |
+        make coverage
+        PR_COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
+        echo "PR_COVERAGE=$PR_COVERAGE" >> $GITHUB_ENV
+        
+    - name: Checkout main branch
+      uses: actions/checkout@v4
+      with:
+        ref: main
+        
+    - name: Generate main coverage
+      run: |
+        make coverage
+        MAIN_COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
+        echo "MAIN_COVERAGE=$MAIN_COVERAGE" >> $GITHUB_ENV
+        
+    - name: Check for coverage regression
+      run: |
+        echo "Main branch coverage: ${MAIN_COVERAGE}%"
+        echo "PR branch coverage: ${PR_COVERAGE}%"
+        
+        # Check if coverage decreased by more than 1%
+        REGRESSION_THRESHOLD=1.0
+        COVERAGE_DIFF=$(echo "$MAIN_COVERAGE - $PR_COVERAGE" | bc -l)
+        
+        if (( $(echo "$COVERAGE_DIFF > $REGRESSION_THRESHOLD" | bc -l) )); then
+          echo "❌ Coverage regression detected!"
+          echo "Coverage decreased by ${COVERAGE_DIFF}% (threshold: ${REGRESSION_THRESHOLD}%)"
+          echo "Main: ${MAIN_COVERAGE}%, PR: ${PR_COVERAGE}%"
+          exit 1
+        else
+          echo "✅ No significant coverage regression detected"
+          if (( $(echo "$PR_COVERAGE > $MAIN_COVERAGE" | bc -l) )); then
+            IMPROVEMENT=$(echo "$PR_COVERAGE - $MAIN_COVERAGE" | bc -l)
+            echo "🎉 Coverage improved by ${IMPROVEMENT}%!"
+          fi
+        fi
+
+  coverage-badge:
+    name: Update Coverage Badge
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: coverage
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+        
+    - name: Generate coverage
+      run: make coverage
+      
+    - name: Extract coverage percentage
+      run: |
+        COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
+        echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+        
+    - name: Create coverage badge
+      uses: schneegans/dynamic-badges-action@v1.6.0
+      with:
+        auth: ${{ secrets.GITHUB_TOKEN }}
+        gistID: ${{ secrets.COVERAGE_GIST_ID }}
+        filename: optargs-coverage.json
+        label: Coverage
+        message: ${{ env.COVERAGE }}%
+        color: ${{ env.COVERAGE > 95 && 'brightgreen' || env.COVERAGE > 85 && 'yellow' || 'red' }}
