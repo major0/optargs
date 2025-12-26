@@ -1333,3 +1333,515 @@ func TestProperty12_OptionRedefinitionHandling(t *testing.T) {
 		t.Errorf("Property 12 failed: %v", err)
 	}
 }
+
+// Property 13: Error Reporting Accuracy
+// Feature: optargs-core, Property 13: For any missing required argument error, the error message should identify the specific option that requires the argument
+func TestProperty13_ErrorReportingAccuracy(t *testing.T) {
+	property := func() bool {
+		// Test error reporting accuracy for missing required arguments
+
+		// Test case 1: Short option missing required argument
+		parser1, err1 := GetOpt([]string{"-a"}, "a:")
+		if err1 != nil {
+			return false // Parser creation should succeed
+		}
+
+		// Error should occur during iteration
+		for _, err := range parser1.Options() {
+			if err == nil {
+				return false // Should error for missing required argument
+			}
+			// Error message should identify the specific option
+			errMsg := err.Error()
+			if !strings.Contains(errMsg, "a") {
+				return false // Error should mention option 'a'
+			}
+			if !strings.Contains(errMsg, "requires an argument") {
+				return false // Error should mention missing argument
+			}
+			break // Only check first iteration
+		}
+
+		// Test case 2: Long option missing required argument
+		longOpts := []Flag{
+			{Name: "verbose", HasArg: RequiredArgument},
+		}
+
+		parser2, err2 := GetOptLong([]string{"--verbose"}, "", longOpts)
+		if err2 != nil {
+			return false // Parser creation should succeed
+		}
+
+		// Error should occur during iteration
+		for _, err := range parser2.Options() {
+			if err == nil {
+				return false // Should error for missing required argument
+			}
+			// Error message should identify the specific option
+			errMsg := err.Error()
+			if !strings.Contains(errMsg, "verbose") {
+				return false // Error should mention option 'verbose'
+			}
+			if !strings.Contains(errMsg, "requires an argument") {
+				return false // Error should mention missing argument
+			}
+			break // Only check first iteration
+		}
+
+		// Test case 3: Multiple options, error should identify the correct one
+		parser3, err3 := GetOpt([]string{"-a", "-b"}, "a:b:")
+		if err3 != nil {
+			return false // Parser creation should succeed
+		}
+
+		// First option should work
+		optionCount := 0
+		for opt, err := range parser3.Options() {
+			optionCount++
+			if optionCount == 1 {
+				if err != nil {
+					return false // First option should not error (has argument from next arg)
+				}
+				if opt.Name != "a" || !opt.HasArg || opt.Arg != "-b" {
+					return false // Should consume -b as argument to -a
+				}
+			} else if optionCount == 2 {
+				if err == nil {
+					return false // Second option should error (no argument available)
+				}
+				// Error should identify option 'b'
+				errMsg := err.Error()
+				if !strings.Contains(errMsg, "b") {
+					return false // Error should mention option 'b'
+				}
+				break
+			}
+		}
+
+		// Test case 4: Unknown option error should identify the option
+		parser4, err4 := GetOpt([]string{"-z"}, "a:b:")
+		if err4 != nil {
+			return false // Parser creation should succeed
+		}
+
+		// Error should occur during iteration
+		for _, err := range parser4.Options() {
+			if err == nil {
+				return false // Should error for unknown option
+			}
+			// Error message should identify the specific option
+			errMsg := err.Error()
+			if !strings.Contains(errMsg, "z") {
+				return false // Error should mention option 'z'
+			}
+			if !strings.Contains(errMsg, "unknown option") {
+				return false // Error should mention unknown option
+			}
+			break // Only check first iteration
+		}
+
+		// Test case 5: Long option unknown error should identify the option
+		parser5, err5 := GetOptLong([]string{"--unknown"}, "", []Flag{})
+		if err5 != nil {
+			return false // Parser creation should succeed
+		}
+
+		// Error should occur during iteration
+		for _, err := range parser5.Options() {
+			if err == nil {
+				return false // Should error for unknown option
+			}
+			// Error message should identify the specific option
+			errMsg := err.Error()
+			if !strings.Contains(errMsg, "unknown") {
+				return false // Error should mention option 'unknown'
+			}
+			if !strings.Contains(errMsg, "unknown option") {
+				return false // Error should mention unknown option
+			}
+			break // Only check first iteration
+		}
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 13 failed: %v", err)
+	}
+}
+
+// Property 14: Silent Error Mode
+// Feature: optargs-core, Property 14: For any optstring beginning with `:`, the parser should suppress automatic error logging while still returning errors
+func TestProperty14_SilentErrorMode(t *testing.T) {
+	property := func() bool {
+		// Test silent error mode behavior
+
+		// Test case 1: Silent mode should still return errors but not log them
+		// We can't easily test log suppression in a unit test, but we can verify
+		// that errors are still returned and the parser is configured correctly
+
+		parser1, err1 := GetOpt([]string{"-a"}, ":a:")
+		if err1 != nil {
+			return false // Parser creation should succeed
+		}
+
+		// Verify silent mode is enabled
+		if parser1.config.enableErrors {
+			return false // Should disable error logging with : prefix
+		}
+
+		// Error should still occur during iteration (just not logged)
+		for _, err := range parser1.Options() {
+			if err == nil {
+				return false // Should still error for missing required argument
+			}
+			// Error message should still identify the specific option
+			errMsg := err.Error()
+			if !strings.Contains(errMsg, "a") {
+				return false // Error should mention option 'a'
+			}
+			if !strings.Contains(errMsg, "requires an argument") {
+				return false // Error should mention missing argument
+			}
+			break // Only check first iteration
+		}
+
+		// Test case 2: Silent mode with unknown option
+		parser2, err2 := GetOpt([]string{"-z"}, ":abc")
+		if err2 != nil {
+			return false // Parser creation should succeed
+		}
+
+		// Verify silent mode is enabled
+		if parser2.config.enableErrors {
+			return false // Should disable error logging with : prefix
+		}
+
+		// Error should still occur during iteration
+		for _, err := range parser2.Options() {
+			if err == nil {
+				return false // Should still error for unknown option
+			}
+			// Error message should still identify the specific option
+			errMsg := err.Error()
+			if !strings.Contains(errMsg, "z") {
+				return false // Error should mention option 'z'
+			}
+			if !strings.Contains(errMsg, "unknown option") {
+				return false // Error should mention unknown option
+			}
+			break // Only check first iteration
+		}
+
+		// Test case 3: Silent mode combined with other behavior flags
+		parser3, err3 := GetOpt([]string{"-a"}, ":+a:")
+		if err3 != nil {
+			return false // Parser creation should succeed
+		}
+
+		// Verify both silent mode and POSIX mode are enabled
+		if parser3.config.enableErrors {
+			return false // Should disable error logging with : prefix
+		}
+		if parser3.config.parseMode != ParsePosixlyCorrect {
+			return false // Should enable POSIX mode with + prefix
+		}
+
+		// Error should still occur during iteration
+		for _, err := range parser3.Options() {
+			if err == nil {
+				return false // Should still error for missing required argument
+			}
+			break // Only check first iteration
+		}
+
+		// Test case 4: Compare with non-silent mode to verify difference
+		parser4, err4 := GetOpt([]string{"-b", "value"}, "b:")
+		if err4 != nil {
+			return false // Parser creation should succeed
+		}
+
+		// Verify non-silent mode is enabled
+		if !parser4.config.enableErrors {
+			return false // Should enable error logging without : prefix
+		}
+
+		// This should work without error
+		found := false
+		for opt, err := range parser4.Options() {
+			if err != nil {
+				return false // Should not error with valid argument
+			}
+			if opt.Name == "b" {
+				found = true
+				if !opt.HasArg || opt.Arg != "value" {
+					return false // Should have argument "value"
+				}
+			}
+		}
+		if !found {
+			return false
+		}
+
+		// Test case 5: Silent mode with long options
+		longOpts := []Flag{
+			{Name: "verbose", HasArg: RequiredArgument},
+		}
+
+		parser5, err5 := GetOptLong([]string{"--verbose"}, ":abc", longOpts)
+		if err5 != nil {
+			return false // Parser creation should succeed
+		}
+
+		// Verify silent mode is enabled
+		if parser5.config.enableErrors {
+			return false // Should disable error logging with : prefix
+		}
+
+		// Error should still occur during iteration
+		for _, err := range parser5.Options() {
+			if err == nil {
+				return false // Should still error for missing required argument
+			}
+			// Error message should still identify the specific option
+			errMsg := err.Error()
+			if !strings.Contains(errMsg, "verbose") {
+				return false // Error should mention option 'verbose'
+			}
+			break // Only check first iteration
+		}
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 14 failed: %v", err)
+	}
+}
+
+// Property 15: Iterator Correctness
+// Feature: optargs-core, Property 15: For any valid argument list, the iterator should yield all options exactly once and preserve non-option arguments correctly
+func TestProperty15_IteratorCorrectness(t *testing.T) {
+	property := func() bool {
+		// Test iterator correctness with various argument patterns
+
+		// Test case 1: Simple options should be yielded exactly once
+		parser1, err1 := GetOpt([]string{"-a", "-b", "-c"}, "abc")
+		if err1 != nil {
+			return false // Parser creation should succeed
+		}
+
+		var options1 []Option
+		for opt, err := range parser1.Options() {
+			if err != nil {
+				return false // Should not error
+			}
+			options1 = append(options1, opt)
+		}
+
+		// Should have exactly 3 options
+		if len(options1) != 3 {
+			return false
+		}
+
+		// Should have options a, b, c in order
+		expectedNames := []string{"a", "b", "c"}
+		for i, opt := range options1 {
+			if opt.Name != expectedNames[i] {
+				return false
+			}
+			if opt.HasArg {
+				return false // None should have arguments
+			}
+		}
+
+		// Test case 2: Options with arguments should preserve arguments correctly
+		parser2, err2 := GetOpt([]string{"-a", "arg1", "-b", "arg2"}, "a:b:")
+		if err2 != nil {
+			return false // Parser creation should succeed
+		}
+
+		var options2 []Option
+		for opt, err := range parser2.Options() {
+			if err != nil {
+				return false // Should not error
+			}
+			options2 = append(options2, opt)
+		}
+
+		// Should have exactly 2 options
+		if len(options2) != 2 {
+			return false
+		}
+
+		// First option should be 'a' with argument "arg1"
+		if options2[0].Name != "a" || !options2[0].HasArg || options2[0].Arg != "arg1" {
+			return false
+		}
+
+		// Second option should be 'b' with argument "arg2"
+		if options2[1].Name != "b" || !options2[1].HasArg || options2[1].Arg != "arg2" {
+			return false
+		}
+
+		// Test case 3: Non-option arguments should be preserved in parser.Args
+		parser3, err3 := GetOpt([]string{"-a", "nonopt1", "-b", "nonopt2"}, "ab")
+		if err3 != nil {
+			return false // Parser creation should succeed
+		}
+
+		var options3 []Option
+		for opt, err := range parser3.Options() {
+			if err != nil {
+				return false // Should not error
+			}
+			options3 = append(options3, opt)
+		}
+
+		// Should have exactly 2 options
+		if len(options3) != 2 {
+			return false
+		}
+
+		// Should have options a, b
+		if options3[0].Name != "a" || options3[1].Name != "b" {
+			return false
+		}
+
+		// Non-option arguments should be preserved in parser.Args
+		if len(parser3.Args) != 2 {
+			return false
+		}
+		if parser3.Args[0] != "nonopt1" || parser3.Args[1] != "nonopt2" {
+			return false
+		}
+
+		// Test case 4: Compacted options should be expanded correctly
+		parser4, err4 := GetOpt([]string{"-abc"}, "abc")
+		if err4 != nil {
+			return false // Parser creation should succeed
+		}
+
+		var options4 []Option
+		for opt, err := range parser4.Options() {
+			if err != nil {
+				return false // Should not error
+			}
+			options4 = append(options4, opt)
+		}
+
+		// Should have exactly 3 options (expanded from compacted form)
+		if len(options4) != 3 {
+			return false
+		}
+
+		// Should have options a, b, c in order
+		for i, opt := range options4 {
+			if opt.Name != expectedNames[i] {
+				return false
+			}
+			if opt.HasArg {
+				return false // None should have arguments
+			}
+		}
+
+		// Test case 5: Iterator should handle -- termination correctly
+		parser5, err5 := GetOpt([]string{"-a", "--", "-b", "nonopt"}, "ab")
+		if err5 != nil {
+			return false // Parser creation should succeed
+		}
+
+		var options5 []Option
+		for opt, err := range parser5.Options() {
+			if err != nil {
+				return false // Should not error
+			}
+			options5 = append(options5, opt)
+		}
+
+		// Should have exactly 1 option (only -a before --)
+		if len(options5) != 1 {
+			return false
+		}
+
+		// Should have option 'a'
+		if options5[0].Name != "a" {
+			return false
+		}
+
+		// Arguments after -- should be preserved
+		if len(parser5.Args) != 2 {
+			return false
+		}
+		if parser5.Args[0] != "-b" || parser5.Args[1] != "nonopt" {
+			return false
+		}
+
+		// Test case 6: Long options should be yielded correctly
+		longOpts := []Flag{
+			{Name: "verbose", HasArg: NoArgument},
+			{Name: "output", HasArg: RequiredArgument},
+		}
+
+		parser6, err6 := GetOptLong([]string{"--verbose", "--output", "file.txt"}, "", longOpts)
+		if err6 != nil {
+			return false // Parser creation should succeed
+		}
+
+		var options6 []Option
+		for opt, err := range parser6.Options() {
+			if err != nil {
+				return false // Should not error
+			}
+			options6 = append(options6, opt)
+		}
+
+		// Should have exactly 2 options
+		if len(options6) != 2 {
+			return false
+		}
+
+		// First option should be 'verbose' without argument
+		if options6[0].Name != "verbose" || options6[0].HasArg {
+			return false
+		}
+
+		// Second option should be 'output' with argument "file.txt"
+		if options6[1].Name != "output" || !options6[1].HasArg || options6[1].Arg != "file.txt" {
+			return false
+		}
+
+		// Test case 7: Empty argument list should yield no options
+		parser7, err7 := GetOpt([]string{}, "abc")
+		if err7 != nil {
+			return false // Parser creation should succeed
+		}
+
+		var options7 []Option
+		for opt, err := range parser7.Options() {
+			if err != nil {
+				return false // Should not error
+			}
+			options7 = append(options7, opt)
+		}
+
+		// Should have no options
+		if len(options7) != 0 {
+			return false
+		}
+
+		// Should have no remaining arguments
+		if len(parser7.Args) != 0 {
+			return false
+		}
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 15 failed: %v", err)
+	}
+}
