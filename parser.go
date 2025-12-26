@@ -254,7 +254,11 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 
 			case strings.HasPrefix(p.Args[0], "--"):
 				slog.Debug("Options", "prefix", "--")
-				p.Args, option, err = p.findLongOpt(p.Args[0][2:], p.Args[1:])
+				var remainingArgs []string
+				if len(p.Args) > 1 {
+					remainingArgs = p.Args[1:]
+				}
+				p.Args, option, err = p.findLongOpt(p.Args[0][2:], remainingArgs)
 				if !yield(option, err) {
 					break
 				}
@@ -262,7 +266,11 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 			case strings.HasPrefix(p.Args[0], "-"):
 				slog.Debug("Options", "prefix", "-")
 				if p.config.longOptsOnly {
-					p.Args, option, err = p.findLongOpt(p.Args[0][1:], p.Args[1:])
+					var remainingArgs []string
+					if len(p.Args) > 1 {
+						remainingArgs = p.Args[1:]
+					}
+					p.Args, option, err = p.findLongOpt(p.Args[0][1:], remainingArgs)
 					if !yield(option, err) {
 						break
 					}
@@ -273,7 +281,11 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				// for short options
 				for word := p.Args[0][1:]; len(word) > 0; {
 					slog.Debug("Options", "word", word)
-					p.Args, word, option, err = p.findShortOpt(word[0], word[1:], p.Args[1:])
+					var remainingArgs []string
+					if len(p.Args) > 1 {
+						remainingArgs = p.Args[1:]
+					}
+					p.Args, word, option, err = p.findShortOpt(word[0], word[1:], remainingArgs)
 
 					// Transform usages such as `-W foo` into `--foo`
 					if option.Name == "W" && p.config.gnuWords {
