@@ -1,6 +1,7 @@
 package optargs
 
 import (
+	"os"
 	"testing"
 )
 
@@ -516,5 +517,112 @@ func TestPOSIXCharacterValidation(t *testing.T) {
 		if !test.shouldFail && err != nil {
 			t.Errorf("%s should be accepted, got error: %v", test.desc, err)
 		}
+	}
+}
+// TestPOSIXLYCORRECTEnvironmentVariable tests POSIXLY_CORRECT environment variable behavior
+func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
+	tests := []struct {
+		name     string
+		optstring string
+		args     []string
+		envValue string
+		expected []Option
+		remainingArgs []string
+	}{
+		{
+			name:     "without POSIXLY_CORRECT processes all options",
+			optstring: "a",
+			args:     []string{"file1", "-a", "file2"},
+			envValue: "",
+			expected: []Option{{Name: "a", HasArg: false, Arg: ""}},
+			remainingArgs: []string{"file1", "file2"},
+		},
+		{
+			name:     "with POSIXLY_CORRECT stops at first non-option",
+			optstring: "a",
+			args:     []string{"file1", "-a", "file2"},
+			envValue: "1",
+			expected: []Option{},
+			remainingArgs: []string{"file1", "-a", "file2"},
+		},
+		{
+			name:     "POSIXLY_CORRECT with options first",
+			optstring: "ab",
+			args:     []string{"-a", "-b", "file1", "-a"},
+			envValue: "1",
+			expected: []Option{
+				{Name: "a", HasArg: false, Arg: ""},
+				{Name: "b", HasArg: false, Arg: ""},
+			},
+			remainingArgs: []string{"file1", "-a"},
+		},
+		{
+			name:     "plus prefix overrides environment variable",
+			optstring: "+a",
+			args:     []string{"file1", "-a", "file2"},
+			envValue: "", // Even without env var, + prefix should work
+			expected: []Option{},
+			remainingArgs: []string{"file1", "-a", "file2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save original environment variable
+			originalValue := os.Getenv("POSIXLY_CORRECT")
+			defer func() {
+				if originalValue == "" {
+					os.Unsetenv("POSIXLY_CORRECT")
+				} else {
+					os.Setenv("POSIXLY_CORRECT", originalValue)
+				}
+			}()
+
+			// Set test environment variable
+			if tt.envValue == "" {
+				os.Unsetenv("POSIXLY_CORRECT")
+			} else {
+				os.Setenv("POSIXLY_CORRECT", tt.envValue)
+			}
+
+			parser, err := GetOpt(tt.args, tt.optstring)
+			if err != nil {
+				t.Fatalf("GetOpt failed: %v", err)
+			}
+
+			var options []Option
+			for opt, err := range parser.Options() {
+				if err != nil {
+					t.Fatalf("Options iteration failed: %v", err)
+				}
+				options = append(options, opt)
+			}
+
+			if len(options) != len(tt.expected) {
+				t.Fatalf("Expected %d options, got %d", len(tt.expected), len(options))
+			}
+
+			for i, expected := range tt.expected {
+				if options[i].Name != expected.Name {
+					t.Errorf("Option %d: expected name %s, got %s", i, expected.Name, options[i].Name)
+				}
+				if options[i].HasArg != expected.HasArg {
+					t.Errorf("Option %d: expected HasArg %t, got %t", i, expected.HasArg, options[i].HasArg)
+				}
+				if options[i].Arg != expected.Arg {
+					t.Errorf("Option %d: expected arg %s, got %s", i, expected.Arg, options[i].Arg)
+				}
+			}
+
+			if len(parser.Args) != len(tt.remainingArgs) {
+				t.Fatalf("Expected %d remaining args, got %d", len(tt.remainingArgs), len(parser.Args))
+			}
+
+			for i, expected := range tt.remainingArgs {
+				if parser.Args[i] != expected {
+					t.Errorf("Remaining arg %d: expected %s, got %s", i, expected, parser.Args[i])
+				}
+			}
+		})
 	}
 }

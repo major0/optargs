@@ -84,6 +84,7 @@ package optargs
 import (
 	"errors"
 	"log/slog"
+	"os"
 )
 
 type ArgType int
@@ -137,6 +138,12 @@ func getOpt(args []string, optstring string, longopts []Flag, longOnly bool) (*P
 		enableErrors:    true,
 		gnuWords:        false,
 		parseMode:       ParseDefault,
+	}
+
+	// Check POSIXLY_CORRECT environment variable
+	// If set, behave as if '+' prefix was used in optstring
+	if os.Getenv("POSIXLY_CORRECT") != "" {
+		config.parseMode = ParsePosixlyCorrect
 	}
 
 	// Itterate over the longOpts list populating the map

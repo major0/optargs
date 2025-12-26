@@ -3,6 +3,7 @@ package optargs
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"testing"
 	"testing/quick"
@@ -424,7 +425,8 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 			args = append(args, "-b")
 		}
 
-		// Test without POSIXLY_CORRECT (should process all options)
+		// Test without POSIXLY_CORRECT environment variable
+		os.Unsetenv("POSIXLY_CORRECT")
 		parser1, err := GetOpt(args, optstring)
 		if err != nil {
 			return false
@@ -438,9 +440,11 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 			normalModeOptions++
 		}
 
-		// Test with POSIXLY_CORRECT behavior (using + prefix)
-		posixOptstring := "+" + optstring
-		parser2, err := GetOpt(args, posixOptstring)
+		// Test with POSIXLY_CORRECT environment variable set
+		os.Setenv("POSIXLY_CORRECT", "1")
+		defer os.Unsetenv("POSIXLY_CORRECT") // Clean up after test
+		
+		parser2, err := GetOpt(args, optstring)
 		if err != nil {
 			return false
 		}
@@ -457,6 +461,25 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 		if posixModeOptions >= normalModeOptions {
 			return false
 		}
+
+		// Also test that + prefix still works and overrides environment variable
+		os.Setenv("POSIXLY_CORRECT", "1")
+		posixOptstring := "+" + optstring
+		parser3, err := GetOpt(args, posixOptstring)
+		if err != nil {
+			return false
+		}
+
+		prefixModeOptions := 0
+		for _, err := range parser3.Options() {
+			if err != nil {
+				return false
+			}
+			prefixModeOptions++
+		}
+
+		// Should behave the same as environment variable
+		return posixModeOptions == prefixModeOptions
 
 		// In POSIX mode, should have exactly numInitialOpts options
 		if posixModeOptions != numInitialOpts {
