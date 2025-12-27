@@ -202,6 +202,10 @@ func isZeroValue(flag *Flag, value string) bool {
 		z = newUintValue(0, nil)
 	case "uint64":
 		z = newUint64Value(0, nil)
+	case "stringSlice":
+		z = newStringSliceValue([]string{}, nil)
+	case "intSlice":
+		z = newIntSliceValue([]int{}, nil)
 	default:
 		// likely a custom type
 		return false

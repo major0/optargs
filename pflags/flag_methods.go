@@ -211,3 +211,55 @@ func (f *FlagSet) DurationP(name, shorthand string, value time.Duration, usage s
 	f.DurationVarP(p, name, shorthand, value, usage)
 	return p
 }
+
+// StringSliceVar defines a string slice flag with specified name, default value, and usage string.
+// The argument p points to a []string variable in which to store the value of the flag.
+func (f *FlagSet) StringSliceVar(p *[]string, name string, value []string, usage string) {
+	f.VarP(newStringSliceValue(value, p), name, "", usage)
+}
+
+// StringSliceVarP is like StringSliceVar, but accepts a shorthand letter that can be used after a single dash.
+func (f *FlagSet) StringSliceVarP(p *[]string, name, shorthand string, value []string, usage string) {
+	f.VarP(newStringSliceValue(value, p), name, shorthand, usage)
+}
+
+// StringSlice defines a string slice flag with specified name, default value, and usage string.
+// The return value is the address of a []string variable that stores the value of the flag.
+func (f *FlagSet) StringSlice(name string, value []string, usage string) *[]string {
+	p := new([]string)
+	f.StringSliceVarP(p, name, "", value, usage)
+	return p
+}
+
+// StringSliceP is like StringSlice, but accepts a shorthand letter that can be used after a single dash.
+func (f *FlagSet) StringSliceP(name, shorthand string, value []string, usage string) *[]string {
+	p := new([]string)
+	f.StringSliceVarP(p, name, shorthand, value, usage)
+	return p
+}
+
+// IntSliceVar defines an int slice flag with specified name, default value, and usage string.
+// The argument p points to a []int variable in which to store the value of the flag.
+func (f *FlagSet) IntSliceVar(p *[]int, name string, value []int, usage string) {
+	f.VarP(newIntSliceValue(value, p), name, "", usage)
+}
+
+// IntSliceVarP is like IntSliceVar, but accepts a shorthand letter that can be used after a single dash.
+func (f *FlagSet) IntSliceVarP(p *[]int, name, shorthand string, value []int, usage string) {
+	f.VarP(newIntSliceValue(value, p), name, shorthand, usage)
+}
+
+// IntSlice defines an int slice flag with specified name, default value, and usage string.
+// The return value is the address of a []int variable that stores the value of the flag.
+func (f *FlagSet) IntSlice(name string, value []int, usage string) *[]int {
+	p := new([]int)
+	f.IntSliceVarP(p, name, "", value, usage)
+	return p
+}
+
+// IntSliceP is like IntSlice, but accepts a shorthand letter that can be used after a single dash.
+func (f *FlagSet) IntSliceP(name, shorthand string, value []int, usage string) *[]int {
+	p := new([]int)
+	f.IntSliceVarP(p, name, shorthand, value, usage)
+	return p
+}
