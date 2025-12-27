@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Package pflags provides a drop-in replacement for spf13/pflag that maintains
 // complete API compatibility while leveraging OptArgs Core for superior POSIX/GNU compliance.
 package pflags
