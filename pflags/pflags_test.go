@@ -577,3 +577,219 @@ func TestDurationValueImplementation(t *testing.T) {
 		t.Errorf("Expected error message '%s', got '%s'", expectedError, err.Error())
 	}
 }
+
+// TestStringSliceValueImplementation tests the stringSliceValue type implementation
+// Requirements: 3.1, 3.2, 3.3, 3.4
+func TestStringSliceValueImplementation(t *testing.T) {
+	var slice []string
+	sv := newStringSliceValue([]string{"initial"}, &slice)
+	
+	// Test Type() method
+	if sv.Type() != "stringSlice" {
+		t.Errorf("Expected Type() to return 'stringSlice', got %s", sv.Type())
+	}
+	
+	// Test String() method with initial value
+	if sv.String() != "[initial]" {
+		t.Errorf("Expected String() to return '[initial]', got %s", sv.String())
+	}
+	
+	// Test Set() method with single value
+	err := sv.Set("single")
+	if err != nil {
+		t.Errorf("Expected Set() to succeed, got error: %v", err)
+	}
+	
+	if len(*sv) != 2 || (*sv)[0] != "initial" || (*sv)[1] != "single" {
+		t.Errorf("Expected slice to be [initial, single], got %v", *sv)
+	}
+	
+	// Test Set() method with comma-separated values
+	err = sv.Set("a,b,c")
+	if err != nil {
+		t.Errorf("Expected Set() with comma-separated values to succeed, got error: %v", err)
+	}
+	
+	expected := []string{"initial", "single", "a", "b", "c"}
+	if len(*sv) != len(expected) {
+		t.Errorf("Expected slice length %d, got %d", len(expected), len(*sv))
+	}
+	
+	for i, v := range expected {
+		if (*sv)[i] != v {
+			t.Errorf("Expected slice[%d] to be '%s', got '%s'", i, v, (*sv)[i])
+		}
+	}
+	
+	// Test String() method with multiple values
+	expectedString := "[initial,single,a,b,c]"
+	if sv.String() != expectedString {
+		t.Errorf("Expected String() to return '%s', got %s", expectedString, sv.String())
+	}
+	
+	// Test with empty slice
+	var emptySlice []string
+	esv := newStringSliceValue([]string{}, &emptySlice)
+	if esv.String() != "[]" {
+		t.Errorf("Expected empty slice String() to return '[]', got %s", esv.String())
+	}
+	
+	// Test with values containing spaces (should be trimmed in comma-separated)
+	err = esv.Set("  spaced  ,  values  ")
+	if err != nil {
+		t.Errorf("Expected Set() with spaced values to succeed, got error: %v", err)
+	}
+	
+	if len(*esv) != 2 || (*esv)[0] != "spaced" || (*esv)[1] != "values" {
+		t.Errorf("Expected trimmed values [spaced, values], got %v", *esv)
+	}
+}
+
+// TestIntSliceValueImplementation tests the intSliceValue type implementation
+// Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
+func TestIntSliceValueImplementation(t *testing.T) {
+	var slice []int
+	iv := newIntSliceValue([]int{42}, &slice)
+	
+	// Test Type() method
+	if iv.Type() != "intSlice" {
+		t.Errorf("Expected Type() to return 'intSlice', got %s", iv.Type())
+	}
+	
+	// Test String() method with initial value
+	if iv.String() != "[42]" {
+		t.Errorf("Expected String() to return '[42]', got %s", iv.String())
+	}
+	
+	// Test Set() method with single value
+	err := iv.Set("100")
+	if err != nil {
+		t.Errorf("Expected Set() to succeed, got error: %v", err)
+	}
+	
+	if len(*iv) != 2 || (*iv)[0] != 42 || (*iv)[1] != 100 {
+		t.Errorf("Expected slice to be [42, 100], got %v", *iv)
+	}
+	
+	// Test Set() method with comma-separated values
+	err = iv.Set("1,2,3")
+	if err != nil {
+		t.Errorf("Expected Set() with comma-separated values to succeed, got error: %v", err)
+	}
+	
+	expected := []int{42, 100, 1, 2, 3}
+	if len(*iv) != len(expected) {
+		t.Errorf("Expected slice length %d, got %d", len(expected), len(*iv))
+	}
+	
+	for i, v := range expected {
+		if (*iv)[i] != v {
+			t.Errorf("Expected slice[%d] to be %d, got %d", i, v, (*iv)[i])
+		}
+	}
+	
+	// Test String() method with multiple values
+	expectedString := "[42,100,1,2,3]"
+	if iv.String() != expectedString {
+		t.Errorf("Expected String() to return '%s', got %s", expectedString, iv.String())
+	}
+	
+	// Test with empty slice
+	var emptySlice []int
+	eiv := newIntSliceValue([]int{}, &emptySlice)
+	if eiv.String() != "[]" {
+		t.Errorf("Expected empty slice String() to return '[]', got %s", eiv.String())
+	}
+	
+	// Test Set() with invalid single value
+	err = eiv.Set("not a number")
+	if err == nil {
+		t.Error("Expected Set() with invalid single value to fail")
+	}
+	
+	expectedError := "invalid syntax for integer slice element: not a number"
+	if err.Error() != expectedError {
+		t.Errorf("Expected error message '%s', got '%s'", expectedError, err.Error())
+	}
+	
+	// Test Set() with invalid comma-separated value
+	err = eiv.Set("1,not a number,3")
+	if err == nil {
+		t.Error("Expected Set() with invalid comma-separated value to fail")
+	}
+	
+	expectedError = "invalid syntax for integer slice element: not a number"
+	if err.Error() != expectedError {
+		t.Errorf("Expected error message '%s', got '%s'", expectedError, err.Error())
+	}
+	
+	// Test with negative numbers
+	var freshSlice []int
+	fiv := newIntSliceValue([]int{}, &freshSlice)
+	err = fiv.Set("-5,-10")
+	if err != nil {
+		t.Errorf("Expected Set() with negative numbers to succeed, got error: %v", err)
+	}
+	
+	if len(*fiv) != 2 || (*fiv)[0] != -5 || (*fiv)[1] != -10 {
+		t.Errorf("Expected slice to be [-5, -10], got %v", *fiv)
+	}
+}
+
+// TestStringSliceFlag tests string slice flag creation and basic functionality
+func TestStringSliceFlag(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	
+	var stringSliceVar []string
+	fs.StringSliceVar(&stringSliceVar, "strings", []string{"default1", "default2"}, "string slice flag")
+	
+	flag := fs.Lookup("strings")
+	if flag == nil {
+		t.Fatal("Expected to find strings flag")
+	}
+	
+	if flag.Name != "strings" {
+		t.Errorf("Expected flag name 'strings', got %s", flag.Name)
+	}
+	
+	if flag.DefValue != "[default1,default2]" {
+		t.Errorf("Expected default value '[default1,default2]', got %s", flag.DefValue)
+	}
+	
+	if flag.Usage != "string slice flag" {
+		t.Errorf("Expected usage 'string slice flag', got %s", flag.Usage)
+	}
+	
+	if len(stringSliceVar) != 2 || stringSliceVar[0] != "default1" || stringSliceVar[1] != "default2" {
+		t.Errorf("Expected variable to be set to default value [default1, default2], got %v", stringSliceVar)
+	}
+}
+
+// TestIntSliceFlag tests int slice flag creation and basic functionality
+func TestIntSliceFlag(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	
+	var intSliceVar []int
+	fs.IntSliceVar(&intSliceVar, "ints", []int{1, 2, 3}, "int slice flag")
+	
+	flag := fs.Lookup("ints")
+	if flag == nil {
+		t.Fatal("Expected to find ints flag")
+	}
+	
+	if flag.Name != "ints" {
+		t.Errorf("Expected flag name 'ints', got %s", flag.Name)
+	}
+	
+	if flag.DefValue != "[1,2,3]" {
+		t.Errorf("Expected default value '[1,2,3]', got %s", flag.DefValue)
+	}
+	
+	if flag.Usage != "int slice flag" {
+		t.Errorf("Expected usage 'int slice flag', got %s", flag.Usage)
+	}
+	
+	if len(intSliceVar) != 3 || intSliceVar[0] != 1 || intSliceVar[1] != 2 || intSliceVar[2] != 3 {
+		t.Errorf("Expected variable to be set to default value [1, 2, 3], got %v", intSliceVar)
+	}
+}

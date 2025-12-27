@@ -3,6 +3,8 @@ package pflags
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
+	"strings"
 	"testing"
 	"testing/quick"
 	"time"
@@ -444,6 +446,271 @@ func TestProperty9_FlagIntrospectionAccuracy(t *testing.T) {
 	
 	if err := quick.Check(introspectionProperty, &quick.Config{MaxCount: 50}); err != nil {
 		t.Errorf("Flag introspection accuracy failed: %v", err)
+	}
+}
+
+// TestProperty3_SliceFlagValueAccumulation tests Property 3 from the design document:
+// For any slice flag and sequence of values, providing values either comma-separated 
+// or through repeated flag usage should result in a slice containing all provided 
+// values in the correct order.
+// **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
+func TestProperty3_SliceFlagValueAccumulation(t *testing.T) {
+	// Test string slice accumulation
+	stringSliceProperty := func(flagName string, values []string) bool {
+		if flagName == "" || len(flagName) > 50 || len(values) > 10 {
+			return true // Skip invalid inputs
+		}
+		
+		// Filter out empty values to keep test reasonable
+		validValues := make([]string, 0)
+		for _, v := range values {
+			if v != "" && len(v) <= 50 {
+				validValues = append(validValues, v)
+			}
+		}
+		
+		if len(validValues) == 0 {
+			return true // Skip if no valid values
+		}
+		
+		fs := NewFlagSet("test", ContinueOnError)
+		var variable []string
+		fs.StringSliceVar(&variable, flagName, []string{}, "test slice flag")
+		
+		// Test 1: Single comma-separated value
+		commaSeparated := strings.Join(validValues, ",")
+		err := fs.Set(flagName, commaSeparated)
+		if err != nil {
+			return false
+		}
+		
+		if len(variable) != len(validValues) {
+			return false
+		}
+		
+		for i, expected := range validValues {
+			if variable[i] != expected {
+				return false
+			}
+		}
+		
+		// Test 2: Reset and test repeated flag usage
+		variable = []string{} // Reset
+		fs2 := NewFlagSet("test2", ContinueOnError)
+		fs2.StringSliceVar(&variable, flagName, []string{}, "test slice flag")
+		
+		for _, value := range validValues {
+			err := fs2.Set(flagName, value)
+			if err != nil {
+				return false
+			}
+		}
+		
+		if len(variable) != len(validValues) {
+			return false
+		}
+		
+		for i, expected := range validValues {
+			if variable[i] != expected {
+				return false
+			}
+		}
+		
+		return true
+	}
+	
+	if err := quick.Check(stringSliceProperty, &quick.Config{MaxCount: 100}); err != nil {
+		t.Errorf("String slice flag value accumulation failed: %v", err)
+	}
+	
+	// Test int slice accumulation
+	intSliceProperty := func(flagName string, values []int) bool {
+		if flagName == "" || len(flagName) > 50 || len(values) > 10 {
+			return true // Skip invalid inputs
+		}
+		
+		// Limit values to reasonable range
+		validValues := make([]int, 0)
+		for _, v := range values {
+			if v >= -1000 && v <= 1000 {
+				validValues = append(validValues, v)
+			}
+		}
+		
+		if len(validValues) == 0 {
+			return true // Skip if no valid values
+		}
+		
+		fs := NewFlagSet("test", ContinueOnError)
+		var variable []int
+		fs.IntSliceVar(&variable, flagName, []int{}, "test int slice flag")
+		
+		// Test 1: Single comma-separated value
+		stringValues := make([]string, len(validValues))
+		for i, v := range validValues {
+			stringValues[i] = fmt.Sprintf("%d", v)
+		}
+		commaSeparated := strings.Join(stringValues, ",")
+		err := fs.Set(flagName, commaSeparated)
+		if err != nil {
+			return false
+		}
+		
+		if len(variable) != len(validValues) {
+			return false
+		}
+		
+		for i, expected := range validValues {
+			if variable[i] != expected {
+				return false
+			}
+		}
+		
+		// Test 2: Reset and test repeated flag usage
+		variable = []int{} // Reset
+		fs2 := NewFlagSet("test2", ContinueOnError)
+		fs2.IntSliceVar(&variable, flagName, []int{}, "test int slice flag")
+		
+		for _, value := range validValues {
+			err := fs2.Set(flagName, fmt.Sprintf("%d", value))
+			if err != nil {
+				return false
+			}
+		}
+		
+		if len(variable) != len(validValues) {
+			return false
+		}
+		
+		for i, expected := range validValues {
+			if variable[i] != expected {
+				return false
+			}
+		}
+		
+		return true
+	}
+	
+	if err := quick.Check(intSliceProperty, &quick.Config{MaxCount: 100}); err != nil {
+		t.Errorf("Int slice flag value accumulation failed: %v", err)
+	}
+}
+
+// TestProperty13_SliceTypeValidation tests Property 13 from the design document:
+// For any slice flag receiving invalid values for its element type, the error should 
+// clearly indicate the type conversion failure.
+// **Validates: Requirements 3.5**
+func TestProperty13_SliceTypeValidation(t *testing.T) {
+	// Test int slice type validation
+	intSliceValidationProperty := func(flagName string, invalidValues []string) bool {
+		if flagName == "" || len(flagName) > 50 || len(invalidValues) > 5 {
+			return true // Skip invalid inputs
+		}
+		
+		// Filter to only include values that should be invalid for integers
+		actuallyInvalidValues := make([]string, 0)
+		for _, v := range invalidValues {
+			if v != "" && len(v) <= 50 {
+				// Check if it's actually invalid by trying to parse it
+				if _, err := strconv.Atoi(v); err != nil {
+					actuallyInvalidValues = append(actuallyInvalidValues, v)
+				}
+			}
+		}
+		
+		if len(actuallyInvalidValues) == 0 {
+			return true // Skip if no actually invalid values
+		}
+		
+		fs := NewFlagSet("test", ContinueOnError)
+		var variable []int
+		fs.IntSliceVar(&variable, flagName, []int{}, "test int slice flag")
+		
+		// Test each invalid value
+		for _, invalidValue := range actuallyInvalidValues {
+			err := fs.Set(flagName, invalidValue)
+			if err == nil {
+				// This should have failed
+				return false
+			}
+			
+			// Check that error message indicates type conversion failure
+			errorMsg := err.Error()
+			if !strings.Contains(errorMsg, "invalid syntax for integer slice element") {
+				return false
+			}
+			
+			// Check that the invalid value is mentioned in the error
+			if !strings.Contains(errorMsg, invalidValue) {
+				return false
+			}
+		}
+		
+		// Test comma-separated values with one invalid
+		if len(actuallyInvalidValues) > 0 {
+			mixedValue := "1," + actuallyInvalidValues[0] + ",3"
+			err := fs.Set(flagName, mixedValue)
+			if err == nil {
+				return false // Should have failed
+			}
+			
+			errorMsg := err.Error()
+			if !strings.Contains(errorMsg, "invalid syntax for integer slice element") {
+				return false
+			}
+			
+			if !strings.Contains(errorMsg, actuallyInvalidValues[0]) {
+				return false
+			}
+		}
+		
+		return true
+	}
+	
+	if err := quick.Check(intSliceValidationProperty, &quick.Config{MaxCount: 100}); err != nil {
+		t.Errorf("Int slice type validation failed: %v", err)
+	}
+	
+	// Test with specific known invalid values for more reliable testing
+	fs := NewFlagSet("test", ContinueOnError)
+	var intSlice []int
+	fs.IntSliceVar(&intSlice, "numbers", []int{}, "test numbers")
+	
+	invalidIntValues := []string{"abc", "3.14", "not_a_number", "1.5", "true", ""}
+	
+	for _, invalidValue := range invalidIntValues {
+		if invalidValue == "" {
+			continue // Skip empty string as it might be handled differently
+		}
+		
+		err := fs.Set("numbers", invalidValue)
+		if err == nil {
+			t.Errorf("Expected error for invalid int value '%s', but got none", invalidValue)
+			continue
+		}
+		
+		errorMsg := err.Error()
+		if !strings.Contains(errorMsg, "invalid syntax for integer slice element") {
+			t.Errorf("Expected error message to contain 'invalid syntax for integer slice element', got: %s", errorMsg)
+		}
+		
+		if !strings.Contains(errorMsg, invalidValue) {
+			t.Errorf("Expected error message to contain invalid value '%s', got: %s", invalidValue, errorMsg)
+		}
+	}
+	
+	// Test comma-separated with invalid value
+	err := fs.Set("numbers", "1,abc,3")
+	if err == nil {
+		t.Error("Expected error for comma-separated value with invalid element")
+	} else {
+		errorMsg := err.Error()
+		if !strings.Contains(errorMsg, "invalid syntax for integer slice element") {
+			t.Errorf("Expected error message to contain 'invalid syntax for integer slice element', got: %s", errorMsg)
+		}
+		if !strings.Contains(errorMsg, "abc") {
+			t.Errorf("Expected error message to contain 'abc', got: %s", errorMsg)
+		}
 	}
 }
 

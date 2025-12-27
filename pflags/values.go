@@ -3,6 +3,7 @@ package pflags
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -185,3 +186,84 @@ func (d *durationValue) Type() string {
 }
 
 func (d *durationValue) String() string { return (*time.Duration)(d).String() }
+
+// -- []string Value
+type stringSliceValue []string
+
+func newStringSliceValue(val []string, p *[]string) *stringSliceValue {
+	*p = val
+	return (*stringSliceValue)(p)
+}
+
+func (s *stringSliceValue) Set(val string) error {
+	// Support both comma-separated and repeated flag usage
+	if strings.Contains(val, ",") {
+		// Split by comma and append all parts
+		parts := strings.Split(val, ",")
+		for _, part := range parts {
+			*s = append(*s, strings.TrimSpace(part))
+		}
+	} else {
+		// Single value, append directly
+		*s = append(*s, val)
+	}
+	return nil
+}
+
+func (s *stringSliceValue) Type() string {
+	return "stringSlice"
+}
+
+func (s *stringSliceValue) String() string {
+	if len(*s) == 0 {
+		return "[]"
+	}
+	return fmt.Sprintf("[%s]", strings.Join(*s, ","))
+}
+
+// -- []int Value
+type intSliceValue []int
+
+func newIntSliceValue(val []int, p *[]int) *intSliceValue {
+	*p = val
+	return (*intSliceValue)(p)
+}
+
+func (i *intSliceValue) Set(val string) error {
+	// Support both comma-separated and repeated flag usage
+	if strings.Contains(val, ",") {
+		// Split by comma and parse each part
+		parts := strings.Split(val, ",")
+		for _, part := range parts {
+			trimmed := strings.TrimSpace(part)
+			v, err := strconv.Atoi(trimmed)
+			if err != nil {
+				return fmt.Errorf("invalid syntax for integer slice element: %s", trimmed)
+			}
+			*i = append(*i, v)
+		}
+	} else {
+		// Single value, parse and append
+		v, err := strconv.Atoi(val)
+		if err != nil {
+			return fmt.Errorf("invalid syntax for integer slice element: %s", val)
+		}
+		*i = append(*i, v)
+	}
+	return nil
+}
+
+func (i *intSliceValue) Type() string {
+	return "intSlice"
+}
+
+func (i *intSliceValue) String() string {
+	if len(*i) == 0 {
+		return "[]"
+	}
+	strs := make([]string, len(*i))
+	for idx, v := range *i {
+		strs[idx] = strconv.Itoa(v)
+	}
+	return fmt.Sprintf("[%s]", strings.Join(strs, ","))
+}
