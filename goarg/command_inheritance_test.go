@@ -66,10 +66,7 @@ func TestCommandInheritanceIntegration(t *testing.T) {
 	})
 
 	// This test demonstrates the key functionality: option inheritance
-	// Currently skipped as the full inheritance implementation is still in progress
 	t.Run("SubcommandWithInheritedOptions", func(t *testing.T) {
-		t.Skip("Option inheritance from parent to child - implementation in progress")
-		
 		// This should work: server subcommand with --verbose from root
 		var cmd RootCmd
 		err := ParseArgs(&cmd, []string{"server", "--verbose", "--port", "9000"})

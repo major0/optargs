@@ -180,7 +180,14 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, Option, erro
 	if best.Name != "" {
 		return args, best, nil
 	}
-	return args, Option{}, p.optError("unknown option: " + name)
+	
+	// Only log error if there's no parent to fall back to
+	if p.parent == nil {
+		return args, Option{}, p.optError("unknown option: " + name)
+	}
+	
+	// Return error without logging - parent will be consulted
+	return args, Option{}, errors.New("unknown option: " + name)
 }
 
 func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, string, Option, error) {
@@ -252,7 +259,13 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 		return args, word, option, nil
 	}
 
-	return args, word, Option{}, p.optError("unknown option: " + string(c))
+	// Only log error if there's no parent to fall back to
+	if p.parent == nil {
+		return args, word, Option{}, p.optError("unknown option: " + string(c))
+	}
+	
+	// Return error without logging - parent will be consulted
+	return args, word, Option{}, errors.New("unknown option: " + string(c))
 }
 
 func (p *Parser) Options() iter.Seq2[Option, error] {
@@ -415,6 +428,11 @@ func (p *Parser) findLongOptWithFallback(name string, args []string) ([]string, 
 		return p.parent.findLongOptWithFallback(name, args)
 	}
 	
+	// If we get here and there's an error, log it (either no parent or parent also failed)
+	if err != nil {
+		return remainingArgs, option, p.optError("unknown option: " + name)
+	}
+	
 	return remainingArgs, option, err
 }
 
@@ -426,6 +444,11 @@ func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([
 	// If not found and we have a parent, try parent
 	if err != nil && p.parent != nil {
 		return p.parent.findShortOptWithFallback(c, word, args)
+	}
+	
+	// If we get here and there's an error, log it (either no parent or parent also failed)
+	if err != nil {
+		return remainingArgs, remainingWord, option, p.optError("unknown option: " + string(c))
 	}
 	
 	return remainingArgs, remainingWord, option, err
