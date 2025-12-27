@@ -423,33 +423,42 @@ func (p *Parser) findLongOptWithFallback(name string, args []string) ([]string, 
 	// Try to find in current parser first
 	remainingArgs, option, err := p.findLongOpt(name, args)
 	
+	// If found in current parser, return it
+	if err == nil {
+		return remainingArgs, option, err
+	}
+	
 	// If not found and we have a parent, try parent
-	if err != nil && p.parent != nil {
+	if p.parent != nil {
 		return p.parent.findLongOptWithFallback(name, args)
 	}
 	
-	// If we get here and there's an error, log it (either no parent or parent also failed)
-	if err != nil {
-		return remainingArgs, option, p.optError("unknown option: " + name)
-	}
-	
-	return remainingArgs, option, err
+	// If we get here and there's an error, log it (no parent to fall back to)
+	return remainingArgs, option, p.optError("unknown option: " + name)
 }
 
 // findShortOptWithFallback finds a short option, falling back to parent if not found
 func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([]string, string, Option, error) {
+	fmt.Printf("DEBUG: findShortOptWithFallback called with c='%c', word='%s', args=%v\n", c, word, args)
+	
 	// Try to find in current parser first
 	remainingArgs, remainingWord, option, err := p.findShortOpt(c, word, args)
 	
+	fmt.Printf("DEBUG: findShortOpt result: remainingArgs=%v, remainingWord='%s', option=%+v, err=%v\n", remainingArgs, remainingWord, option, err)
+	
+	// If found in current parser, return it
+	if err == nil {
+		fmt.Printf("DEBUG: Found option '%c' in current parser\n", c)
+		return remainingArgs, remainingWord, option, err
+	}
+	
 	// If not found and we have a parent, try parent
-	if err != nil && p.parent != nil {
+	if p.parent != nil {
+		fmt.Printf("DEBUG: Option '%c' not found in current parser, trying parent\n", c)
 		return p.parent.findShortOptWithFallback(c, word, args)
 	}
 	
-	// If we get here and there's an error, log it (either no parent or parent also failed)
-	if err != nil {
-		return remainingArgs, remainingWord, option, p.optError("unknown option: " + string(c))
-	}
-	
-	return remainingArgs, remainingWord, option, err
+	// If we get here and there's an error, log it (no parent to fall back to)
+	fmt.Printf("DEBUG: Option '%c' not found and no parent available\n", c)
+	return remainingArgs, remainingWord, option, p.optError("unknown option: " + string(c))
 }
