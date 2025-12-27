@@ -132,14 +132,6 @@ func (p *Parser) Parse(args []string) error {
 					return fmt.Errorf("failed to execute subcommand %s: %w", arg, err)
 				}
 				
-				// Process the subcommand's results with option inheritance
-				subIntegration := &CoreIntegration{
-					metadata:    subMetadata,
-					shortOpts:   make(map[byte]*optargs.Flag),
-					longOpts:    make(map[string]*optargs.Flag),
-					positionals: []PositionalArg{},
-				}
-				
 				// Get the subcommand field from the destination struct
 				destValue := reflect.ValueOf(p.dest).Elem()
 				var subcommandField reflect.Value
@@ -161,21 +153,9 @@ func (p *Parser) Parse(args []string) error {
 					subcommandField.Set(reflect.New(subcommandField.Type().Elem()))
 				}
 				
-				// First, process inherited options that belong to the parent
-				err = p.processInheritedOptionsFromSubcommand(subParser, coreIntegration)
-				if err != nil {
-					return err
-				}
-				
-				// Then process subcommand results - need to create a fresh parser since Options() iterator was consumed
-				// Create a new parser for the subcommand with the same args
-				freshSubParser, err := coreParser.Commands.ExecuteCommandCaseInsensitive(subcommandName, args[i+1:], true)
-				if err != nil {
-					return fmt.Errorf("failed to re-execute subcommand %s: %w", arg, err)
-				}
-				
-				// Process subcommand results
-				return subIntegration.ProcessResults(freshSubParser, subcommandField.Interface())
+				// Process all options from the subcommand parser in a single pass
+				// This handles both inherited options (set on parent) and subcommand options (set on subcommand)
+				return p.processOptionsWithInheritance(subParser, coreIntegration, subMetadata, subcommandField.Interface())
 			}
 		}
 	}
@@ -184,35 +164,98 @@ func (p *Parser) Parse(args []string) error {
 	return coreIntegration.ProcessResults(coreParser, p.dest)
 }
 
-// processInheritedOptionsFromSubcommand processes options that were inherited from parent
-func (p *Parser) processInheritedOptionsFromSubcommand(subParser *optargs.Parser, parentIntegration *CoreIntegration) error {
-	// Process options from the subcommand parser that might be inherited from parent
+// processOptionsWithInheritance processes options from subcommand parser, handling inheritance in a single pass
+func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parentIntegration *CoreIntegration, subMetadata *StructMetadata, subcommandDest interface{}) error {
+	// Create integration for subcommand
+	subIntegration := &CoreIntegration{
+		metadata:    subMetadata,
+		shortOpts:   make(map[byte]*optargs.Flag),
+		longOpts:    make(map[string]*optargs.Flag),
+		positionals: []PositionalArg{},
+	}
+	
+	// Build subcommand option mappings
+	subIntegration.BuildLongOpts()
+	
+	destValue := reflect.ValueOf(p.dest).Elem()
+	subDestValue := reflect.ValueOf(subcommandDest).Elem()
+	
+	// Process all options from the subcommand parser in a single pass
 	for option, err := range subParser.Options() {
 		if err != nil {
-			// Skip errors - they're expected for inheritance (logged but handled)
-			continue
+			return fmt.Errorf("parsing error: %w", err)
 		}
 		
-		// Check if this option belongs to the parent parser
-		parentField := p.findParentFieldForOption(option.Name)
-		if parentField != nil {
-			// This is a parent option, set it on the parent struct
-			destValue := reflect.ValueOf(p.dest).Elem()
-			fieldValue := destValue.FieldByName(parentField.Name)
-			
+		// First, try to find the option in the subcommand metadata
+		subField := p.findFieldInMetadata(option.Name, subMetadata)
+		if subField != nil {
+			// This is a subcommand option, set it on the subcommand struct
+			fieldValue := subDestValue.FieldByName(subField.Name)
 			if fieldValue.IsValid() && fieldValue.CanSet() {
 				var arg string
 				if option.HasArg {
 					arg = option.Arg
 				}
 				
-				if err := parentIntegration.setFieldValue(fieldValue, parentField, arg); err != nil {
-					return fmt.Errorf("failed to set inherited field %s: %w", parentField.Name, err)
+				if err := subIntegration.setFieldValue(fieldValue, subField, arg); err != nil {
+					return fmt.Errorf("failed to set subcommand field %s: %w", subField.Name, err)
 				}
 			}
+		} else {
+			// Not found in subcommand, check if it's a parent option (inherited)
+			parentField := p.findParentFieldForOption(option.Name)
+			if parentField != nil {
+				// This is an inherited parent option, set it on the parent struct
+				fieldValue := destValue.FieldByName(parentField.Name)
+				if fieldValue.IsValid() && fieldValue.CanSet() {
+					var arg string
+					if option.HasArg {
+						arg = option.Arg
+					}
+					
+					if err := parentIntegration.setFieldValue(fieldValue, parentField, arg); err != nil {
+						return fmt.Errorf("failed to set inherited field %s: %w", parentField.Name, err)
+					}
+				}
+			}
+			// If not found in either parent or subcommand, it's an unknown option (already handled by OptArgs Core)
 		}
 	}
 	
+	// Process positional arguments for subcommand
+	if err := subIntegration.processPositionalArgs(subParser, subDestValue); err != nil {
+		return fmt.Errorf("failed to process subcommand positional arguments: %w", err)
+	}
+	
+	// Process environment variables for subcommand
+	if err := subIntegration.processEnvironmentVariables(subDestValue); err != nil {
+		return fmt.Errorf("failed to process subcommand environment variables: %w", err)
+	}
+	
+	// Set default values for subcommand
+	if err := subIntegration.setDefaultValues(subDestValue); err != nil {
+		return fmt.Errorf("failed to set subcommand default values: %w", err)
+	}
+	
+	// Process environment variables and defaults for parent as well
+	if err := parentIntegration.processEnvironmentVariables(destValue); err != nil {
+		return fmt.Errorf("failed to process parent environment variables: %w", err)
+	}
+	
+	if err := parentIntegration.setDefaultValues(destValue); err != nil {
+		return fmt.Errorf("failed to set parent default values: %w", err)
+	}
+	
+	return nil
+}
+
+// findFieldInMetadata finds a field in the given metadata that matches the option name
+func (p *Parser) findFieldInMetadata(optionName string, metadata *StructMetadata) *FieldMetadata {
+	for _, field := range metadata.Fields {
+		if field.Short == optionName || field.Long == optionName {
+			return &field
+		}
+	}
 	return nil
 }
 
