@@ -141,14 +141,38 @@ Single-character flags that provide convenient shortcuts for frequently used opt
 # Short form
 ./myapp -o output.txt -v -h localhost
 
-# Combined short options (POSIX style)
-./myapp -ovh output.txt localhost
-
 # Mixed short and long
 ./myapp -v --output=result.txt
 ```
 
 [📁 Code Example](docs/examples/short_only_options.go)
+
+### Short-Option Compaction
+
+POSIX-style compaction allows multiple short options to be combined into a single argument. When an optional argument is provided, it belongs to the last option in the compacted sequence that accepts an argument.
+
+```bash
+# Basic compaction (equivalent to -v -f -x)
+./myapp -vfx
+
+# Compaction with argument to last option
+./myapp -vfo output.txt        # -v -f -o output.txt
+
+# Compaction with optional argument attached
+./myapp -vf123                 # -v -f=123 (if -f accepts optional arg)
+
+# Complex compaction with mixed argument types
+./myapp -abc123 input.txt      # -a -b -c=123 input.txt
+
+# Real-world example (tar-style)
+tar -xzf archive.tar.gz        # -x -z -f=archive.tar.gz
+tar -xzvf archive.tar.gz       # -x -z -v -f=archive.tar.gz
+
+# With optional arguments
+./myapp -vvf5 --output=result  # -v -v -f=5 --output=result
+```
+
+[📁 Code Example](docs/examples/short_option_compaction.go)
 
 ### Long-Only Options
 
