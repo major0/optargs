@@ -9,11 +9,47 @@ proton-cli
 *.so
 *.dylib
 
+# Build artifacts
+/bin/
+/build/
+/dist/
+*.a
+*.o
+
+# Debug files
+debug
+debug.test
+*.debug
+
 # Test binary, built with `go test -c`
 *.test
 
+# Test artifacts and temporary files
+*.tmp
+*.temp
+*_test_*
+test_*
+
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Coverage reports and analysis files
+coverage*.html
+coverage*.out
+cover.out
+coverage_*.md
+coverage_analysis.md
+coverage_gaps_detailed.md
+coverage_validation_report.md
+
+# Benchmark and performance reports
+benchmark_results_*.txt
+benchmark-results*.txt
+performance_report_*.md
+performance_baselines.json
+
+# Test artifacts and reports
+final_validation_report.md
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
