@@ -42,7 +42,8 @@ func TestFrameworkSetup(t *testing.T) {
 // TestProjectStructure tests that all required components are present
 func TestProjectStructure(t *testing.T) {
 	// Test that we can create all main components
-	parser, err := NewParser(Config{}, struct{}{})
+	testStruct := struct{}{}
+	parser, err := NewParser(Config{}, &testStruct)
 	if err != nil {
 		t.Errorf("Failed to create parser: %v", err)
 	}
@@ -52,7 +53,7 @@ func TestProjectStructure(t *testing.T) {
 
 	// Test tag parser
 	tagParser := &TagParser{}
-	metadata, err := tagParser.ParseStruct(struct{}{})
+	metadata, err := tagParser.ParseStruct(&testStruct)
 	if err != nil {
 		t.Errorf("Failed to parse struct: %v", err)
 	}
