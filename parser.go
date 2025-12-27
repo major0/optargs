@@ -26,6 +26,9 @@ type ParserConfig struct {
 
 	longCaseIgnore bool
 	longOptsOnly   bool
+	
+	// Command case sensitivity
+	commandCaseIgnore bool
 }
 
 type Parser struct {
@@ -78,6 +81,14 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 	parser.Commands = NewCommandRegistry()
 
 	return &parser, nil
+}
+
+// NewParserWithCaseInsensitiveCommands creates a new parser with case insensitive command matching enabled
+func NewParserWithCaseInsensitiveCommands(shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string) (*Parser, error) {
+	config := ParserConfig{
+		commandCaseIgnore: true,
+	}
+	return NewParser(config, shortOpts, longOpts, args)
 }
 
 func (p *Parser) optError(msg string) error {
@@ -371,7 +382,7 @@ func (p *Parser) AddAlias(alias, existingCommand string) error {
 
 // GetCommand retrieves a parser by command name
 func (p *Parser) GetCommand(name string) (*Parser, bool) {
-	return p.Commands.GetCommand(name)
+	return p.Commands.GetCommandCaseInsensitive(name, p.config.commandCaseIgnore)
 }
 
 // ListCommands returns all command mappings
@@ -381,7 +392,7 @@ func (p *Parser) ListCommands() map[string]*Parser {
 
 // ExecuteCommand finds and executes a command
 func (p *Parser) ExecuteCommand(name string, args []string) (*Parser, error) {
-	return p.Commands.ExecuteCommand(name, args)
+	return p.Commands.ExecuteCommandCaseInsensitive(name, args, p.config.commandCaseIgnore)
 }
 
 // HasCommands returns true if any commands are registered
