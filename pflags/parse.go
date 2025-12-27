@@ -3,6 +3,7 @@ package pflags
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 	
 	"github.com/major0/optargs"
@@ -45,6 +46,7 @@ func (f *FlagSet) processOptions(parser *optargs.Parser) error {
 		
 		// Find the corresponding pflag Flag
 		var flag *Flag
+		var isNegation bool
 		
 		// Handle both short and long option names
 		if len(option.Name) == 1 {
@@ -53,8 +55,21 @@ func (f *FlagSet) processOptions(parser *optargs.Parser) error {
 				flag = f.flags[f.normalizeFlagName(longName)]
 			}
 		} else {
-			// Long option - look up directly
-			flag = f.flags[f.normalizeFlagName(option.Name)]
+			// Check if this is a negation flag (--no-<flag>)
+			if strings.HasPrefix(option.Name, "no-") && len(option.Name) > 3 {
+				originalName := option.Name[3:] // Remove "no-" prefix
+				flag = f.flags[f.normalizeFlagName(originalName)]
+				if flag != nil && flag.Value.Type() == "bool" {
+					isNegation = true
+				} else {
+					flag = nil // Not a valid negation
+				}
+			}
+			
+			// If not a negation or negation lookup failed, try direct lookup
+			if flag == nil {
+				flag = f.flags[f.normalizeFlagName(option.Name)]
+			}
 		}
 		
 		if flag == nil {
@@ -62,7 +77,7 @@ func (f *FlagSet) processOptions(parser *optargs.Parser) error {
 		}
 		
 		// Set the flag value
-		if err := f.setFlagValue(flag, option); err != nil {
+		if err := f.setFlagValue(flag, option, isNegation); err != nil {
 			return err
 		}
 		
@@ -74,14 +89,22 @@ func (f *FlagSet) processOptions(parser *optargs.Parser) error {
 }
 
 // setFlagValue sets the flag value based on the OptArgs Core option
-func (f *FlagSet) setFlagValue(flag *Flag, option optargs.Option) error {
+func (f *FlagSet) setFlagValue(flag *Flag, option optargs.Option, isNegation bool) error {
 	// Handle boolean flags specially
 	if flag.Value.Type() == "bool" {
-		if option.HasArg {
-			// Explicit boolean value provided
-			return flag.Value.Set(option.Arg)
+		if isNegation {
+			// Negation flag (--no-<flag>) always sets to false
+			return flag.Value.Set("false")
+		} else if option.HasArg {
+			// Explicit boolean value provided (--flag=value)
+			// OptArgs Core includes the '=' in the argument, so we need to strip it
+			arg := option.Arg
+			if strings.HasPrefix(arg, "=") {
+				arg = arg[1:]
+			}
+			return flag.Value.Set(arg)
 		} else {
-			// No argument provided, set to true
+			// No argument provided (--flag), set to true
 			return flag.Value.Set("true")
 		}
 	}
@@ -91,7 +114,13 @@ func (f *FlagSet) setFlagValue(flag *Flag, option optargs.Option) error {
 		return fmt.Errorf("flag --%s requires an argument", flag.Name)
 	}
 	
-	return flag.Value.Set(option.Arg)
+	// OptArgs Core includes the '=' in the argument for long options, so we need to strip it
+	arg := option.Arg
+	if strings.HasPrefix(arg, "=") {
+		arg = arg[1:]
+	}
+	
+	return flag.Value.Set(arg)
 }
 
 // CommandLine is the default set of command-line flags, parsed from os.Args.

@@ -82,15 +82,15 @@ This implementation plan creates a drop-in replacement for spf13/pflag that main
     - **Property 11: OptArgs Core Integration Fidelity**
     - **Validates: Requirements 10.1, 10.2**
 
-- [ ] 6. Implement boolean flag special handling
-  - [ ] 6.1 Add enhanced boolean flag parsing
+- [-] 6. Implement boolean flag special handling
+  - [x] 6.1 Add enhanced boolean flag parsing
     - Support no-argument boolean flags (--verbose sets to true)
     - Handle explicit boolean values (--verbose=true/false)
     - Implement boolean negation syntax (--no-verbose)
     - Add proper error messages for invalid boolean values
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-  - [ ] 6.2 Write property test for boolean flag parsing flexibility
+  - [x] 6.2 Write property test for boolean flag parsing flexibility
     - **Property 4: Boolean Flag Parsing Flexibility**
     - **Validates: Requirements 4.1, 4.2, 4.3, 4.5**
 

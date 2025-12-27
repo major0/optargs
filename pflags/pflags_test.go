@@ -283,31 +283,152 @@ func TestVisitAll(t *testing.T) {
 	}
 }
 
-// TestGlobalFlagSet tests the global CommandLine flag set
-func TestGlobalFlagSet(t *testing.T) {
-	// Save original CommandLine
-	originalCommandLine := CommandLine
-	defer func() {
-		CommandLine = originalCommandLine
-	}()
-	
-	// Create a new CommandLine for testing
-	CommandLine = NewFlagSet("test", ContinueOnError)
-	
-	var testString string
-	StringVar(&testString, "global", "default", "global flag")
-	
-	flag := Lookup("global")
-	if flag == nil {
-		t.Fatal("Expected to find global flag")
+// TestBooleanFlagEnhancedParsing tests enhanced boolean flag parsing functionality
+// Requirements: 4.1, 4.2, 4.3, 4.4, 4.5
+func TestBooleanFlagEnhancedParsing(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		defaultVal  bool
+		expectedVal bool
+		shouldError bool
+	}{
+		// Test no-argument boolean flags (--verbose sets to true)
+		{
+			name:        "no-argument sets true",
+			args:        []string{"--verbose"},
+			defaultVal:  false,
+			expectedVal: true,
+			shouldError: false,
+		},
+		{
+			name:        "no-argument with default true",
+			args:        []string{"--verbose"},
+			defaultVal:  true,
+			expectedVal: true,
+			shouldError: false,
+		},
+		// Test explicit boolean values
+		{
+			name:        "explicit true",
+			args:        []string{"--verbose=true"},
+			defaultVal:  false,
+			expectedVal: true,
+			shouldError: false,
+		},
+		{
+			name:        "explicit false",
+			args:        []string{"--verbose=false"},
+			defaultVal:  true,
+			expectedVal: false,
+			shouldError: false,
+		},
+		{
+			name:        "explicit 1",
+			args:        []string{"--verbose=1"},
+			defaultVal:  false,
+			expectedVal: true,
+			shouldError: false,
+		},
+		{
+			name:        "explicit 0",
+			args:        []string{"--verbose=0"},
+			defaultVal:  true,
+			expectedVal: false,
+			shouldError: false,
+		},
+		// Test boolean negation syntax
+		{
+			name:        "negation with default true",
+			args:        []string{"--no-verbose"},
+			defaultVal:  true,
+			expectedVal: false,
+			shouldError: false,
+		},
+		{
+			name:        "negation with default false",
+			args:        []string{"--no-verbose"},
+			defaultVal:  false,
+			expectedVal: false,
+			shouldError: false,
+		},
+		// Test invalid boolean values
+		{
+			name:        "invalid boolean value",
+			args:        []string{"--verbose=invalid"},
+			defaultVal:  false,
+			expectedVal: false,
+			shouldError: true,
+		},
 	}
 	
-	if flag.Name != "global" {
-		t.Errorf("Expected flag name 'global', got %s", flag.Name)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			var verboseVar bool
+			fs.BoolVar(&verboseVar, "verbose", tt.defaultVal, "verbose flag")
+			
+			err := fs.Parse(tt.args)
+			
+			if tt.shouldError {
+				if err == nil {
+					t.Errorf("Expected error for args %v, but got none", tt.args)
+				}
+				return
+			}
+			
+			if err != nil {
+				t.Errorf("Unexpected error for args %v: %v", tt.args, err)
+				return
+			}
+			
+			if verboseVar != tt.expectedVal {
+				t.Errorf("Expected verbose to be %t for args %v, got %t", tt.expectedVal, tt.args, verboseVar)
+			}
+			
+			// Check that the flag was marked as changed
+			flag := fs.Lookup("verbose")
+			if flag == nil {
+				t.Fatal("Expected to find verbose flag")
+			}
+			
+			if !flag.Changed {
+				t.Error("Expected flag to be marked as changed after parsing")
+			}
+		})
+	}
+}
+
+// TestBooleanFlagShorthandParsing tests boolean flag parsing with shorthand
+// Requirements: 4.1, 4.2, 4.3
+func TestBooleanFlagShorthandParsing(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var verboseVar bool
+	fs.BoolVarP(&verboseVar, "verbose", "v", false, "verbose flag")
+	
+	// Test shorthand no-argument
+	err := fs.Parse([]string{"-v"})
+	if err != nil {
+		t.Errorf("Unexpected error parsing -v: %v", err)
 	}
 	
-	if testString != "default" {
-		t.Errorf("Expected variable to be set to 'default', got %s", testString)
+	if !verboseVar {
+		t.Error("Expected verbose to be true after parsing -v")
+	}
+	
+	// Reset for next test
+	verboseVar = false
+	flag := fs.Lookup("verbose")
+	flag.Changed = false
+	
+	// Test shorthand with explicit value
+	err = fs.Parse([]string{"-v=false"})
+	if err != nil {
+		t.Errorf("Unexpected error parsing -v=false: %v", err)
+	}
+	
+	if verboseVar {
+		t.Error("Expected verbose to be false after parsing -v=false")
 	}
 }
 

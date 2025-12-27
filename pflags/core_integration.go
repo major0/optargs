@@ -43,6 +43,17 @@ func (ci *CoreIntegration) RegisterFlag(flag *Flag) error {
 	ci.flagMap[flag.Name] = coreFlag
 	ci.longOpts[flag.Name] = coreFlag
 	
+	// For boolean flags, also register the negation form --no-<flag>
+	if flag.Value.Type() == "bool" {
+		negationName := "no-" + flag.Name
+		negationFlag := &optargs.Flag{
+			Name:   negationName,
+			HasArg: optargs.NoArgument,
+		}
+		ci.flagMap[negationName] = negationFlag
+		ci.longOpts[negationName] = negationFlag
+	}
+	
 	// Register shorthand if present
 	if len(flag.Shorthand) > 0 {
 		if len(flag.Shorthand) != 1 {
@@ -57,12 +68,12 @@ func (ci *CoreIntegration) RegisterFlag(flag *Flag) error {
 }
 
 // mapArgumentType converts pflag value types to OptArgs Core argument types.
-// Boolean flags are treated as NoArgument, all others as RequiredArgument.
+// Boolean flags are treated as OptionalArgument to support both --flag and --flag=value syntax.
 func (ci *CoreIntegration) mapArgumentType(valueType string) optargs.ArgType {
 	switch valueType {
 	case "bool":
-		// Boolean flags don't require arguments - they default to true when present
-		return optargs.NoArgument
+		// Boolean flags support optional arguments - they can be used as --flag or --flag=value
+		return optargs.OptionalArgument
 	default:
 		// All other types require arguments
 		return optargs.RequiredArgument
