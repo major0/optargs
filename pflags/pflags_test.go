@@ -310,3 +310,270 @@ func TestGlobalFlagSet(t *testing.T) {
 		t.Errorf("Expected variable to be set to 'default', got %s", testString)
 	}
 }
+
+// TestStringValueImplementation tests the stringValue type implementation
+// Requirements: 1.1
+func TestStringValueImplementation(t *testing.T) {
+	var str string
+	sv := newStringValue("initial", &str)
+	
+	// Test Type() method
+	if sv.Type() != "string" {
+		t.Errorf("Expected Type() to return 'string', got %s", sv.Type())
+	}
+	
+	// Test String() method
+	if sv.String() != "initial" {
+		t.Errorf("Expected String() to return 'initial', got %s", sv.String())
+	}
+	
+	// Test Set() method with valid input
+	err := sv.Set("new value")
+	if err != nil {
+		t.Errorf("Expected Set() to succeed, got error: %v", err)
+	}
+	
+	if sv.String() != "new value" {
+		t.Errorf("Expected String() to return 'new value' after Set(), got %s", sv.String())
+	}
+	
+	if str != "new value" {
+		t.Errorf("Expected underlying variable to be 'new value', got %s", str)
+	}
+	
+	// Test Set() with empty string (should be valid)
+	err = sv.Set("")
+	if err != nil {
+		t.Errorf("Expected Set() with empty string to succeed, got error: %v", err)
+	}
+	
+	if sv.String() != "" {
+		t.Errorf("Expected String() to return empty string, got %s", sv.String())
+	}
+}
+
+// TestIntValueImplementation tests the intValue type implementation
+// Requirements: 1.2
+func TestIntValueImplementation(t *testing.T) {
+	var num int
+	iv := newIntValue(42, &num)
+	
+	// Test Type() method
+	if iv.Type() != "int" {
+		t.Errorf("Expected Type() to return 'int', got %s", iv.Type())
+	}
+	
+	// Test String() method
+	if iv.String() != "42" {
+		t.Errorf("Expected String() to return '42', got %s", iv.String())
+	}
+	
+	// Test Set() method with valid input
+	err := iv.Set("100")
+	if err != nil {
+		t.Errorf("Expected Set() to succeed, got error: %v", err)
+	}
+	
+	if iv.String() != "100" {
+		t.Errorf("Expected String() to return '100' after Set(), got %s", iv.String())
+	}
+	
+	if num != 100 {
+		t.Errorf("Expected underlying variable to be 100, got %d", num)
+	}
+	
+	// Test Set() with negative number
+	err = iv.Set("-50")
+	if err != nil {
+		t.Errorf("Expected Set() with negative number to succeed, got error: %v", err)
+	}
+	
+	if iv.String() != "-50" {
+		t.Errorf("Expected String() to return '-50', got %s", iv.String())
+	}
+	
+	// Test Set() with invalid input
+	err = iv.Set("not a number")
+	if err == nil {
+		t.Error("Expected Set() with invalid input to fail")
+	}
+	
+	expectedError := "invalid syntax for integer flag: not a number"
+	if err.Error() != expectedError {
+		t.Errorf("Expected error message '%s', got '%s'", expectedError, err.Error())
+	}
+	
+	// Test Set() with float (should fail)
+	err = iv.Set("3.14")
+	if err == nil {
+		t.Error("Expected Set() with float to fail")
+	}
+}
+
+// TestBoolValueImplementation tests the boolValue type implementation
+// Requirements: 1.3
+func TestBoolValueImplementation(t *testing.T) {
+	var flag bool
+	bv := newBoolValue(true, &flag)
+	
+	// Test Type() method
+	if bv.Type() != "bool" {
+		t.Errorf("Expected Type() to return 'bool', got %s", bv.Type())
+	}
+	
+	// Test String() method
+	if bv.String() != "true" {
+		t.Errorf("Expected String() to return 'true', got %s", bv.String())
+	}
+	
+	// Test Set() method with valid inputs
+	testCases := []struct {
+		input    string
+		expected bool
+	}{
+		{"true", true},
+		{"false", false},
+		{"1", true},
+		{"0", false},
+		{"t", true},
+		{"f", false},
+		{"T", true},
+		{"F", false},
+		{"TRUE", true},
+		{"FALSE", false},
+	}
+	
+	for _, tc := range testCases {
+		err := bv.Set(tc.input)
+		if err != nil {
+			t.Errorf("Expected Set(%s) to succeed, got error: %v", tc.input, err)
+		}
+		
+		if bool(*bv) != tc.expected {
+			t.Errorf("Expected Set(%s) to result in %t, got %t", tc.input, tc.expected, bool(*bv))
+		}
+		
+		expectedString := "true"
+		if !tc.expected {
+			expectedString = "false"
+		}
+		if bv.String() != expectedString {
+			t.Errorf("Expected String() to return '%s' after Set(%s), got %s", expectedString, tc.input, bv.String())
+		}
+	}
+	
+	// Test Set() with invalid input
+	err := bv.Set("invalid")
+	if err == nil {
+		t.Error("Expected Set() with invalid input to fail")
+	}
+	
+	expectedError := "invalid boolean value 'invalid'"
+	if err.Error() != expectedError {
+		t.Errorf("Expected error message '%s', got '%s'", expectedError, err.Error())
+	}
+}
+
+// TestFloat64ValueImplementation tests the float64Value type implementation
+// Requirements: 1.4
+func TestFloat64ValueImplementation(t *testing.T) {
+	var num float64
+	fv := newFloat64Value(3.14, &num)
+	
+	// Test Type() method
+	if fv.Type() != "float64" {
+		t.Errorf("Expected Type() to return 'float64', got %s", fv.Type())
+	}
+	
+	// Test String() method
+	if fv.String() != "3.14" {
+		t.Errorf("Expected String() to return '3.14', got %s", fv.String())
+	}
+	
+	// Test Set() method with valid inputs
+	testCases := []struct {
+		input    string
+		expected float64
+	}{
+		{"2.5", 2.5},
+		{"-1.5", -1.5},
+		{"0", 0.0},
+		{"100", 100.0},
+		{"1e10", 1e10},
+		{"-3.14159", -3.14159},
+	}
+	
+	for _, tc := range testCases {
+		err := fv.Set(tc.input)
+		if err != nil {
+			t.Errorf("Expected Set(%s) to succeed, got error: %v", tc.input, err)
+		}
+		
+		if float64(*fv) != tc.expected {
+			t.Errorf("Expected Set(%s) to result in %f, got %f", tc.input, tc.expected, float64(*fv))
+		}
+	}
+	
+	// Test Set() with invalid input
+	err := fv.Set("not a number")
+	if err == nil {
+		t.Error("Expected Set() with invalid input to fail")
+	}
+	
+	expectedError := "invalid syntax for float64 flag: not a number"
+	if err.Error() != expectedError {
+		t.Errorf("Expected error message '%s', got '%s'", expectedError, err.Error())
+	}
+}
+
+// TestDurationValueImplementation tests the durationValue type implementation
+// Requirements: 1.5
+func TestDurationValueImplementation(t *testing.T) {
+	var dur time.Duration
+	dv := newDurationValue(5*time.Second, &dur)
+	
+	// Test Type() method
+	if dv.Type() != "duration" {
+		t.Errorf("Expected Type() to return 'duration', got %s", dv.Type())
+	}
+	
+	// Test String() method
+	if dv.String() != "5s" {
+		t.Errorf("Expected String() to return '5s', got %s", dv.String())
+	}
+	
+	// Test Set() method with valid inputs
+	testCases := []struct {
+		input    string
+		expected time.Duration
+	}{
+		{"1s", 1 * time.Second},
+		{"2m", 2 * time.Minute},
+		{"3h", 3 * time.Hour},
+		{"500ms", 500 * time.Millisecond},
+		{"1h30m", 1*time.Hour + 30*time.Minute},
+		{"0", 0},
+	}
+	
+	for _, tc := range testCases {
+		err := dv.Set(tc.input)
+		if err != nil {
+			t.Errorf("Expected Set(%s) to succeed, got error: %v", tc.input, err)
+		}
+		
+		if time.Duration(*dv) != tc.expected {
+			t.Errorf("Expected Set(%s) to result in %v, got %v", tc.input, tc.expected, time.Duration(*dv))
+		}
+	}
+	
+	// Test Set() with invalid input
+	err := dv.Set("invalid duration")
+	if err == nil {
+		t.Error("Expected Set() with invalid input to fail")
+	}
+	
+	expectedError := "invalid duration format for flag: invalid duration"
+	if err.Error() != expectedError {
+		t.Errorf("Expected error message '%s', got '%s'", expectedError, err.Error())
+	}
+}
