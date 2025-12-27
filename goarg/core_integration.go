@@ -77,6 +77,11 @@ func (ci *CoreIntegration) BuildLongOpts() []optargs.Flag {
 
 // CreateParser creates an OptArgs Core parser with command support
 func (ci *CoreIntegration) CreateParser(args []string) (*optargs.Parser, error) {
+	return ci.CreateParserWithParent(args, nil)
+}
+
+// CreateParserWithParent creates an OptArgs Core parser with command support and parent relationship
+func (ci *CoreIntegration) CreateParserWithParent(args []string, parent *optargs.Parser) (*optargs.Parser, error) {
 	// Build positional arguments
 	ci.buildPositionalArgs()
 	
@@ -101,13 +106,13 @@ func (ci *CoreIntegration) CreateParser(args []string) (*optargs.Parser, error) 
 				positionals: []PositionalArg{},
 			}
 			
-			// Create subcommand parser (empty args for now, will be set during execution)
-			subParser, err := subIntegration.CreateParser([]string{})
+			// Create subcommand parser with parent relationship for option inheritance
+			subParser, err := subIntegration.CreateParserWithParent([]string{}, parser)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create subcommand parser for %s: %w", cmdName, err)
 			}
 			
-			// Register subcommand with main parser
+			// Register subcommand with main parser (this sets parent relationship in OptArgs Core)
 			parser.AddCmd(cmdName, subParser)
 		}
 	}
