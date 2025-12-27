@@ -2,6 +2,7 @@ package optargs
 
 import (
 	"fmt"
+	"strings"
 )
 
 // CommandRegistry manages subcommands for a parser using a simple map
@@ -35,6 +36,21 @@ func (cr CommandRegistry) GetCommand(name string) (*Parser, bool) {
 	return parser, exists
 }
 
+// GetCommandCaseInsensitive retrieves a parser by command name with case insensitive matching
+func (cr CommandRegistry) GetCommandCaseInsensitive(name string, caseIgnore bool) (*Parser, bool) {
+	if !caseIgnore {
+		return cr.GetCommand(name)
+	}
+	
+	// Case insensitive lookup
+	for cmdName, parser := range cr {
+		if strings.EqualFold(cmdName, name) {
+			return parser, true
+		}
+	}
+	return nil, false
+}
+
 // ListCommands returns all command mappings
 func (cr CommandRegistry) ListCommands() map[string]*Parser {
 	return map[string]*Parser(cr)
@@ -43,6 +59,24 @@ func (cr CommandRegistry) ListCommands() map[string]*Parser {
 // ExecuteCommand finds and executes a command
 func (cr CommandRegistry) ExecuteCommand(name string, args []string) (*Parser, error) {
 	parser, exists := cr[name]
+	if !exists {
+		return nil, fmt.Errorf("unknown command: %s", name)
+	}
+	
+	if parser == nil {
+		return nil, fmt.Errorf("command %s has no parser", name)
+	}
+	
+	// Update the parser's args for this execution
+	parser.Args = args
+	parser.nonOpts = []string{}
+	
+	return parser, nil
+}
+
+// ExecuteCommandCaseInsensitive finds and executes a command with case insensitive matching
+func (cr CommandRegistry) ExecuteCommandCaseInsensitive(name string, args []string, caseIgnore bool) (*Parser, error) {
+	parser, exists := cr.GetCommandCaseInsensitive(name, caseIgnore)
 	if !exists {
 		return nil, fmt.Errorf("unknown command: %s", name)
 	}

@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/major0/optargs"
 )
@@ -122,15 +123,16 @@ func (p *Parser) Parse(args []string) error {
 	if len(p.metadata.Subcommands) > 0 && len(args) > 0 {
 		// Look for subcommand in arguments
 		for i, arg := range args {
-			if _, exists := p.metadata.Subcommands[arg]; exists {
+			// Try case insensitive lookup for subcommands
+			subMetadata, subcommandName := p.findSubcommand(arg)
+			if subMetadata != nil {
 				// Found subcommand, dispatch to it
-				subParser, err := coreParser.Commands.ExecuteCommand(arg, args[i+1:])
+				subParser, err := coreParser.Commands.ExecuteCommandCaseInsensitive(subcommandName, args[i+1:], true) // Always use case insensitive for go-arg
 				if err != nil {
 					return fmt.Errorf("failed to execute subcommand %s: %w", arg, err)
 				}
 				
 				// Process the subcommand's results
-				subMetadata := p.metadata.Subcommands[arg]
 				subIntegration := &CoreIntegration{
 					metadata:    subMetadata,
 					shortOpts:   make(map[byte]*optargs.Flag),
@@ -144,7 +146,7 @@ func (p *Parser) Parse(args []string) error {
 				for j := 0; j < destValue.NumField(); j++ {
 					field := destValue.Type().Field(j)
 					fieldMeta, _ := (&TagParser{}).ParseField(field)
-					if fieldMeta.IsSubcommand && fieldMeta.SubcommandName == arg {
+					if fieldMeta.IsSubcommand && strings.EqualFold(fieldMeta.SubcommandName, arg) {
 						subcommandField = destValue.Field(j)
 						break
 					}
@@ -264,4 +266,21 @@ func (p *Parser) Fail(msg string) {
 	fmt.Fprintln(os.Stderr, msg)
 	p.WriteUsage(os.Stderr)
 	p.config.Exit(1)
+}
+
+// findSubcommand performs case insensitive lookup for subcommands
+func (p *Parser) findSubcommand(name string) (*StructMetadata, string) {
+	// First try exact match
+	if metadata, exists := p.metadata.Subcommands[name]; exists {
+		return metadata, name
+	}
+	
+	// Then try case insensitive match
+	for cmdName, metadata := range p.metadata.Subcommands {
+		if strings.EqualFold(cmdName, name) {
+			return metadata, cmdName
+		}
+	}
+	
+	return nil, ""
 }
