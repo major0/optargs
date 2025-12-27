@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 	"github.com/major0/optargs/pflags"
 )
@@ -21,13 +22,13 @@ func main() {
 	
 	// Custom usage function
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "MyApp - A sample application\n\n")
-		fmt.Fprintf(fs.Output(), "Usage: %s [OPTIONS]\n\n", fs.Name())
-		fmt.Fprintf(fs.Output(), "Options:\n")
+		fmt.Fprintf(os.Stderr, "MyApp - A sample application\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS]\n\n", fs.Name())
+		fmt.Fprintf(os.Stderr, "Options:\n")
 		fs.PrintDefaults()
-		fmt.Fprintf(fs.Output(), "\nExamples:\n")
-		fmt.Fprintf(fs.Output(), "  %s --host=api.example.com --port=443 --verbose\n", fs.Name())
-		fmt.Fprintf(fs.Output(), "  %s -h localhost -p 8080 --tag=web --tag=api\n", fs.Name())
+		fmt.Fprintf(os.Stderr, "\nExamples:\n")
+		fmt.Fprintf(os.Stderr, "  %s --host=api.example.com --port=443 --verbose\n", fs.Name())
+		fmt.Fprintf(os.Stderr, "  %s -h localhost -p 8080 --tag=web --tag=api\n", fs.Name())
 	}
 	
 	// Parse arguments
