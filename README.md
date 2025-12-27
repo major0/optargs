@@ -123,635 +123,325 @@ forward to support arbitrary use cases.
 
 Boolean flags that don't require explicit values. When present, they toggle to `true`.
 
-```go
-package main
+```bash
+# Enable verbose mode
+./myapp --verbose
 
-import (
-    "fmt"
-    "github.com/major0/optargs/pflags"
-)
-
-func main() {
-    fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-    
-    var verbose bool
-    fs.BoolVar(&verbose, "verbose", false, "Enable verbose output")
-    
-    // Usage: ./app --verbose
-    fs.Parse([]string{"--verbose"})
-    fmt.Printf("Verbose mode: %t\n", verbose) // Output: Verbose mode: true
-}
+# Multiple boolean flags
+./myapp --verbose --debug --force
 ```
+
+[📁 Code Example](docs/examples/non_argument_options.go)
 
 ### Short-Only Options
 
 Single-character flags that provide convenient shortcuts for frequently used options.
 
-```go
-package main
+```bash
+# Short form
+./myapp -o output.txt -v -h localhost
 
-import (
-    "fmt"
-    "github.com/major0/optargs/pflags"
-)
+# Combined short options (POSIX style)
+./myapp -ovh output.txt localhost
 
-func main() {
-    fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-    
-    var output string
-    fs.StringVarP(&output, "output", "o", "stdout", "Output destination")
-    
-    // Usage: ./app -o file.txt
-    fs.Parse([]string{"-o", "file.txt"})
-    fmt.Printf("Output: %s\n", output) // Output: Output: file.txt
-}
+# Mixed short and long
+./myapp -v --output=result.txt
 ```
+
+[📁 Code Example](docs/examples/short_only_options.go)
 
 ### Long-Only Options
 
 Descriptive multi-character flags for clarity and self-documentation.
 
-```go
-package main
+```bash
+# Long descriptive flags
+./myapp --config-file=/etc/myapp/config.json
+./myapp --database-url=postgres://localhost/mydb
+./myapp --max-connections=100
 
-import (
-    "fmt"
-    "github.com/major0/optargs/pflags"
-)
-
-func main() {
-    fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-    
-    var configFile string
-    fs.StringVar(&configFile, "config-file", "config.json", "Configuration file path")
-    
-    // Usage: ./app --config-file=/etc/myapp/config.json
-    fs.Parse([]string{"--config-file=/etc/myapp/config.json"})
-    fmt.Printf("Config: %s\n", configFile) // Output: Config: /etc/myapp/config.json
-}
+# With equals syntax
+./myapp --output-format=json --log-level=debug
 ```
 
 ### Count Options
 
 Flags that can be repeated to increase a counter value, useful for verbosity levels.
 
-```go
-package main
+```bash
+# Increase verbosity level
+./myapp -v                    # verbosity = 1
+./myapp -vv                   # verbosity = 2  
+./myapp -vvv                  # verbosity = 3
 
-import (
-    "fmt"
-    "strings"
-    "github.com/major0/optargs/pflags"
-)
+# Long form repetition
+./myapp --verbose --verbose --verbose
 
-func main() {
-    fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-    
-    var verbosity int
-    // Custom counter implementation using Var
-    fs.Var(&CountValue{&verbosity}, "verbose", "Increase verbosity (can be repeated)")
-    
-    // Usage: ./app -v -v -v  (or --verbose --verbose --verbose)
-    fs.Parse([]string{"--verbose", "--verbose", "--verbose"})
-    fmt.Printf("Verbosity level: %d\n", verbosity) // Output: Verbosity level: 3
-}
-
-// CountValue implements Value interface for counting
-type CountValue struct {
-    count *int
-}
-
-func (c *CountValue) String() string { return fmt.Sprintf("%d", *c.count) }
-func (c *CountValue) Set(string) error { *c.count++; return nil }
-func (c *CountValue) Type() string { return "count" }
+# Mixed usage
+./myapp -v --verbose -v       # verbosity = 3
 ```
+
+[📁 Code Example](docs/examples/count_options.go)
 
 ### Boolean Toggle Options
 
 Boolean flags with enhanced syntax supporting explicit true/false values and negation.
 
-```go
-package main
+```bash
+# Simple boolean (sets to true)
+./myapp --debug
 
-import (
-    "fmt"
-    "github.com/major0/optargs/pflags"
-)
+# Explicit values
+./myapp --debug=true
+./myapp --debug=false
 
-func main() {
-    fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-    
-    var debug bool
-    fs.BoolVar(&debug, "debug", false, "Enable debug mode")
-    
-    // Multiple ways to use boolean flags:
-    // ./app --debug              (sets to true)
-    // ./app --debug=true         (explicit true)
-    // ./app --debug=false        (explicit false)
-    // ./app --no-debug           (negation syntax, sets to false)
-    
-    fs.Parse([]string{"--debug=true"})
-    fmt.Printf("Debug mode: %t\n", debug) // Output: Debug mode: true
-}
+# Various boolean formats
+./myapp --enabled=1           # true
+./myapp --enabled=0           # false
+./myapp --enabled=yes         # true
+./myapp --enabled=no          # false
 ```
 
 ### Boolean w/ Inversion Options
 
 Boolean flags that support negation syntax for intuitive toggling.
 
-```go
-package main
+```bash
+# Enable colors (default behavior)
+./myapp --colors
 
-import (
-    "fmt"
-    "github.com/major0/optargs/pflags"
-)
+# Disable colors using negation
+./myapp --no-colors
 
-func main() {
-    fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-    
-    var colors bool
-    fs.BoolVar(&colors, "colors", true, "Enable colored output")
-    
-    // Usage examples:
-    // ./app --colors             (enables colors)
-    // ./app --no-colors          (disables colors)
-    
-    fs.Parse([]string{"--no-colors"})
-    fmt.Printf("Colors enabled: %t\n", colors) // Output: Colors enabled: false
-}
+# Other negation examples
+./myapp --no-cache --no-verify --no-interactive
 ```
 
 ### N-Way Toggle Options
 
 Enumerated options that cycle through multiple states or accept specific values.
 
-```go
-package main
+```bash
+# Set log level
+./myapp --log-level=debug
+./myapp --log-level=info
+./myapp --log-level=warn
+./myapp --log-level=error
 
-import (
-    "fmt"
-    "github.com/major0/optargs/pflags"
-)
+# Output format selection
+./myapp --format=json
+./myapp --format=yaml
+./myapp --format=table
 
-func main() {
-    fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-    
-    var logLevel string
-    // Custom enum implementation
-    fs.Var(&EnumValue{
-        value: &logLevel,
-        allowed: []string{"debug", "info", "warn", "error"},
-        defaultVal: "info",
-    }, "log-level", "Set logging level (debug|info|warn|error)")
-    
-    // Usage: ./app --log-level=debug
-    fs.Parse([]string{"--log-level=debug"})
-    fmt.Printf("Log level: %s\n", logLevel) // Output: Log level: debug
-}
-
-// EnumValue implements Value interface for enumerated options
-type EnumValue struct {
-    value      *string
-    allowed    []string
-    defaultVal string
-}
-
-func (e *EnumValue) String() string { 
-    if *e.value == "" { return e.defaultVal }
-    return *e.value 
-}
-
-func (e *EnumValue) Set(val string) error {
-    for _, allowed := range e.allowed {
-        if val == allowed {
-            *e.value = val
-            return nil
-        }
-    }
-    return fmt.Errorf("invalid value %q, must be one of: %v", val, e.allowed)
-}
-
-func (e *EnumValue) Type() string { return "enum" }
+# Compression level
+./myapp --compression=none
+./myapp --compression=fast
+./myapp --compression=best
 ```
 
 ### Many-to-One Options
 
 Multiple flags that can set the same destination variable, useful for aliases.
 
-```go
-package main
+```bash
+# All of these show help
+./myapp --help
+./myapp -h
+./myapp --usage
 
-import (
-    "fmt"
-    "github.com/major0/optargs/pflags"
-)
+# Version information aliases
+./myapp --version
+./myapp -V
+./myapp --ver
 
-func main() {
-    fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-    
-    var helpRequested bool
-    
-    // Multiple flags setting the same variable
-    fs.BoolVar(&helpRequested, "help", false, "Show help message")
-    fs.BoolVar(&helpRequested, "h", false, "Show help message (short)")
-    fs.BoolVar(&helpRequested, "usage", false, "Show help message (alias)")
-    
-    // Any of these work: --help, --h, --usage
-    fs.Parse([]string{"--usage"})
-    fmt.Printf("Help requested: %t\n", helpRequested) // Output: Help requested: true
-}
+# Multiple ways to set the same config
+./myapp --config=file.json
+./myapp --configuration=file.json
+./myapp -c file.json
 ```
 
 ### Complex Data Structure Options
 
 Flags that parse complex data structures like slices, maps, or custom types.
 
-```go
-package main
+```bash
+# String slices (comma-separated)
+./myapp --tag=web,api,database
 
-import (
-    "fmt"
-    "strings"
-    "github.com/major0/optargs/pflags"
-)
+# String slices (repeated flags)
+./myapp --tag=web --tag=api --tag=database
 
-func main() {
-    fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-    
-    // Built-in slice support
-    var tags []string
-    var ports []int
-    
-    fs.StringSliceVar(&tags, "tag", []string{}, "Add tags (can be repeated or comma-separated)")
-    fs.IntSliceVar(&ports, "port", []int{}, "Add ports (can be repeated or comma-separated)")
-    
-    // Usage examples:
-    // ./app --tag=web --tag=api --port=8080,8081,8082
-    // ./app --tag=web,api,database --port=8080 --port=8081
-    
-    fs.Parse([]string{"--tag=web,api", "--port=8080", "--port=8081"})
-    fmt.Printf("Tags: %v\n", tags)   // Output: Tags: [web api]
-    fmt.Printf("Ports: %v\n", ports) // Output: Ports: [8080 8081]
-    
-    // Custom map implementation
-    var env map[string]string
-    fs.Var(&MapValue{&env}, "env", "Set environment variables (key=value)")
-    
-    fs.Parse([]string{"--env=DEBUG=true", "--env=PORT=8080"})
-    fmt.Printf("Environment: %v\n", env) // Output: Environment: map[DEBUG:true PORT:8080]
-}
+# Integer slices
+./myapp --port=8080,8081,8082
+./myapp --port=8080 --port=8081 --port=8082
 
-// MapValue implements Value interface for key=value pairs
-type MapValue struct {
-    m *map[string]string
-}
+# Key-value pairs (environment variables)
+./myapp --env=DEBUG=true --env=PORT=8080 --env=HOST=localhost
 
-func (mv *MapValue) String() string {
-    if *mv.m == nil { return "{}" }
-    return fmt.Sprintf("%v", *mv.m)
-}
-
-func (mv *MapValue) Set(val string) error {
-    if *mv.m == nil {
-        *mv.m = make(map[string]string)
-    }
-    parts := strings.SplitN(val, "=", 2)
-    if len(parts) != 2 {
-        return fmt.Errorf("invalid format, expected key=value")
-    }
-    (*mv.m)[parts[0]] = parts[1]
-    return nil
-}
-
-func (mv *MapValue) Type() string { return "map" }
+# Mixed complex structures
+./myapp --tag=web,api --port=8080,8081 --env=NODE_ENV=production
 ```
+
+[📁 Code Example](docs/examples/complex_data_structures.go)
 
 ### Destination Variable Options
 
 Direct binding of flag values to variables for automatic population.
 
-```go
-package main
+```bash
+# All flags automatically populate their respective variables
+./myapp --host=api.example.com --port=443 --timeout=30s --verbose --retries=5
 
-import (
-    "fmt"
-    "time"
-    "github.com/major0/optargs/pflags"
-)
+# Mixed short and long forms
+./myapp -h api.example.com -p 443 --timeout=1m -v --retries=3
 
-func main() {
-    fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-    
-    // Direct variable binding - no need to check flag values manually
-    var (
-        host     string
-        port     int
-        timeout  time.Duration
-        verbose  bool
-        retries  int
-    )
-    
-    fs.StringVar(&host, "host", "localhost", "Server host")
-    fs.IntVar(&port, "port", 8080, "Server port")
-    fs.DurationVar(&timeout, "timeout", 30*time.Second, "Request timeout")
-    fs.BoolVar(&verbose, "verbose", false, "Verbose output")
-    fs.IntVar(&retries, "retries", 3, "Number of retries")
-    
-    // After parsing, variables are automatically populated
-    fs.Parse([]string{"--host=api.example.com", "--port=443", "--timeout=1m", "--verbose"})
-    
-    // Variables are ready to use immediately
-    fmt.Printf("Connecting to %s:%d\n", host, port)
-    fmt.Printf("Timeout: %v, Verbose: %t, Retries: %d\n", timeout, verbose, retries)
-    // Output: 
-    // Connecting to api.example.com:443
-    // Timeout: 1m0s, Verbose: true, Retries: 3
-}
+# Using equals syntax
+./myapp --host=localhost --port=8080 --timeout=10s
 ```
 
 ### Option Inheritance
 
 Flags that inherit values from parent contexts or configuration files.
 
-```go
-package main
+```bash
+# Global flags affect all subcommands
+./myapp --verbose server --port=8080
+./myapp --config=/etc/myapp.conf client --url=http://localhost
 
-import (
-    "fmt"
-    "github.com/major0/optargs/pflags"
-)
-
-func main() {
-    // Parent flag set with global options
-    globalFlags := pflags.NewFlagSet("global", pflags.ContinueOnError)
-    var globalVerbose bool
-    globalFlags.BoolVar(&globalVerbose, "verbose", false, "Global verbose mode")
-    
-    // Child flag set that can inherit from parent
-    cmdFlags := pflags.NewFlagSet("command", pflags.ContinueOnError)
-    var cmdSpecific string
-    cmdFlags.StringVar(&cmdSpecific, "output", "", "Command-specific output")
-    
-    // Parse global flags first
-    globalFlags.Parse([]string{"--verbose"})
-    
-    // Child can access parent's parsed values
-    if globalVerbose {
-        fmt.Println("Verbose mode enabled globally")
-    }
-    
-    // Parse command-specific flags
-    cmdFlags.Parse([]string{"--output=result.txt"})
-    fmt.Printf("Command output: %s\n", cmdSpecific)
-}
+# Subcommand-specific flags
+./myapp server --port=8080 --host=0.0.0.0
+./myapp client --url=http://api.example.com --timeout=30s
 ```
 
 ### Option Overloading
 
 Multiple definitions of the same flag name with different behaviors based on context.
 
-```go
-package main
+```bash
+# Config as file path
+./myapp --config=/path/to/config.json
 
-import (
-    "fmt"
-    "strings"
-    "github.com/major0/optargs/pflags"
-)
+# Config as inline JSON
+./myapp --config='{"database": {"host": "localhost"}}'
 
-func main() {
-    fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-    
-    // Same flag name with different types/behaviors in different contexts
-    var configFile string
-    var configInline string
-    
-    // Context-sensitive flag handling
-    fs.Var(&OverloadedValue{
-        fileVar:   &configFile,
-        inlineVar: &configInline,
-    }, "config", "Configuration (file path or inline JSON)")
-    
-    // Usage examples:
-    // ./app --config=/path/to/config.json        (treated as file path)
-    // ./app --config='{"key": "value"}'          (treated as inline JSON)
-    
-    fs.Parse([]string{"--config=/etc/app/config.json"})
-    fmt.Printf("Config file: %s\n", configFile)
-}
-
-// OverloadedValue demonstrates context-sensitive flag handling
-type OverloadedValue struct {
-    fileVar   *string
-    inlineVar *string
-}
-
-func (ov *OverloadedValue) String() string {
-    if *ov.fileVar != "" { return *ov.fileVar }
-    return *ov.inlineVar
-}
-
-func (ov *OverloadedValue) Set(val string) error {
-    // Heuristic: if it starts with { or [, treat as inline JSON
-    if strings.HasPrefix(val, "{") || strings.HasPrefix(val, "[") {
-        *ov.inlineVar = val
-    } else {
-        *ov.fileVar = val
-    }
-    return nil
-}
-
-func (ov *OverloadedValue) Type() string { return "config" }
+# Context determines interpretation
+./myapp --config=production.yml     # file
+./myapp --config='key: value'       # inline YAML
 ```
 
 ### Sub-Command Directories
 
 Organized command structures with hierarchical flag inheritance.
 
-```go
-package main
+```bash
+# Global flags before subcommand
+./myapp --verbose --config=/etc/myapp.conf server --port=8080
 
-import (
-    "fmt"
-    "os"
-    "github.com/major0/optargs/pflags"
-)
+# Subcommand with its own flags
+./myapp server --port=8080 --host=0.0.0.0 --workers=4
 
-func main() {
-    // Root command flags
-    rootFlags := pflags.NewFlagSet("myapp", pflags.ContinueOnError)
-    var globalVerbose bool
-    rootFlags.BoolVar(&globalVerbose, "verbose", false, "Global verbose mode")
-    
-    // Sub-command: server
-    serverFlags := pflags.NewFlagSet("server", pflags.ContinueOnError)
-    var serverPort int
-    var serverHost string
-    serverFlags.IntVar(&serverPort, "port", 8080, "Server port")
-    serverFlags.StringVar(&serverHost, "host", "localhost", "Server host")
-    
-    // Sub-command: client
-    clientFlags := pflags.NewFlagSet("client", pflags.ContinueOnError)
-    var clientURL string
-    var clientTimeout string
-    clientFlags.StringVar(&clientURL, "url", "", "Server URL")
-    clientFlags.StringVar(&clientTimeout, "timeout", "30s", "Request timeout")
-    
-    // Parse command line
-    args := os.Args[1:]
-    if len(args) == 0 {
-        fmt.Println("Usage: myapp [global-flags] <command> [command-flags]")
-        return
-    }
-    
-    // Parse global flags until we hit a sub-command
-    var globalArgs []string
-    var subCommand string
-    var subArgs []string
-    
-    for i, arg := range args {
-        if !strings.HasPrefix(arg, "-") {
-            subCommand = arg
-            globalArgs = args[:i]
-            subArgs = args[i+1:]
-            break
-        }
-    }
-    
-    // Parse global flags
-    rootFlags.Parse(globalArgs)
-    
-    // Handle sub-commands
-    switch subCommand {
-    case "server":
-        serverFlags.Parse(subArgs)
-        fmt.Printf("Starting server on %s:%d (verbose: %t)\n", 
-            serverHost, serverPort, globalVerbose)
-        
-    case "client":
-        clientFlags.Parse(subArgs)
-        fmt.Printf("Connecting to %s with timeout %s (verbose: %t)\n", 
-            clientURL, clientTimeout, globalVerbose)
-        
-    default:
-        fmt.Printf("Unknown command: %s\n", subCommand)
-    }
-}
+# Client subcommand
+./myapp client --url=http://localhost:8080 --timeout=30s
+
+# Nested subcommands
+./myapp database migrate --dry-run --verbose
+./myapp database backup --output=/backups/db.sql
 ```
 
 ### Automatic Help Text
 
 Built-in help generation with customizable formatting and usage information.
 
-```go
-package main
+```bash
+# Show help
+./myapp --help
+./myapp -h
 
-import (
-    "fmt"
-    "time"
-    "github.com/major0/optargs/pflags"
-)
+# Subcommand help
+./myapp server --help
+./myapp client --help
 
-func main() {
-    fs := pflags.NewFlagSet("myapp", pflags.ContinueOnError)
-    
-    // Define flags with descriptive usage text
-    var (
-        host     = fs.StringP("host", "h", "localhost", "Server `hostname` to connect to")
-        port     = fs.IntP("port", "p", 8080, "Server `port` number")
-        timeout  = fs.Duration("timeout", 30*time.Second, "Connection `timeout` duration")
-        verbose  = fs.BoolP("verbose", "v", false, "Enable verbose output")
-        config   = fs.String("config", "", "Configuration `file` path")
-        tags     = fs.StringSlice("tag", []string{}, "Add `tags` (repeatable)")
-    )
-    
-    // Custom usage function
-    fs.Usage = func() {
-        fmt.Fprintf(fs.Output(), "MyApp - A sample application\n\n")
-        fmt.Fprintf(fs.Output(), "Usage: %s [OPTIONS]\n\n", fs.Name())
-        fmt.Fprintf(fs.Output(), "Options:\n")
-        fs.PrintDefaults()
-        fmt.Fprintf(fs.Output(), "\nExamples:\n")
-        fmt.Fprintf(fs.Output(), "  %s --host=api.example.com --port=443 --verbose\n", fs.Name())
-        fmt.Fprintf(fs.Output(), "  %s -h localhost -p 8080 --tag=web --tag=api\n", fs.Name())
-    }
-    
-    // Parse arguments
-    err := fs.Parse([]string{"--help"})
-    if err != nil {
-        return
-    }
-    
-    // Use the parsed values
-    fmt.Printf("Connecting to %s:%d\n", *host, *port)
-    fmt.Printf("Timeout: %v, Verbose: %t\n", *timeout, *verbose)
-    fmt.Printf("Config: %s, Tags: %v\n", *config, *tags)
-}
-
-// Output when --help is used:
-// MyApp - A sample application
-//
-// Usage: myapp [OPTIONS]
-//
-// Options:
-//   -h, --host hostname     Server hostname to connect to (default "localhost")
-//   -p, --port port         Server port number (default 8080)
-//       --timeout timeout   Connection timeout duration (default 30s)
-//   -v, --verbose           Enable verbose output
-//       --config file       Configuration file path
-//       --tag tags          Add tags (repeatable)
-//
-// Examples:
-//   myapp --host=api.example.com --port=443 --verbose
-//   myapp -h localhost -p 8080 --tag=web --tag=api
+# Example output:
+# MyApp - A sample application
+#
+# Usage: myapp [OPTIONS] COMMAND
+#
+# Options:
+#   -h, --host hostname     Server hostname (default "localhost")
+#   -p, --port port         Server port number (default 8080)
+#       --timeout duration  Connection timeout (default 30s)
+#   -v, --verbose          Enable verbose output
+#
+# Commands:
+#   server    Start the server
+#   client    Run as client
+#
+# Examples:
+#   myapp --host=api.example.com server --port=443
+#   myapp client --url=http://localhost:8080
 ```
 
 ### Advanced GNU/POSIX Features
 
 OptArgs supports sophisticated GNU getopt_long() features including special characters in option names and longest matching patterns.
 
-```go
-package main
+```bash
+# Special characters in option names
+./myapp --system7:verbose=detailed
+./myapp --config=env production
+./myapp --db:host=primary=db1.example.com
+./myapp --app:level=debug=trace
 
-import (
-    "fmt"
-    "github.com/major0/optargs/pflags"
-)
+# Longest matching (enable-bobadufoo wins over enable-bob)
+./myapp --enable-bobadufoo=advanced
 
-func main() {
-    fs := pflags.NewFlagSet("advanced", pflags.ContinueOnError)
-    
-    // Special characters in option names (colons, equals)
-    var (
-        systemVerbose = fs.String("system7:verbose", "", "System 7 verbose mode")
-        configEnv     = fs.String("config=env", "", "Configuration environment")
-        dbHost        = fs.String("db:host=primary", "", "Database primary host")
-        appLevel      = fs.String("app:level=debug", "", "Application debug level")
-    )
-    
-    // Longest matching - multiple options with shared prefixes
-    var (
-        enableBob       = fs.String("enable-bob", "", "Enable bob feature")
-        enableBobadufoo = fs.String("enable-bobadufoo", "", "Enable bobadufoo feature")
-    )
-    
-    // Complex nested syntax examples:
-    args := []string{
-        "--system7:verbose=detailed",
-        "--config=env", "production", 
-        "--db:host=primary=db1.example.com",
-        "--app:level=debug=trace",
-        "--enable-bobadufoo", "advanced",  // Longest match wins
-    }
-    
-    fs.Parse(args)
-    
-    fmt.Printf("System verbose: %s\n", *systemVerbose)
-    fmt.Printf("Config env: %s\n", *configEnv)
-    fmt.Printf("DB host: %s\n", *dbHost)
-    fmt.Printf("App level: %s\n", *appLevel)
-    fmt.Printf("Enable bob: %s\n", *enableBob)           // Empty - not matched
-    fmt.Printf("Enable bobadufoo: %s\n", *enableBobadufoo) // "advanced" - longest match
-}
+# Complex nested syntax
+./myapp --system7:path=bindir=/usr/local/bin
+./myapp --cache:url=redis=redis://localhost:6379
+
+# Multiple special characters
+./myapp --app:config=env:prod=live-settings
+```
+
+[📁 Code Example](docs/examples/advanced_gnu_features.go)
+
+### Real-World Usage Examples
+
+```bash
+# Web server with comprehensive configuration
+./myapp server \
+  --host=0.0.0.0 \
+  --port=8080 \
+  --workers=4 \
+  --timeout=30s \
+  --log-level=info \
+  --tag=web,api,production \
+  --env=NODE_ENV=production \
+  --env=DEBUG=false \
+  --no-cache
+
+# Database operations
+./myapp db migrate \
+  --config=/etc/myapp/db.conf \
+  --dry-run \
+  --verbose \
+  --timeout=5m
+
+# Batch processing with multiple inputs
+./myapp process \
+  --input=/data/file1.json \
+  --input=/data/file2.json \
+  --output-format=csv \
+  --workers=8 \
+  --tag=batch,processing \
+  --env=MEMORY_LIMIT=4GB
+
+# Development mode with debugging
+./myapp dev \
+  --verbose --verbose --verbose \
+  --debug \
+  --hot-reload \
+  --port=3000 \
+  --env=NODE_ENV=development \
+  --no-minify
 ```
