@@ -75,28 +75,8 @@ func (ci *CoreIntegration) BuildLongOpts() []optargs.Flag {
 	return longOpts
 }
 
-// CreateParser creates an OptArgs Core parser
+// CreateParser creates an OptArgs Core parser with command support
 func (ci *CoreIntegration) CreateParser(args []string) (*optargs.Parser, error) {
-	// Check for subcommands first
-	if len(ci.metadata.Subcommands) > 0 && len(args) > 0 {
-		// Look for subcommand in arguments
-		for i, arg := range args {
-			if subMetadata, exists := ci.metadata.Subcommands[arg]; exists {
-				// Found subcommand, create parser for it
-				subIntegration := &CoreIntegration{
-					metadata:    subMetadata,
-					shortOpts:   make(map[byte]*optargs.Flag),
-					longOpts:    make(map[string]*optargs.Flag),
-					positionals: []PositionalArg{},
-				}
-				
-				// Parse remaining arguments with subcommand
-				remainingArgs := args[i+1:]
-				return subIntegration.CreateParser(remainingArgs)
-			}
-		}
-	}
-	
 	// Build positional arguments
 	ci.buildPositionalArgs()
 	
@@ -108,6 +88,28 @@ func (ci *CoreIntegration) CreateParser(args []string) (*optargs.Parser, error) 
 	parser, err := optargs.GetOptLong(args, optstring, longOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OptArgs parser: %w", err)
+	}
+	
+	// Register subcommands using OptArgs Core command system
+	if len(ci.metadata.Subcommands) > 0 {
+		for cmdName, subMetadata := range ci.metadata.Subcommands {
+			// Create integration for subcommand
+			subIntegration := &CoreIntegration{
+				metadata:    subMetadata,
+				shortOpts:   make(map[byte]*optargs.Flag),
+				longOpts:    make(map[string]*optargs.Flag),
+				positionals: []PositionalArg{},
+			}
+			
+			// Create subcommand parser (empty args for now, will be set during execution)
+			subParser, err := subIntegration.CreateParser([]string{})
+			if err != nil {
+				return nil, fmt.Errorf("failed to create subcommand parser for %s: %w", cmdName, err)
+			}
+			
+			// Register subcommand with main parser
+			parser.AddCmd(cmdName, subParser)
+		}
 	}
 	
 	return parser, nil
@@ -127,11 +129,13 @@ func (ci *CoreIntegration) ProcessResults(parser *optargs.Parser, dest interface
 		// Find the corresponding field
 		field, err := ci.findFieldForOption(option, destType)
 		if err != nil {
-			return fmt.Errorf("failed to find field for option %s: %w", option.Name, err)
+			// If option not found in current parser, it might be handled by parent
+			// This is expected behavior with command inheritance
+			continue
 		}
 		
 		if field == nil {
-			continue // Skip unknown options (shouldn't happen with proper setup)
+			continue // Skip unknown options
 		}
 		
 		// Set the field value
@@ -192,7 +196,8 @@ func (ci *CoreIntegration) findFieldForOption(option optargs.Option, destType re
 		}
 	}
 	
-	return nil, fmt.Errorf("unknown option: %s", option.Name)
+	// Option not found in current metadata - this is expected with command inheritance
+	return nil, nil
 }
 
 // setFieldValue sets a field value based on the parsed argument

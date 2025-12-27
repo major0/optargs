@@ -110,7 +110,7 @@ func (p *Parser) Parse(args []string) error {
 		positionals: []PositionalArg{},
 	}
 
-	// Build OptArgs Core parser
+	// Build OptArgs Core parser with command support
 	coreParser, err := coreIntegration.CreateParser(args)
 	if err != nil {
 		return err
@@ -118,7 +118,54 @@ func (p *Parser) Parse(args []string) error {
 
 	p.coreParser = coreParser
 
-	// Process results and populate destination struct
+	// Check if we have subcommands and if a subcommand was invoked
+	if len(p.metadata.Subcommands) > 0 && len(args) > 0 {
+		// Look for subcommand in arguments
+		for i, arg := range args {
+			if _, exists := p.metadata.Subcommands[arg]; exists {
+				// Found subcommand, dispatch to it
+				subParser, err := coreParser.Commands.ExecuteCommand(arg, args[i+1:])
+				if err != nil {
+					return fmt.Errorf("failed to execute subcommand %s: %w", arg, err)
+				}
+				
+				// Process the subcommand's results
+				subMetadata := p.metadata.Subcommands[arg]
+				subIntegration := &CoreIntegration{
+					metadata:    subMetadata,
+					shortOpts:   make(map[byte]*optargs.Flag),
+					longOpts:    make(map[string]*optargs.Flag),
+					positionals: []PositionalArg{},
+				}
+				
+				// Get the subcommand field from the destination struct
+				destValue := reflect.ValueOf(p.dest).Elem()
+				var subcommandField reflect.Value
+				for j := 0; j < destValue.NumField(); j++ {
+					field := destValue.Type().Field(j)
+					fieldMeta, _ := (&TagParser{}).ParseField(field)
+					if fieldMeta.IsSubcommand && fieldMeta.SubcommandName == arg {
+						subcommandField = destValue.Field(j)
+						break
+					}
+				}
+				
+				if !subcommandField.IsValid() {
+					return fmt.Errorf("subcommand field not found for %s", arg)
+				}
+				
+				// Ensure subcommand field is initialized
+				if subcommandField.IsNil() {
+					subcommandField.Set(reflect.New(subcommandField.Type().Elem()))
+				}
+				
+				// Process subcommand results
+				return subIntegration.ProcessResults(subParser, subcommandField.Interface())
+			}
+		}
+	}
+
+	// No subcommand found, process as regular parsing
 	return coreIntegration.ProcessResults(coreParser, p.dest)
 }
 

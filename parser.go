@@ -37,7 +37,7 @@ type Parser struct {
 	lockConfig bool
 	
 	// Command support - simple map of command name to parser
-	commands CommandRegistry
+	Commands CommandRegistry
 	parent   *Parser
 }
 
@@ -75,7 +75,7 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 	parser.longOpts = longOpts
 	
 	// Initialize command registry
-	parser.commands = NewCommandRegistry()
+	parser.Commands = NewCommandRegistry()
 
 	return &parser, nil
 }
@@ -361,37 +361,37 @@ func (p *Parser) AddCmd(name string, parser *Parser) *Parser {
 	if parser != nil {
 		parser.parent = p
 	}
-	return p.commands.AddCmd(name, parser)
+	return p.Commands.AddCmd(name, parser)
 }
 
 // AddAlias creates an alias for an existing command
 func (p *Parser) AddAlias(alias, existingCommand string) error {
-	return p.commands.AddAlias(alias, existingCommand)
+	return p.Commands.AddAlias(alias, existingCommand)
 }
 
 // GetCommand retrieves a parser by command name
 func (p *Parser) GetCommand(name string) (*Parser, bool) {
-	return p.commands.GetCommand(name)
+	return p.Commands.GetCommand(name)
 }
 
 // ListCommands returns all command mappings
 func (p *Parser) ListCommands() map[string]*Parser {
-	return p.commands.ListCommands()
+	return p.Commands.ListCommands()
 }
 
 // ExecuteCommand finds and executes a command
 func (p *Parser) ExecuteCommand(name string, args []string) (*Parser, error) {
-	return p.commands.ExecuteCommand(name, args)
+	return p.Commands.ExecuteCommand(name, args)
 }
 
 // HasCommands returns true if any commands are registered
 func (p *Parser) HasCommands() bool {
-	return p.commands.HasCommands()
+	return p.Commands.HasCommands()
 }
 
 // GetAliases returns all aliases for a given parser
 func (p *Parser) GetAliases(targetParser *Parser) []string {
-	return p.commands.GetAliases(targetParser)
+	return p.Commands.GetAliases(targetParser)
 }
 
 // findLongOptWithFallback finds a long option, falling back to parent if not found
