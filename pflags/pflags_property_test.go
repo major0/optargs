@@ -449,6 +449,304 @@ func TestProperty9_FlagIntrospectionAccuracy(t *testing.T) {
 	}
 }
 
+// TestProperty4_BooleanFlagParsingFlexibility tests Property 4 from the design document:
+// For any boolean flag, it should accept no argument (defaulting to true), explicit 
+// true/false values, and negation syntax when the default is true.
+// **Validates: Requirements 4.1, 4.2, 4.3, 4.5**
+func TestProperty4_BooleanFlagParsingFlexibility(t *testing.T) {
+	// Test basic boolean flag parsing flexibility
+	booleanFlexibilityProperty := func(flagName string, defaultValue bool, usage string) bool {
+		if flagName == "" || len(flagName) > 50 {
+			return true // Skip invalid inputs
+		}
+		
+		// Test 1: No argument should set to true
+		fs1 := NewFlagSet("test1", ContinueOnError)
+		var variable1 bool
+		fs1.BoolVar(&variable1, flagName, defaultValue, usage)
+		
+		args1 := []string{"--" + flagName}
+		err1 := fs1.Parse(args1)
+		if err1 != nil {
+			// If OptArgs Core rejects the flag name, that's acceptable
+			return true
+		}
+		
+		// No argument should always set to true
+		if !variable1 {
+			return false
+		}
+		
+		// Flag should be marked as changed
+		flag1 := fs1.Lookup(flagName)
+		if flag1 == nil || !flag1.Changed {
+			return false
+		}
+		
+		// Test 2: Explicit true value
+		fs2 := NewFlagSet("test2", ContinueOnError)
+		var variable2 bool
+		fs2.BoolVar(&variable2, flagName, false, usage)
+		
+		args2 := []string{"--" + flagName + "=true"}
+		err2 := fs2.Parse(args2)
+		if err2 != nil {
+			return true // Acceptable if OptArgs Core rejects
+		}
+		
+		if !variable2 {
+			return false
+		}
+		
+		// Test 3: Explicit false value
+		fs3 := NewFlagSet("test3", ContinueOnError)
+		var variable3 bool
+		fs3.BoolVar(&variable3, flagName, true, usage) // Default to true
+		
+		args3 := []string{"--" + flagName + "=false"}
+		err3 := fs3.Parse(args3)
+		if err3 != nil {
+			return true // Acceptable if OptArgs Core rejects
+		}
+		
+		if variable3 {
+			return false
+		}
+		
+		// Test 4: Negation syntax (--no-<flag>)
+		fs4 := NewFlagSet("test4", ContinueOnError)
+		var variable4 bool
+		fs4.BoolVar(&variable4, flagName, true, usage) // Default to true
+		
+		args4 := []string{"--no-" + flagName}
+		err4 := fs4.Parse(args4)
+		if err4 != nil {
+			return true // Acceptable if OptArgs Core rejects
+		}
+		
+		// Negation should set to false
+		if variable4 {
+			return false
+		}
+		
+		// Original flag should be marked as changed (not the negation flag)
+		flag4 := fs4.Lookup(flagName)
+		if flag4 == nil || !flag4.Changed {
+			return false
+		}
+		
+		// Test 5: Negation syntax with default false
+		fs5 := NewFlagSet("test5", ContinueOnError)
+		var variable5 bool
+		fs5.BoolVar(&variable5, flagName, false, usage) // Default to false
+		
+		args5 := []string{"--no-" + flagName}
+		err5 := fs5.Parse(args5)
+		if err5 != nil {
+			return true // Acceptable if OptArgs Core rejects
+		}
+		
+		// Negation should still set to false
+		if variable5 {
+			return false
+		}
+		
+		return true
+	}
+	
+	if err := quick.Check(booleanFlexibilityProperty, &quick.Config{MaxCount: 100}); err != nil {
+		t.Errorf("Boolean flag parsing flexibility failed: %v", err)
+	}
+	
+	// Test with various boolean value formats
+	booleanValueFormatsProperty := func(flagName string) bool {
+		if flagName == "" || len(flagName) > 50 {
+			return true // Skip invalid inputs
+		}
+		
+		// Test various true values
+		trueValues := []string{"true", "1", "t", "T", "TRUE"}
+		for _, trueVal := range trueValues {
+			fs := NewFlagSet("test", ContinueOnError)
+			var variable bool
+			fs.BoolVar(&variable, flagName, false, "test flag")
+			
+			args := []string{"--" + flagName + "=" + trueVal}
+			err := fs.Parse(args)
+			if err != nil {
+				return true // Acceptable if OptArgs Core rejects
+			}
+			
+			if !variable {
+				return false // Should be true
+			}
+		}
+		
+		// Test various false values
+		falseValues := []string{"false", "0", "f", "F", "FALSE"}
+		for _, falseVal := range falseValues {
+			fs := NewFlagSet("test", ContinueOnError)
+			var variable bool
+			fs.BoolVar(&variable, flagName, true, "test flag") // Default to true
+			
+			args := []string{"--" + flagName + "=" + falseVal}
+			err := fs.Parse(args)
+			if err != nil {
+				return true // Acceptable if OptArgs Core rejects
+			}
+			
+			if variable {
+				return false // Should be false
+			}
+		}
+		
+		return true
+	}
+	
+	if err := quick.Check(booleanValueFormatsProperty, &quick.Config{MaxCount: 50}); err != nil {
+		t.Errorf("Boolean value formats flexibility failed: %v", err)
+	}
+	
+	// Test shorthand boolean flags
+	booleanShorthandProperty := func(flagName, shorthand string) bool {
+		if flagName == "" || len(flagName) > 50 || len(shorthand) != 1 {
+			return true // Skip invalid inputs
+		}
+		
+		// Skip if shorthand is not a valid character
+		if !((shorthand[0] >= 'a' && shorthand[0] <= 'z') || (shorthand[0] >= 'A' && shorthand[0] <= 'Z')) {
+			return true
+		}
+		
+		// Test shorthand no-argument (should set to true)
+		fs1 := NewFlagSet("test1", ContinueOnError)
+		var variable1 bool
+		fs1.BoolVarP(&variable1, flagName, shorthand, false, "test flag")
+		
+		args1 := []string{"-" + shorthand}
+		err1 := fs1.Parse(args1)
+		if err1 != nil {
+			return true // Acceptable if OptArgs Core rejects
+		}
+		
+		if !variable1 {
+			return false
+		}
+		
+		// Test shorthand with explicit value
+		fs2 := NewFlagSet("test2", ContinueOnError)
+		var variable2 bool
+		fs2.BoolVarP(&variable2, flagName, shorthand, true, "test flag")
+		
+		args2 := []string{"-" + shorthand + "=false"}
+		err2 := fs2.Parse(args2)
+		if err2 != nil {
+			return true // Acceptable if OptArgs Core rejects
+		}
+		
+		if variable2 {
+			return false
+		}
+		
+		return true
+	}
+	
+	if err := quick.Check(booleanShorthandProperty, &quick.Config{MaxCount: 50}); err != nil {
+		t.Errorf("Boolean shorthand parsing flexibility failed: %v", err)
+	}
+	
+	// Test with known valid flag names for more reliable testing
+	t.Run("KnownValidBooleanFlags", func(t *testing.T) {
+		validFlags := []string{"verbose", "debug", "help", "quiet", "force"}
+		
+		for _, flagName := range validFlags {
+			// Test no-argument sets to true
+			fs1 := NewFlagSet("test", ContinueOnError)
+			var var1 bool
+			fs1.BoolVar(&var1, flagName, false, "test flag")
+			
+			err1 := fs1.Parse([]string{"--" + flagName})
+			if err1 != nil {
+				t.Errorf("Failed to parse no-argument boolean flag %s: %v", flagName, err1)
+				continue
+			}
+			
+			if !var1 {
+				t.Errorf("No-argument boolean flag %s should be true, got false", flagName)
+			}
+			
+			// Test explicit true
+			fs2 := NewFlagSet("test", ContinueOnError)
+			var var2 bool
+			fs2.BoolVar(&var2, flagName, false, "test flag")
+			
+			err2 := fs2.Parse([]string{"--" + flagName + "=true"})
+			if err2 != nil {
+				t.Errorf("Failed to parse explicit true boolean flag %s: %v", flagName, err2)
+				continue
+			}
+			
+			if !var2 {
+				t.Errorf("Explicit true boolean flag %s should be true, got false", flagName)
+			}
+			
+			// Test explicit false
+			fs3 := NewFlagSet("test", ContinueOnError)
+			var var3 bool
+			fs3.BoolVar(&var3, flagName, true, "test flag")
+			
+			err3 := fs3.Parse([]string{"--" + flagName + "=false"})
+			if err3 != nil {
+				t.Errorf("Failed to parse explicit false boolean flag %s: %v", flagName, err3)
+				continue
+			}
+			
+			if var3 {
+				t.Errorf("Explicit false boolean flag %s should be false, got true", flagName)
+			}
+			
+			// Test negation syntax
+			fs4 := NewFlagSet("test", ContinueOnError)
+			var var4 bool
+			fs4.BoolVar(&var4, flagName, true, "test flag")
+			
+			err4 := fs4.Parse([]string{"--no-" + flagName})
+			if err4 != nil {
+				t.Errorf("Failed to parse negation boolean flag %s: %v", flagName, err4)
+				continue
+			}
+			
+			if var4 {
+				t.Errorf("Negation boolean flag %s should be false, got true", flagName)
+			}
+		}
+	})
+	
+	// Test invalid boolean values should produce errors
+	t.Run("InvalidBooleanValues", func(t *testing.T) {
+		fs := NewFlagSet("test", ContinueOnError)
+		var variable bool
+		fs.BoolVar(&variable, "test", false, "test flag")
+		
+		invalidValues := []string{"invalid", "maybe", "yes", "no", "2", "-1", "1.5"}
+		
+		for _, invalidValue := range invalidValues {
+			err := fs.Parse([]string{"--test=" + invalidValue})
+			if err == nil {
+				t.Errorf("Expected error for invalid boolean value '%s', but got none", invalidValue)
+			} else {
+				errorMsg := err.Error()
+				if !strings.Contains(errorMsg, "invalid boolean value") {
+					t.Errorf("Expected error message to contain 'invalid boolean value', got: %s", errorMsg)
+				}
+				if !strings.Contains(errorMsg, invalidValue) {
+					t.Errorf("Expected error message to contain invalid value '%s', got: %s", invalidValue, errorMsg)
+				}
+			}
+		}
+	})
+}
+
 // TestProperty3_SliceFlagValueAccumulation tests Property 3 from the design document:
 // For any slice flag and sequence of values, providing values either comma-separated 
 // or through repeated flag usage should result in a slice containing all provided 

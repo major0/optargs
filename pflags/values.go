@@ -49,6 +49,9 @@ func (b *boolValue) Type() string {
 
 func (b *boolValue) String() string { return strconv.FormatBool(bool(*b)) }
 
+// IsBoolFlag returns true to indicate this is a boolean flag
+func (b *boolValue) IsBoolFlag() bool { return true }
+
 // -- int Value
 type intValue int
 
