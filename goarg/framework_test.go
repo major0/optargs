@@ -2,6 +2,8 @@ package goarg
 
 import (
 	"testing"
+	
+	"github.com/major0/optargs"
 )
 
 // TestFrameworkSetup tests that the compatibility testing framework is properly set up
@@ -69,11 +71,16 @@ func TestProjectStructure(t *testing.T) {
 	}
 
 	// Test core integration
-	coreIntegration := &CoreIntegration{}
+	coreIntegration := &CoreIntegration{
+		metadata: metadata,
+		shortOpts: make(map[byte]*optargs.Flag),
+		longOpts: make(map[string]*optargs.Flag),
+		positionals: []PositionalArg{},
+	}
 	optString := coreIntegration.BuildOptString()
 	if optString == "" {
-		// This is expected for now since it's not implemented
-		t.Log("OptString is empty (expected for skeleton implementation)")
+		// This is expected for now since the test struct has no fields
+		t.Log("OptString is empty (expected for empty struct)")
 	}
 }
 
