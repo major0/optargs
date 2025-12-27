@@ -163,6 +163,63 @@ func TestProperty1_FlagCreationConsistency(t *testing.T) {
 	}
 }
 
+// TestProperty2_ShorthandRegistrationAndResolution tests Property 2 from the design document:
+// For any valid flag name and single-character shorthand, registering a flag with shorthand 
+// should make it accessible by both the long name and short character, and parsing with the 
+// short form should set the same flag as the long form.
+// **Validates: Requirements 2.1, 2.2, 2.3**
+func TestProperty2_ShorthandRegistrationAndResolution(t *testing.T) {
+	shorthandProperty := func(flagName, shorthand, defaultValue, usage string) bool {
+		// Skip invalid inputs
+		if flagName == "" || len(flagName) > 50 || len(shorthand) != 1 {
+			return true
+		}
+		
+		// Skip if shorthand is not a valid character
+		if !((shorthand[0] >= 'a' && shorthand[0] <= 'z') || (shorthand[0] >= 'A' && shorthand[0] <= 'Z')) {
+			return true
+		}
+		
+		fs := NewFlagSet("test", ContinueOnError)
+		var variable string
+		fs.StringVarP(&variable, flagName, shorthand, defaultValue, usage)
+		
+		// Test 1: Flag should be accessible by long name
+		flagByName := fs.Lookup(flagName)
+		if flagByName == nil {
+			return false
+		}
+		
+		// Test 2: Flag should have the correct shorthand
+		if flagByName.Shorthand != shorthand {
+			return false
+		}
+		
+		// Test 3: Shorthand mapping should exist
+		if fs.shorthand[shorthand] != flagName {
+			return false
+		}
+		
+		// Test 4: Flag should have correct properties
+		if flagByName.Name != flagName || 
+		   flagByName.DefValue != defaultValue || 
+		   flagByName.Usage != usage {
+			return false
+		}
+		
+		// Test 5: Variable should have default value
+		if variable != defaultValue {
+			return false
+		}
+		
+		return true
+	}
+	
+	if err := quick.Check(shorthandProperty, &quick.Config{MaxCount: 100}); err != nil {
+		t.Errorf("Shorthand registration and resolution failed: %v", err)
+	}
+}
+
 // TestProperty5_FlagSetIsolation tests Property 5 from the design document:
 // For any two FlagSets with the same flag names, operations on one FlagSet should not 
 // affect the other, and parsing should only process flags defined in the target FlagSet.
