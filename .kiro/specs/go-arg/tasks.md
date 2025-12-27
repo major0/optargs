@@ -58,11 +58,12 @@ This implementation plan creates a complete go-arg compatibility layer that prov
     - _Requirements: 1.2, 4.1_
 
 - [ ] 4. Implement direct OptArgs Core integration
-  - [ ] 4.1 Create direct OptArgs Core integration layer
+  - [x] 4.1 Create direct OptArgs Core integration layer
     - Implement CoreIntegration for direct translation from go-arg to OptArgs Core
     - Create methods for building optstring and long options directly
     - Implement result processing from OptArgs Core back to go-arg structs
     - Ensure no intermediate abstraction layers
+    - Updated to use new OptArgs Core command system with subcommand registration
     - _Requirements: 2.1, 2.2, 2.3_
 
   - [ ]* 4.2 Write property test for OptArgs Core integration
