@@ -1233,3 +1233,327 @@ func TestProperty11_OptArgsCoreIntegrationFidelity(t *testing.T) {
 		}
 	})
 }
+
+// TestPropertyAdvancedGNULongestMatching tests Property for GNU longest matching behavior
+// **Feature: pflags, Property Advanced1: GNU Longest Matching**
+// For any set of flags with shared prefixes, the parser should always select the longest
+// matching option name when multiple candidates exist
+func TestPropertyAdvancedGNULongestMatching(t *testing.T) {
+	longestMatchProperty := func(baseFlag, extendedFlag, setValue string) bool {
+		// Skip invalid inputs
+		if baseFlag == "" || extendedFlag == "" || len(baseFlag) >= len(extendedFlag) {
+			return true
+		}
+		
+		// Ensure extendedFlag actually extends baseFlag
+		if !strings.HasPrefix(extendedFlag, baseFlag) {
+			return true
+		}
+		
+		// Skip if flags are too long or contain invalid characters for this test
+		if len(baseFlag) > 30 || len(extendedFlag) > 50 || setValue == "" {
+			return true
+		}
+		
+		fs := NewFlagSet("test", ContinueOnError)
+		var baseVar, extendedVar string
+		
+		fs.StringVar(&baseVar, baseFlag, "", "base flag")
+		fs.StringVar(&extendedVar, extendedFlag, "", "extended flag")
+		
+		// Test that using the extended flag name sets the extended flag
+		args := []string{"--" + extendedFlag, setValue}
+		err := fs.Parse(args)
+		if err != nil {
+			// If OptArgs Core rejects the flag names, that's acceptable
+			return true
+		}
+		
+		// Extended flag should be set, base flag should remain empty
+		if extendedVar != setValue {
+			return false
+		}
+		
+		if baseVar != "" {
+			return false // Base flag should not be set
+		}
+		
+		// Extended flag should be marked as changed
+		extendedFlagObj := fs.Lookup(extendedFlag)
+		if extendedFlagObj == nil || !extendedFlagObj.Changed {
+			return false
+		}
+		
+		// Base flag should not be marked as changed
+		baseFlagObj := fs.Lookup(baseFlag)
+		if baseFlagObj == nil || baseFlagObj.Changed {
+			return false
+		}
+		
+		return true
+	}
+	
+	if err := quick.Check(longestMatchProperty, &quick.Config{MaxCount: 100}); err != nil {
+		t.Errorf("GNU longest matching property failed: %v", err)
+	}
+	
+	// Test with known valid flag combinations
+	t.Run("KnownValidLongestMatching", func(t *testing.T) {
+		testCases := []struct {
+			baseFlag     string
+			extendedFlag string
+			setValue     string
+		}{
+			{"enable", "enable-feature", "test1"},
+			{"verbose", "verbose-mode", "test2"},
+			{"config", "config-file", "test3"},
+			{"debug", "debug-level", "test4"},
+			{"output", "output-format", "test5"},
+		}
+		
+		for _, tc := range testCases {
+			fs := NewFlagSet("test", ContinueOnError)
+			var baseVar, extendedVar string
+			
+			fs.StringVar(&baseVar, tc.baseFlag, "", "base flag")
+			fs.StringVar(&extendedVar, tc.extendedFlag, "", "extended flag")
+			
+			// Test extended flag
+			args := []string{"--" + tc.extendedFlag, tc.setValue}
+			err := fs.Parse(args)
+			if err != nil {
+				t.Errorf("Failed to parse extended flag %s: %v", tc.extendedFlag, err)
+				continue
+			}
+			
+			if extendedVar != tc.setValue {
+				t.Errorf("Extended flag %s not set correctly, expected '%s', got '%s'", 
+					tc.extendedFlag, tc.setValue, extendedVar)
+			}
+			
+			if baseVar != "" {
+				t.Errorf("Base flag %s should not be set when extended flag is used, got '%s'", 
+					tc.baseFlag, baseVar)
+			}
+		}
+	})
+}
+
+// TestPropertyAdvancedGNUSpecialCharacters tests Property for special characters in option names
+// **Feature: pflags, Property Advanced2: Special Characters Support**
+// For any option name containing valid special characters (colons, equals), the parser
+// should correctly handle the option and distinguish between name and value components
+func TestPropertyAdvancedGNUSpecialCharacters(t *testing.T) {
+	specialCharsProperty := func(prefix, suffix, setValue string) bool {
+		// Skip invalid inputs
+		if prefix == "" || suffix == "" || setValue == "" {
+			return true
+		}
+		
+		// Limit length to keep test reasonable
+		if len(prefix) > 20 || len(suffix) > 20 || len(setValue) > 50 {
+			return true
+		}
+		
+		// Create flag names with special characters
+		testCases := []string{
+			prefix + ":" + suffix,           // colon separator
+			prefix + "=" + suffix,           // equals separator  
+			prefix + ":" + suffix + "=more", // mixed separators
+		}
+		
+		for _, flagName := range testCases {
+			fs := NewFlagSet("test", ContinueOnError)
+			var flagVar string
+			fs.StringVar(&flagVar, flagName, "", "test flag with special chars")
+			
+			// Test with space-separated value
+			args := []string{"--" + flagName, setValue}
+			err := fs.Parse(args)
+			if err != nil {
+				// If OptArgs Core rejects the flag name, that's acceptable
+				continue
+			}
+			
+			if flagVar != setValue {
+				return false
+			}
+			
+			// Test with equals syntax
+			fs2 := NewFlagSet("test2", ContinueOnError)
+			var flagVar2 string
+			fs2.StringVar(&flagVar2, flagName, "", "test flag with special chars")
+			
+			args2 := []string{"--" + flagName + "=" + setValue}
+			err2 := fs2.Parse(args2)
+			if err2 != nil {
+				continue // Acceptable if OptArgs Core rejects
+			}
+			
+			if flagVar2 != setValue {
+				return false
+			}
+		}
+		
+		return true
+	}
+	
+	if err := quick.Check(specialCharsProperty, &quick.Config{MaxCount: 50}); err != nil {
+		t.Errorf("Special characters support property failed: %v", err)
+	}
+	
+	// Test with known valid special character combinations
+	t.Run("KnownValidSpecialCharacters", func(t *testing.T) {
+		testCases := []struct {
+			flagName string
+			setValue string
+		}{
+			{"system:verbose", "enabled"},
+			{"config=file", "myconfig.json"},
+			{"app:level=debug", "trace"},
+			{"db:host=primary", "localhost"},
+			{"cache:url=redis", "redis://localhost:6379"},
+		}
+		
+		for _, tc := range testCases {
+			// Test space-separated syntax
+			fs1 := NewFlagSet("test1", ContinueOnError)
+			var flagVar1 string
+			fs1.StringVar(&flagVar1, tc.flagName, "", "test flag")
+			
+			args1 := []string{"--" + tc.flagName, tc.setValue}
+			err1 := fs1.Parse(args1)
+			if err1 != nil {
+				t.Errorf("Failed to parse flag %s with space syntax: %v", tc.flagName, err1)
+				continue
+			}
+			
+			if flagVar1 != tc.setValue {
+				t.Errorf("Flag %s not set correctly with space syntax, expected '%s', got '%s'", 
+					tc.flagName, tc.setValue, flagVar1)
+			}
+			
+			// Test equals syntax
+			fs2 := NewFlagSet("test2", ContinueOnError)
+			var flagVar2 string
+			fs2.StringVar(&flagVar2, tc.flagName, "", "test flag")
+			
+			args2 := []string{"--" + tc.flagName + "=" + tc.setValue}
+			err2 := fs2.Parse(args2)
+			if err2 != nil {
+				t.Errorf("Failed to parse flag %s with equals syntax: %v", tc.flagName, err2)
+				continue
+			}
+			
+			if flagVar2 != tc.setValue {
+				t.Errorf("Flag %s not set correctly with equals syntax, expected '%s', got '%s'", 
+					tc.flagName, tc.setValue, flagVar2)
+			}
+		}
+	})
+}
+
+// TestPropertyAdvancedGNUNestedEquals tests Property for nested equals syntax
+// **Feature: pflags, Property Advanced3: Nested Equals Syntax**
+// For any option name containing equals signs, the parser should correctly distinguish
+// between equals in the option name versus equals used for value assignment
+func TestPropertyAdvancedGNUNestedEquals(t *testing.T) {
+	nestedEqualsProperty := func(optionPart, keyPart, setValue string) bool {
+		// Skip invalid inputs
+		if optionPart == "" || keyPart == "" || setValue == "" {
+			return true
+		}
+		
+		// Limit length to keep test reasonable
+		if len(optionPart) > 15 || len(keyPart) > 15 || len(setValue) > 30 {
+			return true
+		}
+		
+		// Create flag name with equals in the name
+		flagName := optionPart + "=" + keyPart
+		
+		fs := NewFlagSet("test", ContinueOnError)
+		var flagVar string
+		fs.StringVar(&flagVar, flagName, "", "test flag with nested equals")
+		
+		// Test nested equals syntax: --option=key=value
+		args := []string{"--" + flagName + "=" + setValue}
+		err := fs.Parse(args)
+		if err != nil {
+			// If OptArgs Core rejects the flag name, that's acceptable
+			return true
+		}
+		
+		// The value should be everything after the last equals
+		if flagVar != setValue {
+			return false
+		}
+		
+		// Flag should be marked as changed
+		flag := fs.Lookup(flagName)
+		if flag == nil || !flag.Changed {
+			return false
+		}
+		
+		return true
+	}
+	
+	if err := quick.Check(nestedEqualsProperty, &quick.Config{MaxCount: 50}); err != nil {
+		t.Errorf("Nested equals syntax property failed: %v", err)
+	}
+	
+	// Test with known valid nested equals scenarios
+	t.Run("KnownValidNestedEquals", func(t *testing.T) {
+		testCases := []struct {
+			flagName      string
+			args          []string
+			expectedValue string
+		}{
+			{
+				flagName:      "config=file",
+				args:          []string{"--config=file=myconfig.json"},
+				expectedValue: "myconfig.json",
+			},
+			{
+				flagName:      "system=path",
+				args:          []string{"--system=path=/usr/local/bin"},
+				expectedValue: "/usr/local/bin",
+			},
+			{
+				flagName:      "db=host",
+				args:          []string{"--db=host=localhost:5432"},
+				expectedValue: "localhost:5432",
+			},
+			{
+				flagName:      "app=env",
+				args:          []string{"--app=env=production"},
+				expectedValue: "production",
+			},
+		}
+		
+		for _, tc := range testCases {
+			fs := NewFlagSet("test", ContinueOnError)
+			var flagVar string
+			fs.StringVar(&flagVar, tc.flagName, "", "test flag")
+			
+			err := fs.Parse(tc.args)
+			if err != nil {
+				t.Errorf("Failed to parse nested equals flag %s: %v", tc.flagName, err)
+				continue
+			}
+			
+			if flagVar != tc.expectedValue {
+				t.Errorf("Nested equals flag %s not set correctly, expected '%s', got '%s'", 
+					tc.flagName, tc.expectedValue, flagVar)
+			}
+			
+			// Verify flag was marked as changed
+			flag := fs.Lookup(tc.flagName)
+			if flag == nil {
+				t.Errorf("Flag %s not found after parsing", tc.flagName)
+			} else if !flag.Changed {
+				t.Errorf("Flag %s not marked as changed after parsing", tc.flagName)
+			}
+		}
+	})
+}

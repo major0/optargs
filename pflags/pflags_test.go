@@ -914,3 +914,414 @@ func TestIntSliceFlag(t *testing.T) {
 		t.Errorf("Expected variable to be set to default value [1, 2, 3], got %v", intSliceVar)
 	}
 }
+
+// TestAdvancedGNULongestMatching tests the GNU getopt_long() longest matching behavior
+// This tests the sophisticated pattern matching where multiple options can have similar prefixes
+// and the parser selects the longest matching option name
+func TestAdvancedGNULongestMatching(t *testing.T) {
+	tests := []struct {
+		name           string
+		flagDefs       map[string]string // flag name -> expected value
+		args           []string
+		expectedFlag   string
+		expectedValue  string
+		shouldError    bool
+		description    string
+	}{
+		{
+			name: "longest_match_enable_prefix",
+			flagDefs: map[string]string{
+				"enable-bob":       "",
+				"enable-bobadufoo": "",
+			},
+			args:          []string{"--enable-bobadufoo", "test-value"},
+			expectedFlag:  "enable-bobadufoo",
+			expectedValue: "test-value",
+			description:   "Should match longest option when multiple options share prefix",
+		},
+		{
+			name: "shorter_match_when_exact",
+			flagDefs: map[string]string{
+				"enable-bob":       "",
+				"enable-bobadufoo": "",
+			},
+			args:          []string{"--enable-bob", "test-value"},
+			expectedFlag:  "enable-bob", 
+			expectedValue: "test-value",
+			description:   "Should match exact shorter option when provided exactly",
+		},
+		{
+			name: "longest_match_with_equals",
+			flagDefs: map[string]string{
+				"system":     "",
+				"system7":    "",
+				"system7-ex": "",
+			},
+			args:          []string{"--system7-ex=extended-value"},
+			expectedFlag:  "system7-ex",
+			expectedValue: "extended-value",
+			description:   "Should match longest option with equals syntax",
+		},
+		{
+			name: "prefix_disambiguation",
+			flagDefs: map[string]string{
+				"verbose":      "",
+				"verbose-mode": "",
+				"verb":         "",
+			},
+			args:          []string{"--verbose-mode", "detailed"},
+			expectedFlag:  "verbose-mode",
+			expectedValue: "detailed",
+			description:   "Should disambiguate between similar prefixes",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			
+			// Create variables to hold flag values
+			flagVars := make(map[string]*string)
+			for flagName := range tt.flagDefs {
+				var flagVar string
+				flagVars[flagName] = &flagVar
+				fs.StringVar(&flagVar, flagName, "", tt.description)
+			}
+			
+			err := fs.Parse(tt.args)
+			
+			if tt.shouldError {
+				if err == nil {
+					t.Errorf("Expected error for test %s, but got none", tt.description)
+				}
+				return
+			}
+			
+			if err != nil {
+				t.Errorf("Unexpected error for test %s: %v", tt.description, err)
+				return
+			}
+			
+			// Check that the expected flag was set with the expected value
+			if expectedVar, exists := flagVars[tt.expectedFlag]; exists {
+				if *expectedVar != tt.expectedValue {
+					t.Errorf("Expected flag %s to have value '%s', got '%s'", 
+						tt.expectedFlag, tt.expectedValue, *expectedVar)
+				}
+			} else {
+				t.Errorf("Expected flag %s not found in flag definitions", tt.expectedFlag)
+			}
+			
+			// Verify the flag was marked as changed
+			flag := fs.Lookup(tt.expectedFlag)
+			if flag == nil {
+				t.Errorf("Flag %s not found after parsing", tt.expectedFlag)
+			} else if !flag.Changed {
+				t.Errorf("Flag %s not marked as changed after parsing", tt.expectedFlag)
+			}
+		})
+	}
+}
+
+// TestAdvancedGNUSpecialCharacters tests GNU getopt_long() support for special characters
+// in option names, including colons, equals signs, and complex nested syntax
+func TestAdvancedGNUSpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name          string
+		flagName      string
+		args          []string
+		expectedValue string
+		shouldError   bool
+		description   string
+	}{
+		{
+			name:          "colon_in_option_name",
+			flagName:      "system7:verbose",
+			args:          []string{"--system7:verbose", "enabled"},
+			expectedValue: "enabled",
+			description:   "Should support colon in option name",
+		},
+		{
+			name:          "colon_with_equals_syntax",
+			flagName:      "system7:prefix",
+			args:          []string{"--system7:prefix=/my/path"},
+			expectedValue: "/my/path",
+			description:   "Should support colon in option name with equals syntax",
+		},
+		{
+			name:          "complex_key_value_syntax",
+			flagName:      "set:key",
+			args:          []string{"--set:key=variable_value"},
+			expectedValue: "variable_value",
+			description:   "Should support complex key=value syntax with colon",
+		},
+		{
+			name:          "nested_equals_syntax",
+			flagName:      "system7:path=bindir",
+			args:          []string{"--system7:path=bindir=/my/custom/path"},
+			expectedValue: "/my/custom/path",
+			description:   "Should support nested equals syntax in option names",
+		},
+		{
+			name:          "equals_in_option_name_basic",
+			flagName:      "config=file",
+			args:          []string{"--config=file", "myconfig.json"},
+			expectedValue: "myconfig.json",
+			description:   "Should support equals sign in option name (space-separated value)",
+		},
+		{
+			name:          "equals_in_option_name_with_equals",
+			flagName:      "config=default",
+			args:          []string{"--config=default=production.conf"},
+			expectedValue: "production.conf",
+			description:   "Should support equals in option name with equals syntax",
+		},
+		{
+			name:          "multiple_special_chars",
+			flagName:      "app:config=env:prod",
+			args:          []string{"--app:config=env:prod=live-settings"},
+			expectedValue: "live-settings",
+			description:   "Should support multiple colons and equals in option name",
+		},
+		{
+			name:          "numeric_with_colon",
+			flagName:      "level9:debug",
+			args:          []string{"--level9:debug", "trace"},
+			expectedValue: "trace",
+			description:   "Should support numbers and colons in option names",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			var flagVar string
+			fs.StringVar(&flagVar, tt.flagName, "", tt.description)
+			
+			err := fs.Parse(tt.args)
+			
+			if tt.shouldError {
+				if err == nil {
+					t.Errorf("Expected error for test %s, but got none", tt.description)
+				}
+				return
+			}
+			
+			if err != nil {
+				t.Errorf("Unexpected error for test %s: %v", tt.description, err)
+				return
+			}
+			
+			if flagVar != tt.expectedValue {
+				t.Errorf("Expected flag value '%s', got '%s' for test: %s", 
+					tt.expectedValue, flagVar, tt.description)
+			}
+			
+			// Verify the flag was marked as changed
+			flag := fs.Lookup(tt.flagName)
+			if flag == nil {
+				t.Errorf("Flag %s not found after parsing", tt.flagName)
+			} else if !flag.Changed {
+				t.Errorf("Flag %s not marked as changed after parsing", tt.flagName)
+			}
+		})
+	}
+}
+
+// TestAdvancedGNUAmbiguityResolution tests how the parser handles option name resolution
+// OptArgs Core requires exact matches, which is actually more predictable behavior
+func TestAdvancedGNUAmbiguityResolution(t *testing.T) {
+	tests := []struct {
+		name         string
+		flagDefs     []string
+		args         []string
+		expectedFlag string
+		shouldError  bool
+		description  string
+	}{
+		{
+			name:         "partial_match_not_supported",
+			flagDefs:     []string{"verbose", "version", "help"},
+			args:         []string{"--ver", "value"},
+			expectedFlag: "", // Should error - partial matching not supported
+			shouldError:  true,
+			description:  "Should error on partial match - OptArgs Core requires exact matches",
+		},
+		{
+			name:         "partial_prefix_not_supported",
+			flagDefs:     []string{"verbose", "help", "output"},
+			args:         []string{"--verb", "value"},
+			expectedFlag: "", // Should error - partial matching not supported
+			shouldError:  true,
+			description:  "Should error on partial prefix - OptArgs Core requires exact matches",
+		},
+		{
+			name:         "exact_match_works",
+			flagDefs:     []string{"help", "help-extended"},
+			args:         []string{"--help", "value"},
+			expectedFlag: "help",
+			shouldError:  false,
+			description:  "Should match exact flag name",
+		},
+		{
+			name:         "exact_long_match_works",
+			flagDefs:     []string{"system-config", "system-cache", "system"},
+			args:         []string{"--system-config", "value"},
+			expectedFlag: "system-config",
+			shouldError:  false,
+			description:  "Should match exact long flag name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			
+			// Create variables for all flags
+			flagVars := make(map[string]*string)
+			for _, flagName := range tt.flagDefs {
+				var flagVar string
+				flagVars[flagName] = &flagVar
+				fs.StringVar(&flagVar, flagName, "", "test flag")
+			}
+			
+			err := fs.Parse(tt.args)
+			
+			if tt.shouldError {
+				if err == nil {
+					t.Errorf("Expected error for test %s, but got none", tt.description)
+				}
+				return
+			}
+			
+			if err != nil {
+				t.Errorf("Unexpected error for test %s: %v", tt.description, err)
+				return
+			}
+			
+			// Check that the expected flag was set
+			if tt.expectedFlag != "" {
+				if expectedVar, exists := flagVars[tt.expectedFlag]; exists {
+					if *expectedVar != "value" {
+						t.Errorf("Expected flag %s to have value 'value', got '%s'", 
+							tt.expectedFlag, *expectedVar)
+					}
+				} else {
+					t.Errorf("Expected flag %s not found in flag definitions", tt.expectedFlag)
+				}
+				
+				// Verify the flag was marked as changed
+				flag := fs.Lookup(tt.expectedFlag)
+				if flag == nil {
+					t.Errorf("Flag %s not found after parsing", tt.expectedFlag)
+				} else if !flag.Changed {
+					t.Errorf("Flag %s not marked as changed after parsing", tt.expectedFlag)
+				}
+			}
+		})
+	}
+}
+
+// TestAdvancedGNUComplexScenarios tests complex real-world scenarios that combine
+// multiple advanced GNU getopt_long() features
+func TestAdvancedGNUComplexScenarios(t *testing.T) {
+	t.Run("complex_build_system_flags", func(t *testing.T) {
+		fs := NewFlagSet("build", ContinueOnError)
+		
+		var (
+			enableBob       string
+			enableBobadufoo string
+			systemVerbose   string
+			systemPath      string
+			configEnv       string
+			debugLevel      string
+		)
+		
+		// Register flags with special characters and similar prefixes
+		fs.StringVar(&enableBob, "enable-bob", "", "Enable bob feature")
+		fs.StringVar(&enableBobadufoo, "enable-bobadufoo", "", "Enable bobadufoo feature")
+		fs.StringVar(&systemVerbose, "system7:verbose", "", "System 7 verbose mode")
+		fs.StringVar(&systemPath, "system7:path=bindir", "", "System 7 binary directory")
+		fs.StringVar(&configEnv, "config=env", "", "Configuration environment")
+		fs.StringVar(&debugLevel, "debug:level", "", "Debug level setting")
+		
+		// Test complex argument combinations
+		args := []string{
+			"--enable-bobadufoo", "advanced",
+			"--system7:verbose=detailed",
+			"--system7:path=bindir=/usr/local/bin",
+			"--config=env", "production",
+			"--debug:level=trace",
+		}
+		
+		err := fs.Parse(args)
+		if err != nil {
+			t.Fatalf("Unexpected error parsing complex scenario: %v", err)
+		}
+		
+		// Verify all flags were set correctly
+		if enableBobadufoo != "advanced" {
+			t.Errorf("Expected enable-bobadufoo='advanced', got '%s'", enableBobadufoo)
+		}
+		if systemVerbose != "detailed" {
+			t.Errorf("Expected system7:verbose='detailed', got '%s'", systemVerbose)
+		}
+		if systemPath != "/usr/local/bin" {
+			t.Errorf("Expected system7:path=bindir='/usr/local/bin', got '%s'", systemPath)
+		}
+		if configEnv != "production" {
+			t.Errorf("Expected config=env='production', got '%s'", configEnv)
+		}
+		if debugLevel != "trace" {
+			t.Errorf("Expected debug:level='trace', got '%s'", debugLevel)
+		}
+		
+		// Verify enable-bob was NOT set (should remain empty)
+		if enableBob != "" {
+			t.Errorf("Expected enable-bob to remain empty, got '%s'", enableBob)
+		}
+	})
+	
+	t.Run("nested_configuration_syntax", func(t *testing.T) {
+		fs := NewFlagSet("config", ContinueOnError)
+		
+		var (
+			dbHost   string
+			dbPort   string
+			cacheUrl string
+			logLevel string
+		)
+		
+		// Register flags that simulate complex configuration syntax
+		fs.StringVar(&dbHost, "db:host=primary", "", "Database primary host")
+		fs.StringVar(&dbPort, "db:port=primary", "", "Database primary port")
+		fs.StringVar(&cacheUrl, "cache:url=redis", "", "Redis cache URL")
+		fs.StringVar(&logLevel, "log:level=app", "", "Application log level")
+		
+		args := []string{
+			"--db:host=primary=db1.example.com",
+			"--db:port=primary=5432",
+			"--cache:url=redis=redis://cache.example.com:6379",
+			"--log:level=app=debug",
+		}
+		
+		err := fs.Parse(args)
+		if err != nil {
+			t.Fatalf("Unexpected error parsing nested configuration: %v", err)
+		}
+		
+		// Verify nested syntax was parsed correctly
+		if dbHost != "db1.example.com" {
+			t.Errorf("Expected db:host=primary='db1.example.com', got '%s'", dbHost)
+		}
+		if dbPort != "5432" {
+			t.Errorf("Expected db:port=primary='5432', got '%s'", dbPort)
+		}
+		if cacheUrl != "redis://cache.example.com:6379" {
+			t.Errorf("Expected cache:url=redis='redis://cache.example.com:6379', got '%s'", cacheUrl)
+		}
+		if logLevel != "debug" {
+			t.Errorf("Expected log:level=app='debug', got '%s'", logLevel)
+		}
+	})
+}
