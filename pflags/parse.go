@@ -1,8 +1,11 @@
 package pflags
 
 import (
+	"fmt"
 	"os"
 	"time"
+	
+	"github.com/major0/optargs"
 )
 
 // Parse parses flag definitions from the argument list, which should not
@@ -10,14 +13,85 @@ import (
 // are defined and before flags are accessed by the program.
 // The return value will be ErrHelp if -help was set but not defined.
 func (f *FlagSet) Parse(arguments []string) error {
-	f.parsed = true
-	f.args = arguments // For now, just store all arguments as non-flag args
+	// Initialize OptArgs Core parser with current arguments
+	if err := f.coreIntegration.InitializeParser(arguments); err != nil {
+		return f.coreIntegration.TranslateError(err)
+	}
 	
-	// TODO: This is a placeholder implementation
-	// The actual parsing will be implemented in later tasks using OptArgs Core
-	// For now, we just mark as parsed and store arguments
+	// Get the parser from core integration
+	parser := f.coreIntegration.GetParser()
+	if parser == nil {
+		return fmt.Errorf("failed to initialize OptArgs Core parser")
+	}
+	
+	// Process options using OptArgs Core
+	if err := f.processOptions(parser); err != nil {
+		return err
+	}
+	
+	// Store remaining non-flag arguments
+	f.args = parser.Args
+	f.parsed = true
 	
 	return nil
+}
+
+// processOptions iterates through OptArgs Core options and updates flag values
+func (f *FlagSet) processOptions(parser *optargs.Parser) error {
+	for option, err := range parser.Options() {
+		if err != nil {
+			return f.coreIntegration.TranslateError(err)
+		}
+		
+		// Find the corresponding pflag Flag
+		var flag *Flag
+		
+		// Handle both short and long option names
+		if len(option.Name) == 1 {
+			// Short option - look up by shorthand
+			if longName, exists := f.shorthand[option.Name]; exists {
+				flag = f.flags[f.normalizeFlagName(longName)]
+			}
+		} else {
+			// Long option - look up directly
+			flag = f.flags[f.normalizeFlagName(option.Name)]
+		}
+		
+		if flag == nil {
+			return fmt.Errorf("unknown flag: %s", option.Name)
+		}
+		
+		// Set the flag value
+		if err := f.setFlagValue(flag, option); err != nil {
+			return err
+		}
+		
+		// Mark flag as changed
+		flag.Changed = true
+	}
+	
+	return nil
+}
+
+// setFlagValue sets the flag value based on the OptArgs Core option
+func (f *FlagSet) setFlagValue(flag *Flag, option optargs.Option) error {
+	// Handle boolean flags specially
+	if flag.Value.Type() == "bool" {
+		if option.HasArg {
+			// Explicit boolean value provided
+			return flag.Value.Set(option.Arg)
+		} else {
+			// No argument provided, set to true
+			return flag.Value.Set("true")
+		}
+	}
+	
+	// For non-boolean flags, use the provided argument
+	if !option.HasArg {
+		return fmt.Errorf("flag --%s requires an argument", flag.Name)
+	}
+	
+	return flag.Value.Set(option.Arg)
 }
 
 // CommandLine is the default set of command-line flags, parsed from os.Args.
