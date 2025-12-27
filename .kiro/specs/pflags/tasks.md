@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation plan creates a drop-in replacement for spf13/pflag that maintains complete API compatibility while leveraging OptArgs Core for superior POSIX/GNU compliance. The approach focuses on building a compatibility layer that translates pflag API calls into OptArgs Core operations while preserving all expected behaviors and error messages.
+This implementation plan creates a drop-in replacement for spf13/pflag that maintains complete API compatibility while leveraging OptArgs Core for POSIX/GNU compliance. The approach focuses on building a compatibility layer that translates pflag API calls into OptArgs Core operations while preserving all expected behaviors and error messages.
 
 ## Tasks
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The PFlags wrapper provides a drop-in replacement for spf13/pflag that maintains complete API compatibility while leveraging OptArgs Core for superior POSIX/GNU compliance. This design bridges the gap between pflag's familiar interface and OptArgs Core's robust parsing engine, delivering both ease of migration and correctness guarantees.
+The PFlags wrapper provides a drop-in replacement for spf13/pflag that maintains complete API compatibility while leveraging OptArgs Core for POSIX/GNU compliance. This design bridges the gap between pflag's familiar interface and OptArgs Core's robust parsing engine, delivering both ease of migration and correctness guarantees.
 
 ## Architecture
 
@@ -28,7 +28,7 @@ The wrapper architecture creates a compatibility layer that translates pflag API
 
 1. **API Compatibility**: Maintain exact method signatures and behavior of spf13/pflag
 2. **Zero Breaking Changes**: Existing pflag code should work without modification
-3. **Enhanced Reliability**: Leverage OptArgs Core's superior standards compliance
+3. **Enhanced Reliability**: Leverage OptArgs Core's standards compliance
 4. **Performance Preservation**: Match or exceed pflag's performance characteristics
 5. **Clear Error Messages**: Provide helpful, actionable error messages
 

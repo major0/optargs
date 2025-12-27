@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation plan creates a complete go-arg compatibility layer that provides 100% API compatibility with alexflint/go-arg while leveraging OptArgs Core's superior POSIX/GNU compliance. The architecture is intentionally simple with direct integration between go-arg and OptArgs Core. Extensions are handled architecturally through `-ext.go` files.
+This implementation plan creates a complete go-arg compatibility layer that provides 100% API compatibility with alexflint/go-arg while leveraging OptArgs Core's POSIX/GNU compliance. The architecture is intentionally simple with direct integration between go-arg and OptArgs Core. Extensions are handled architecturally through `-ext.go` files.
 
 ## Tasks
 

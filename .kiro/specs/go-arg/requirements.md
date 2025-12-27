@@ -18,7 +18,7 @@ This specification defines the requirements for implementing a complete go-arg c
 
 ### Requirement 1: Complete go-arg API Compatibility
 
-**User Story:** As a Go developer using alexflint/go-arg, I want to switch to OptArgs-based go-arg without changing any code, so that I can benefit from superior POSIX/GNU compliance while maintaining my existing interface.
+**User Story:** As a Go developer using alexflint/go-arg, I want to switch to OptArgs-based go-arg without changing any code, so that I can benefit from POSIX/GNU compliance while maintaining my existing interface.
 
 #### Acceptance Criteria
 

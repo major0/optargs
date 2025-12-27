@@ -201,7 +201,7 @@ for word := p.Args[0][1:]; len(word) > 0; {
 #### Long Option Matching Algorithm
 ```go
 // Supports partial matching and complex name patterns
-// Handles ambiguity resolution and best-match selection
+// Handles ambiguity resolution and optimal match selection
 for opt := range p.longOpts {
     // Complex matching logic with case sensitivity options
     // Supports '=' in option names for advanced patterns

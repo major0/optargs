@@ -1,6 +1,6 @@
 # go-arg Compatibility Layer
 
-This package provides 100% API compatibility with [alexflint/go-arg](https://github.com/alexflint/go-arg) while leveraging OptArgs Core's superior POSIX/GNU compliance.
+This package provides 100% API compatibility with [alexflint/go-arg](https://github.com/alexflint/go-arg) while leveraging OptArgs Core's POSIX/GNU compliance.
 
 ## Project Structure
 

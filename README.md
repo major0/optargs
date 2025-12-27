@@ -15,7 +15,7 @@ CLI from a POSIX/GNU perspective, and is capable of reproducing any optional
 argument pairing that would normally be capable with `getopt()` and
 `getopt_long()`. This also means that this tool does _not_ dictate any sort of
 rules about what a good UI should look like for the end user. Developers are
-free to come up with whatever CLI they feel best fits their user base.
+free to come up with whatever CLI they feel fits their user base.
 
 This tool deviates from `getopt()` and `getopt_long` in a few aspects:
 1. While this library considers interpretation of the CLI as standardized by
@@ -260,7 +260,7 @@ Enumerated options that cycle through multiple states or accept specific values.
 # Compression level
 ./myapp --compression=none
 ./myapp --compression=fast
-./myapp --compression=best
+./myapp --compression=high
 ```
 
 ### Many-to-One Options
