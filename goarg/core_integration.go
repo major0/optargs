@@ -89,15 +89,6 @@ func (ci *CoreIntegration) CreateParserWithParent(args []string, parent *optargs
 	optstring := ci.BuildOptString()
 	longOpts := ci.BuildLongOpts()
 	
-	// Debug: print what options we're registering
-	fmt.Printf("DEBUG: Creating parser with optstring='%s', longOpts=%v\n", optstring, longOpts)
-	for k, v := range ci.shortOpts {
-		fmt.Printf("DEBUG: shortOpts[%c] = %+v\n", k, v)
-	}
-	for k, v := range ci.longOpts {
-		fmt.Printf("DEBUG: longOpts[%s] = %+v\n", k, v)
-	}
-	
 	// Create OptArgs Core parser
 	parser, err := optargs.GetOptLong(args, optstring, longOpts)
 	if err != nil {

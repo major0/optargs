@@ -177,6 +177,14 @@ This implementation plan prioritizes achieving 100% test coverage and comprehens
   - Confirm 100% test coverage achieved and maintained
   - Validate all requirements are implemented and tested
 
+- [-] 13. Fix short option compaction inheritance bug
+  - [-] 13.1 Fix short option compaction handling in inheritance scenarios
+    - Fix bug where parent option inspection doesn't properly handle compacted arguments
+    - Ensure parent only inspects single flag and returns control to caller
+    - Handle optional arguments to compacted options correctly
+    - _Requirements: 1.2, 4.2 (Property 2: Option Compaction and Argument Assignment)_
+    - _Fixes failing tests: TestOptArgsCoreCompactedOptions, TestShortOptionInheritance_
+
 ## Notes
 
 - All tasks focus on testing first, code modification only when tests reveal issues
