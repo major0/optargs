@@ -159,6 +159,7 @@ package optargs
 import (
         "errors"
         "log/slog"
+        "os"
 )
 
 type ArgType int
@@ -214,8 +215,14 @@ func getOpt(args []string, optstring string, longopts []Flag, longOnly bool) (*P
                 parseMode:       ParseDefault,
         }
 
+        // Check POSIXLY_CORRECT environment variable
+        // If set, behave as if '+' prefix was used in optstring
+        if os.Getenv("POSIXLY_CORRECT") != "" </span><span class="cov8" title="1">{
+                config.parseMode = ParsePosixlyCorrect
+        }</span>
+
         // Itterate over the longOpts list populating the map
-        longOpts := make(map[string]*Flag)
+        <span class="cov8" title="1">longOpts := make(map[string]*Flag)
         for _, opt := range longopts </span><span class="cov8" title="1">{
                 longOpts[opt.Name] = &amp;opt
         }</span>
