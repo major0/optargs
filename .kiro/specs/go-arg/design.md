@@ -2,16 +2,29 @@
 
 ## Overview
 
-This design implements a complete go-arg compatibility layer that provides 100% API compatibility with alexflint/go-arg while leveraging OptArgs Core's POSIX/GNU compliance. The architecture is intentionally simple: go-arg interfaces directly with OptArgs Core without intermediate layers. Extensions are handled architecturally through `-ext.go` files that can be included/excluded at build time.
+This design implements a complete go-arg compatibility layer that provides 100% API compatibility with alexflint/go-arg while leveraging OptArgs Core's POSIX/GNU compliance and advanced command system. The architecture is intentionally simple: go-arg interfaces directly with OptArgs Core without intermediate layers. 
+
+Key enhancements include:
+- **Full Command System Integration**: Direct use of OptArgs Core's command/subcommand system
+- **Case Insensitive Commands**: Flexible command matching for improved usability  
+- **Option Inheritance**: Parent-to-child option inheritance through parser hierarchy
+- **Enhanced POSIX/GNU Compliance**: Access to OptArgs Core's advanced parsing features
+
+Extensions are handled architecturally through `-ext.go` files that can be included/excluded at build time.
 
 ## Architecture
 
-### Simple Two-Layer Architecture
+### Enhanced Two-Layer Architecture with Command System
 
 ```mermaid
 graph TB
     A[CLI Applications] --> B[go-arg API Layer]
-    B --> C[OptArgs Core]
+    B --> C[OptArgs Core with Command System]
+    
+    C --> C1[Command Registry]
+    C --> C2[Parent/Child Parsers]
+    C --> C3[Option Inheritance]
+    C --> C4[Case Insensitive Matching]
     
     D[Extension Files *-ext.go] -.-> B
     D -.-> C
@@ -21,15 +34,23 @@ graph TB
     F --> H[Upstream alexflint/go-arg]
     
     I[Test Framework] --> E
+    
+    J[Command System Tests] --> C1
+    J --> C2
+    J --> C3
+    J --> C4
 ```
 
 ### Core Principles
 
-1. **Direct Integration**: go-arg interfaces directly with OptArgs Core
+1. **Direct Integration**: go-arg interfaces directly with OptArgs Core including its command system
 2. **Perfect Compatibility**: 100% API compatibility with alexflint/go-arg
-3. **Architectural Extensions**: Enhanced features through `-ext.go` files
-4. **Build-Time Configuration**: Extensions included/excluded at compile time
-5. **Zero Runtime Overhead**: No runtime extension system complexity
+3. **Enhanced Command System**: Full integration with OptArgs Core's hierarchical command system
+4. **Case Insensitive Commands**: Flexible command matching for improved user experience
+5. **Option Inheritance**: Parent-to-child option inheritance through parser hierarchy
+6. **Architectural Extensions**: Enhanced features through `-ext.go` files
+7. **Build-Time Configuration**: Extensions included/excluded at compile time
+8. **Zero Runtime Overhead**: No runtime extension system complexity
 
 ## Components and Interfaces
 
@@ -323,6 +344,18 @@ Based on the prework analysis, here are the correctness properties:
 **Property 8: Performance Efficiency**
 *For any* argument list size, parsing time should scale linearly and be competitive with or better than upstream alexflint/go-arg
 **Validates: Requirements 7.1**
+
+**Property 9: Option Inheritance Correctness**
+*For any* parent parser with options and child parser with subcommands, options defined in the parent should be accessible and functional when used with child subcommands
+**Validates: Requirements 2.6, 2.8**
+
+**Property 10: Case Insensitive Command Matching**
+*For any* registered command name, all case variations (uppercase, lowercase, mixed case) should resolve to the same command parser
+**Validates: Requirements 2.7**
+
+**Property 11: Command System Integration**
+*For any* struct with subcommand fields, the go-arg layer should correctly register and dispatch to OptArgs Core's command system
+**Validates: Requirements 2.6**
 
 ## Error Handling
 

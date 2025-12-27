@@ -6,13 +6,16 @@ This specification defines the requirements for implementing a complete go-arg c
 
 ## Glossary
 
-- **OptArgs Core**: The underlying POSIX/GNU-compliant argument parsing engine
+- **OptArgs Core**: The underlying POSIX/GNU-compliant argument parsing engine with advanced command system
 - **go-arg Layer**: Full compatibility wrapper for alexflint/go-arg struct-tag interface, built directly on OptArgs Core
 - **Module Aliases**: Go module replacement mechanism to switch between implementations during testing
 - **Upstream go-arg**: The original alexflint/go-arg library
 - **Compatibility Test**: Test that validates identical behavior between our implementation and upstream
 - **Struct-Tag Interface**: Declarative CLI definition using Go struct field tags
 - **Extension Files**: Files with `-ext.go` suffix that provide enhanced functionality without compromising base compatibility
+- **Command System**: OptArgs Core's hierarchical command/subcommand system with parent/child relationships
+- **Option Inheritance**: Feature allowing child parsers to inherit and use options defined in parent parsers
+- **Case Insensitive Commands**: Feature allowing commands to match regardless of case (server, SERVER, SeRvEr)
 
 ## Requirements
 
@@ -28,17 +31,20 @@ This specification defines the requirements for implementing a complete go-arg c
 4. THE go-arg Layer SHALL support all alexflint/go-arg features including subcommands, help generation, and type conversion
 5. THE go-arg Layer SHALL maintain backward compatibility with existing alexflint/go-arg applications
 
-### Requirement 2: Direct OptArgs Core Integration
+### Requirement 2: Direct OptArgs Core Integration with Enhanced Command System
 
-**User Story:** As a CLI application developer, I want the go-arg layer to directly leverage OptArgs Core's capabilities, so that I get enhanced POSIX/GNU compliance without additional abstraction layers.
+**User Story:** As a CLI application developer, I want the go-arg layer to directly leverage OptArgs Core's capabilities including the advanced command system, so that I get enhanced POSIX/GNU compliance and powerful subcommand features without additional abstraction layers.
 
 #### Acceptance Criteria
 
 1. THE go-arg Layer SHALL interface directly with OptArgs Core without intermediate layers
-2. WHEN parsing arguments, THE go-arg Layer SHALL use OptArgs Core's native parsing capabilities
-3. THE go-arg Layer SHALL translate struct-tag definitions directly to OptArgs Core flag definitions
+2. WHEN parsing arguments, THE go-arg Layer SHALL use OptArgs Core's native parsing capabilities including the command system
+3. THE go-arg Layer SHALL translate struct-tag definitions directly to OptArgs Core flag definitions and command registrations
 4. THE go-arg Layer SHALL leverage OptArgs Core's error handling and diagnostic capabilities
 5. THE go-arg Layer SHALL maintain optimal performance by minimizing abstraction overhead
+6. THE go-arg Layer SHALL support OptArgs Core's command/subcommand system with parent/child relationships
+7. THE go-arg Layer SHALL support case insensitive command matching for improved usability
+8. THE go-arg Layer SHALL support option inheritance from parent to child parsers
 
 ### Requirement 3: Comprehensive Compatibility Testing
 
