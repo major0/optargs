@@ -318,11 +318,12 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 
 				// iterate over each character in the word looking
 				// for short options
+				originalArgs := p.Args // Save original args for compacted option processing
 				for word := p.Args[0][1:]; len(word) > 0; {
 					slog.Debug("Options", "word", word)
 					var remainingArgs []string
-					if len(p.Args) > 1 {
-						remainingArgs = p.Args[1:]
+					if len(originalArgs) > 1 {
+						remainingArgs = originalArgs[1:]
 					}
 					p.Args, word, option, err = p.findShortOptWithFallback(word[0], word[1:], remainingArgs)
 
@@ -439,26 +440,76 @@ func (p *Parser) findLongOptWithFallback(name string, args []string) ([]string, 
 
 // findShortOptWithFallback finds a short option, falling back to parent if not found
 func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([]string, string, Option, error) {
-	fmt.Printf("DEBUG: findShortOptWithFallback called with c='%c', word='%s', args=%v\n", c, word, args)
-	
 	// Try to find in current parser first
 	remainingArgs, remainingWord, option, err := p.findShortOpt(c, word, args)
 	
-	fmt.Printf("DEBUG: findShortOpt result: remainingArgs=%v, remainingWord='%s', option=%+v, err=%v\n", remainingArgs, remainingWord, option, err)
-	
 	// If found in current parser, return it
 	if err == nil {
-		fmt.Printf("DEBUG: Found option '%c' in current parser\n", c)
 		return remainingArgs, remainingWord, option, err
 	}
 	
 	// If not found and we have a parent, try parent
 	if p.parent != nil {
-		fmt.Printf("DEBUG: Option '%c' not found in current parser, trying parent\n", c)
+		// Check if parent has this option by looking up the flag definition
+		if parentFlag, exists := p.parent.shortOpts[c]; exists {
+			// Parent has the option, now we need to handle argument assignment
+			// based on the parent's flag requirements but using the child's context
+			parentOption := Option{
+				Name:   string(c),
+				HasArg: false,
+				Arg:    "",
+			}
+			
+			switch parentFlag.HasArg {
+			case NoArgument:
+				// No argument needed, just return the option
+				return args, word, parentOption, nil
+				
+			case RequiredArgument:
+				// Parent option requires an argument
+				var arg string
+				if len(word) > 0 {
+					// Take argument from remaining compacted string
+					arg = word
+					word = ""
+				} else {
+					// Take argument from next arg
+					if len(args) == 0 {
+						return args, word, parentOption, p.optError("option requires an argument: " + string(c))
+					}
+					arg = args[0]
+					args = args[1:]
+				}
+				parentOption.Arg = arg
+				parentOption.HasArg = true
+				return args, word, parentOption, nil
+				
+			case OptionalArgument:
+				// Parent option has optional argument
+				var arg string
+				if len(word) > 0 {
+					// Take argument from remaining compacted string
+					arg = word
+					word = ""
+					parentOption.HasArg = true
+				} else if len(args) > 0 {
+					// Take argument from next arg
+					arg = args[0]
+					args = args[1:]
+					parentOption.HasArg = true
+				}
+				parentOption.Arg = arg
+				return args, word, parentOption, nil
+				
+			default:
+				return args, word, parentOption, p.optErrorf("unknown argument type: %d", parentFlag.HasArg)
+			}
+		}
+		
+		// Parent doesn't have it either, continue with fallback chain
 		return p.parent.findShortOptWithFallback(c, word, args)
 	}
 	
-	// If we get here and there's an error, log it (no parent to fall back to)
-	fmt.Printf("DEBUG: Option '%c' not found and no parent available\n", c)
-	return remainingArgs, remainingWord, option, p.optError("unknown option: " + string(c))
+	// If we get here and there's an error, return the original error from findShortOpt
+	return remainingArgs, remainingWord, option, err
 }
