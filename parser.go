@@ -35,6 +35,10 @@ type Parser struct {
 	longOpts   map[string]*Flag
 	config     ParserConfig
 	lockConfig bool
+	
+	// Command support - simple map of command name to parser
+	commands CommandRegistry
+	parent   *Parser
 }
 
 func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string) (*Parser, error) {
@@ -43,6 +47,7 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 		config:     config,
 		longOpts:   longOpts,
 		lockConfig: false,
+		parent:     nil,
 	}
 
 	for c, _ := range shortOpts {
@@ -68,6 +73,9 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 		}
 	}
 	parser.longOpts = longOpts
+	
+	// Initialize command registry
+	parser.commands = NewCommandRegistry()
 
 	return &parser, nil
 }
@@ -265,7 +273,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				if len(p.Args) > 1 {
 					remainingArgs = p.Args[1:]
 				}
-				p.Args, option, err = p.findLongOpt(p.Args[0][2:], remainingArgs)
+				p.Args, option, err = p.findLongOptWithFallback(p.Args[0][2:], remainingArgs)
 				if !yield(option, err) {
 					return
 				}
@@ -277,7 +285,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 					if len(p.Args) > 1 {
 						remainingArgs = p.Args[1:]
 					}
-					p.Args, option, err = p.findLongOpt(p.Args[0][1:], remainingArgs)
+					p.Args, option, err = p.findLongOptWithFallback(p.Args[0][1:], remainingArgs)
 					if !yield(option, err) {
 						return
 					}
@@ -292,7 +300,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 					if len(p.Args) > 1 {
 						remainingArgs = p.Args[1:]
 					}
-					p.Args, word, option, err = p.findShortOpt(word[0], word[1:], remainingArgs)
+					p.Args, word, option, err = p.findShortOptWithFallback(word[0], word[1:], remainingArgs)
 
 					// Transform usages such as `-W foo` into `--foo`
 					if option.Name == "W" && p.config.gnuWords {
@@ -305,6 +313,24 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				}
 
 			default:
+				// Check if this is a command
+				if p.HasCommands() {
+					if _, exists := p.GetCommand(p.Args[0]); exists {
+						// Found a command, execute it with remaining args
+						remainingArgs := p.Args[1:]
+						_, err := p.ExecuteCommand(p.Args[0], remainingArgs)
+						if err != nil {
+							if !yield(Option{}, err) {
+								return
+							}
+						}
+						// Command handled, stop processing at root level
+						p.Args = []string{}
+						break out
+					}
+				}
+				
+				// Not a command, handle as non-option
 				switch p.config.parseMode {
 				case ParseDefault:
 					p.nonOpts = append(p.nonOpts, p.Args[0])
@@ -328,4 +354,68 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 		cleanupDone = true
 		p.Args = append(p.nonOpts, p.Args...)
 	}
+}
+// AddCmd registers a new subcommand with this parser
+func (p *Parser) AddCmd(name string, parser *Parser) *Parser {
+	// Set up parent relationship for option inheritance
+	if parser != nil {
+		parser.parent = p
+	}
+	return p.commands.AddCmd(name, parser)
+}
+
+// AddAlias creates an alias for an existing command
+func (p *Parser) AddAlias(alias, existingCommand string) error {
+	return p.commands.AddAlias(alias, existingCommand)
+}
+
+// GetCommand retrieves a parser by command name
+func (p *Parser) GetCommand(name string) (*Parser, bool) {
+	return p.commands.GetCommand(name)
+}
+
+// ListCommands returns all command mappings
+func (p *Parser) ListCommands() map[string]*Parser {
+	return p.commands.ListCommands()
+}
+
+// ExecuteCommand finds and executes a command
+func (p *Parser) ExecuteCommand(name string, args []string) (*Parser, error) {
+	return p.commands.ExecuteCommand(name, args)
+}
+
+// HasCommands returns true if any commands are registered
+func (p *Parser) HasCommands() bool {
+	return p.commands.HasCommands()
+}
+
+// GetAliases returns all aliases for a given parser
+func (p *Parser) GetAliases(targetParser *Parser) []string {
+	return p.commands.GetAliases(targetParser)
+}
+
+// findLongOptWithFallback finds a long option, falling back to parent if not found
+func (p *Parser) findLongOptWithFallback(name string, args []string) ([]string, Option, error) {
+	// Try to find in current parser first
+	remainingArgs, option, err := p.findLongOpt(name, args)
+	
+	// If not found and we have a parent, try parent
+	if err != nil && p.parent != nil {
+		return p.parent.findLongOptWithFallback(name, args)
+	}
+	
+	return remainingArgs, option, err
+}
+
+// findShortOptWithFallback finds a short option, falling back to parent if not found
+func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([]string, string, Option, error) {
+	// Try to find in current parser first
+	remainingArgs, remainingWord, option, err := p.findShortOpt(c, word, args)
+	
+	// If not found and we have a parent, try parent
+	if err != nil && p.parent != nil {
+		return p.parent.findShortOptWithFallback(c, word, args)
+	}
+	
+	return remainingArgs, remainingWord, option, err
 }
