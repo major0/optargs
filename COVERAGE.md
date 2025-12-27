@@ -254,7 +254,7 @@ Defined in `.coveragerc`:
 - `.github/workflows/coverage.yml`: GitHub Actions workflow
 - Automated validation, reporting, and badge updates
 
-## Best Practices
+## Good Practices
 
 ### Writing Tests for Coverage
 1. **Focus on functionality**: Test behavior, not just coverage

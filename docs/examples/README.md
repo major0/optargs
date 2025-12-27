@@ -35,4 +35,4 @@ Each example shows:
 
 ## API Compatibility
 
-All examples use the pflags API which maintains compatibility with spf13/pflag while leveraging OptArgs Core's superior POSIX/GNU compliance and advanced features.
+All examples use the pflags API which maintains compatibility with spf13/pflag while leveraging OptArgs Core's POSIX/GNU compliance and advanced features.
