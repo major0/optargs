@@ -87,18 +87,28 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 				subcommandName = strings.ToLower(field.Name)
 			}
 			
-			// Parse the subcommand struct
+			// Parse the subcommand struct for metadata only
 			fieldValue := destElem.Field(i)
 			if fieldValue.Kind() == reflect.Ptr {
-				if fieldValue.IsNil() {
-					// Create a new instance for parsing
-					fieldValue.Set(reflect.New(field.Type.Elem()))
+				var subInstance interface{}
+				wasNil := fieldValue.IsNil()
+				
+				if wasNil {
+					// Create a temporary instance for parsing metadata only
+					tempInstance := reflect.New(field.Type.Elem())
+					subInstance = tempInstance.Interface()
+				} else {
+					subInstance = fieldValue.Interface()
 				}
-				subMetadata, err := tp.ParseStruct(fieldValue.Interface())
+				
+				subMetadata, err := tp.ParseStruct(subInstance)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse subcommand %s: %w", subcommandName, err)
 				}
 				metadata.Subcommands[subcommandName] = subMetadata
+				
+				// If the field was originally nil, keep it nil (don't persist the temp instance)
+				// The subcommand will only be initialized when actually invoked
 			}
 		} else {
 			metadata.Fields = append(metadata.Fields, *fieldMetadata)
