@@ -1,4 +1,7 @@
 # OptArgs
+
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/major0/8842003e742d16ca9cbd5a8da3129a28d7407d16d0e55702c97ca1d4795b4a13/raw/optargs-coverage.json)](https://github.com/major0/optargs/actions/workflows/coverage.yml)
+
 This is a [Go](https://golang.org/) library for parsing optional arguments from
 the command line.
 
