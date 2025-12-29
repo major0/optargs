@@ -53,7 +53,7 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 		parent:     nil,
 	}
 
-	for c, _ := range shortOpts {
+	for c := range shortOpts {
 		if !isGraph(c) {
 			return nil, parser.optErrorf("Invalid short option: %c", c)
 		}
@@ -70,7 +70,7 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 	// ultimately has the same effect.
 	notGraph := regexp.MustCompile(`[^[:graph:]]`)
 	isSpace := regexp.MustCompile(`[[:space:]]`)
-	for s, _ := range longOpts {
+	for s := range longOpts {
 		if notGraph.MatchString(s) || isSpace.MatchString(s) {
 			return nil, fmt.Errorf("Invalid long option: %s", s)
 		}

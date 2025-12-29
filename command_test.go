@@ -342,8 +342,8 @@ func TestCommandInspection(t *testing.T) {
 	// Register commands and aliases
 	rootParser.AddCmd("server", serverParser)
 	rootParser.AddCmd("client", clientParser)
-	rootParser.AddAlias("srv", "server")
-	rootParser.AddAlias("c", "client")
+	_ = rootParser.AddAlias("srv", "server")
+	_ = rootParser.AddAlias("c", "client")
 
 	// Test command inspection
 	commands := rootParser.ListCommands()
