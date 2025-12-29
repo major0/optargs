@@ -179,7 +179,7 @@ func TestParserNonOpt(t *testing.T) {
 
 		switch opt.Name {
 		case "a":
-			break
+			// Expected option, no action needed
 
 		case string(byte(1)):
 			if opt.Arg != "param" {

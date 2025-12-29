@@ -190,13 +190,14 @@ func BenchmarkLargeArgumentLists(b *testing.B) {
 			args := make([]string, 0, size+1)
 			args = append(args, "prog")
 			for i := 1; i <= size; i++ {
-				if i%4 == 0 {
+				switch i % 4 {
+				case 0:
 					args = append(args, "-a")
-				} else if i%4 == 1 {
+				case 1:
 					args = append(args, "-b", "arg"+strconv.Itoa(i))
-				} else if i%4 == 2 {
+				case 2:
 					args = append(args, "-c")
-				} else {
+				default:
 					args = append(args, "arg"+strconv.Itoa(i))
 				}
 			}
