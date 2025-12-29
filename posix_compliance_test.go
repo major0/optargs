@@ -9,15 +9,15 @@ import (
 // This validates that -abc is equivalent to -a -b -c
 func TestPOSIXShortOptionCompaction(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		optstring string
-		args     []string
-		expected []Option
+		args      []string
+		expected  []Option
 	}{
 		{
-			name:     "basic compaction no args",
+			name:      "basic compaction no args",
 			optstring: "abc",
-			args:     []string{"-abc"},
+			args:      []string{"-abc"},
 			expected: []Option{
 				{Name: "a", HasArg: false, Arg: ""},
 				{Name: "b", HasArg: false, Arg: ""},
@@ -25,27 +25,27 @@ func TestPOSIXShortOptionCompaction(t *testing.T) {
 			},
 		},
 		{
-			name:     "compaction with required arg",
+			name:      "compaction with required arg",
 			optstring: "ab:c",
-			args:     []string{"-abfoo"},
+			args:      []string{"-abfoo"},
 			expected: []Option{
 				{Name: "a", HasArg: false, Arg: ""},
 				{Name: "b", HasArg: true, Arg: "foo"},
 			},
 		},
 		{
-			name:     "compaction with optional arg",
+			name:      "compaction with optional arg",
 			optstring: "ab::c",
-			args:     []string{"-abfoo"},
+			args:      []string{"-abfoo"},
 			expected: []Option{
 				{Name: "a", HasArg: false, Arg: ""},
 				{Name: "b", HasArg: true, Arg: "foo"},
 			},
 		},
 		{
-			name:     "compaction with optional arg empty",
+			name:      "compaction with optional arg empty",
 			optstring: "ab::c",
-			args:     []string{"-ab"},
+			args:      []string{"-ab"},
 			expected: []Option{
 				{Name: "a", HasArg: false, Arg: ""},
 				{Name: "b", HasArg: false, Arg: ""},
@@ -90,48 +90,48 @@ func TestPOSIXShortOptionCompaction(t *testing.T) {
 // TestPOSIXArgumentHandling tests POSIX-compliant argument handling
 func TestPOSIXArgumentHandling(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		optstring string
-		args     []string
-		expected []Option
+		args      []string
+		expected  []Option
 		expectErr bool
 	}{
 		{
-			name:     "required argument provided inline",
+			name:      "required argument provided inline",
 			optstring: "a:",
-			args:     []string{"-afoo"},
-			expected: []Option{{Name: "a", HasArg: true, Arg: "foo"}},
+			args:      []string{"-afoo"},
+			expected:  []Option{{Name: "a", HasArg: true, Arg: "foo"}},
 		},
 		{
-			name:     "required argument provided separate",
+			name:      "required argument provided separate",
 			optstring: "a:",
-			args:     []string{"-a", "foo"},
-			expected: []Option{{Name: "a", HasArg: true, Arg: "foo"}},
+			args:      []string{"-a", "foo"},
+			expected:  []Option{{Name: "a", HasArg: true, Arg: "foo"}},
 		},
 		{
-			name:     "required argument missing",
+			name:      "required argument missing",
 			optstring: ":a:", // silent error mode
-			args:     []string{"-a"},
-			expected: []Option{{Name: "a", HasArg: false, Arg: ""}},
+			args:      []string{"-a"},
+			expected:  []Option{{Name: "a", HasArg: false, Arg: ""}},
 			expectErr: true,
 		},
 		{
-			name:     "optional argument provided inline",
+			name:      "optional argument provided inline",
 			optstring: "a::",
-			args:     []string{"-afoo"},
-			expected: []Option{{Name: "a", HasArg: true, Arg: "foo"}},
+			args:      []string{"-afoo"},
+			expected:  []Option{{Name: "a", HasArg: true, Arg: "foo"}},
 		},
 		{
-			name:     "optional argument not provided",
+			name:      "optional argument not provided",
 			optstring: "a::",
-			args:     []string{"-a"},
-			expected: []Option{{Name: "a", HasArg: false, Arg: ""}},
+			args:      []string{"-a"},
+			expected:  []Option{{Name: "a", HasArg: false, Arg: ""}},
 		},
 		{
-			name:     "negative argument accepted",
+			name:      "negative argument accepted",
 			optstring: "a:",
-			args:     []string{"-a", "-123"},
-			expected: []Option{{Name: "a", HasArg: true, Arg: "-123"}},
+			args:      []string{"-a", "-123"},
+			expected:  []Option{{Name: "a", HasArg: true, Arg: "-123"}},
 		},
 	}
 
@@ -180,31 +180,31 @@ func TestPOSIXArgumentHandling(t *testing.T) {
 // TestPOSIXOptionTermination tests POSIX -- termination behavior
 func TestPOSIXOptionTermination(t *testing.T) {
 	tests := []struct {
-		name     string
-		optstring string
-		args     []string
-		expected []Option
+		name          string
+		optstring     string
+		args          []string
+		expected      []Option
 		remainingArgs []string
 	}{
 		{
-			name:     "double dash stops parsing",
-			optstring: "abc",
-			args:     []string{"-a", "--", "-b", "-c"},
-			expected: []Option{{Name: "a", HasArg: false, Arg: ""}},
+			name:          "double dash stops parsing",
+			optstring:     "abc",
+			args:          []string{"-a", "--", "-b", "-c"},
+			expected:      []Option{{Name: "a", HasArg: false, Arg: ""}},
 			remainingArgs: []string{"-b", "-c"},
 		},
 		{
-			name:     "double dash with no options before",
-			optstring: "abc",
-			args:     []string{"--", "-a", "-b"},
-			expected: []Option{},
+			name:          "double dash with no options before",
+			optstring:     "abc",
+			args:          []string{"--", "-a", "-b"},
+			expected:      []Option{},
 			remainingArgs: []string{"-a", "-b"},
 		},
 		{
-			name:     "double dash with arguments",
-			optstring: "a:",
-			args:     []string{"-a", "foo", "--", "-a", "bar"},
-			expected: []Option{{Name: "a", HasArg: true, Arg: "foo"}},
+			name:          "double dash with arguments",
+			optstring:     "a:",
+			args:          []string{"-a", "foo", "--", "-a", "bar"},
+			expected:      []Option{{Name: "a", HasArg: true, Arg: "foo"}},
 			remainingArgs: []string{"-a", "bar"},
 		},
 	}
@@ -256,30 +256,30 @@ func TestPOSIXOptionTermination(t *testing.T) {
 // TestPOSIXParseMode tests different POSIX parsing modes
 func TestPOSIXParseMode(t *testing.T) {
 	tests := []struct {
-		name     string
-		optstring string
-		args     []string
-		expected []Option
+		name          string
+		optstring     string
+		args          []string
+		expected      []Option
 		remainingArgs []string
 	}{
 		{
-			name:     "default mode reorders arguments",
-			optstring: "a",
-			args:     []string{"file1", "-a", "file2"},
-			expected: []Option{{Name: "a", HasArg: false, Arg: ""}},
+			name:          "default mode reorders arguments",
+			optstring:     "a",
+			args:          []string{"file1", "-a", "file2"},
+			expected:      []Option{{Name: "a", HasArg: false, Arg: ""}},
 			remainingArgs: []string{"file1", "file2"},
 		},
 		{
-			name:     "posixly correct mode stops at first non-option",
-			optstring: "+a",
-			args:     []string{"file1", "-a", "file2"},
-			expected: []Option{},
+			name:          "posixly correct mode stops at first non-option",
+			optstring:     "+a",
+			args:          []string{"file1", "-a", "file2"},
+			expected:      []Option{},
 			remainingArgs: []string{"file1", "-a", "file2"},
 		},
 		{
-			name:     "non-opts mode treats non-options as arguments to option 1",
+			name:      "non-opts mode treats non-options as arguments to option 1",
 			optstring: "-a",
-			args:     []string{"-a", "file1", "-a"},
+			args:      []string{"-a", "file1", "-a"},
 			expected: []Option{
 				{Name: "a", HasArg: false, Arg: ""},
 				{Name: string(byte(1)), HasArg: false, Arg: "file1"},
@@ -336,38 +336,38 @@ func TestPOSIXParseMode(t *testing.T) {
 // TestPOSIXErrorHandling tests POSIX-compliant error handling
 func TestPOSIXErrorHandling(t *testing.T) {
 	tests := []struct {
-		name     string
-		optstring string
-		args     []string
-		expectErr bool
+		name       string
+		optstring  string
+		args       []string
+		expectErr  bool
 		silentMode bool
 	}{
 		{
-			name:     "unknown option with error reporting",
-			optstring: "a",
-			args:     []string{"-b"},
-			expectErr: true,
+			name:       "unknown option with error reporting",
+			optstring:  "a",
+			args:       []string{"-b"},
+			expectErr:  true,
 			silentMode: false,
 		},
 		{
-			name:     "unknown option with silent mode",
-			optstring: ":a",
-			args:     []string{"-b"},
-			expectErr: true,
+			name:       "unknown option with silent mode",
+			optstring:  ":a",
+			args:       []string{"-b"},
+			expectErr:  true,
 			silentMode: true,
 		},
 		{
-			name:     "missing required argument with error reporting",
-			optstring: "a:",
-			args:     []string{"-a"},
-			expectErr: true,
+			name:       "missing required argument with error reporting",
+			optstring:  "a:",
+			args:       []string{"-a"},
+			expectErr:  true,
 			silentMode: false,
 		},
 		{
-			name:     "missing required argument with silent mode",
-			optstring: ":a:",
-			args:     []string{"-a"},
-			expectErr: true,
+			name:       "missing required argument with silent mode",
+			optstring:  ":a:",
+			args:       []string{"-a"},
+			expectErr:  true,
 			silentMode: true,
 		},
 	}
@@ -408,22 +408,22 @@ func TestPOSIXErrorHandling(t *testing.T) {
 // TestGNUExtensions tests GNU extensions to POSIX
 func TestGNUExtensions(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		optstring string
-		args     []string
-		expected []Option
+		args      []string
+		expected  []Option
 	}{
 		{
-			name:     "GNU W extension",
+			name:      "GNU W extension",
 			optstring: "W;a",
-			args:     []string{"-W", "foo"},
-			expected: []Option{{Name: "foo", HasArg: true, Arg: "foo"}},
+			args:      []string{"-W", "foo"},
+			expected:  []Option{{Name: "foo", HasArg: true, Arg: "foo"}},
 		},
 		{
-			name:     "GNU W extension with argument",
+			name:      "GNU W extension with argument",
 			optstring: "W;a:",
-			args:     []string{"-W", "a=bar"},
-			expected: []Option{{Name: "a=bar", HasArg: true, Arg: "a=bar"}},
+			args:      []string{"-W", "a=bar"},
+			expected:  []Option{{Name: "a=bar", HasArg: true, Arg: "a=bar"}},
 		},
 	}
 
@@ -470,10 +470,10 @@ func TestPOSIXCharacterValidation(t *testing.T) {
 		if c == ':' || c == ';' || c == '-' || c == '+' {
 			continue
 		}
-		
+
 		optstring := string(c)
 		args := []string{"-" + string(c)}
-		
+
 		parser, err := GetOpt(args, optstring)
 		if err != nil {
 			t.Errorf("Valid character %c should be accepted, got error: %v", c, err)
@@ -496,9 +496,9 @@ func TestPOSIXCharacterValidation(t *testing.T) {
 
 	// Test invalid characters as option characters
 	invalidTests := []struct {
-		optstring string
+		optstring  string
 		shouldFail bool
-		desc string
+		desc       string
 	}{
 		{";", true, "semicolon as option character"},
 		{"a-", true, "dash as option character"},
@@ -508,7 +508,7 @@ func TestPOSIXCharacterValidation(t *testing.T) {
 		{"+a", false, "plus as prefix (valid)"},
 		{"-a", false, "dash as prefix (valid)"},
 	}
-	
+
 	for _, test := range invalidTests {
 		_, err := GetOpt(nil, test.optstring)
 		if test.shouldFail && err == nil {
@@ -519,37 +519,38 @@ func TestPOSIXCharacterValidation(t *testing.T) {
 		}
 	}
 }
+
 // TestPOSIXLYCORRECTEnvironmentVariable tests POSIXLY_CORRECT environment variable behavior
 func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 	tests := []struct {
-		name     string
-		optstring string
-		args     []string
-		envValue string
-		expected []Option
+		name          string
+		optstring     string
+		args          []string
+		envValue      string
+		expected      []Option
 		remainingArgs []string
 	}{
 		{
-			name:     "without POSIXLY_CORRECT processes all options",
-			optstring: "a",
-			args:     []string{"file1", "-a", "file2"},
-			envValue: "",
-			expected: []Option{{Name: "a", HasArg: false, Arg: ""}},
+			name:          "without POSIXLY_CORRECT processes all options",
+			optstring:     "a",
+			args:          []string{"file1", "-a", "file2"},
+			envValue:      "",
+			expected:      []Option{{Name: "a", HasArg: false, Arg: ""}},
 			remainingArgs: []string{"file1", "file2"},
 		},
 		{
-			name:     "with POSIXLY_CORRECT stops at first non-option",
-			optstring: "a",
-			args:     []string{"file1", "-a", "file2"},
-			envValue: "1",
-			expected: []Option{},
+			name:          "with POSIXLY_CORRECT stops at first non-option",
+			optstring:     "a",
+			args:          []string{"file1", "-a", "file2"},
+			envValue:      "1",
+			expected:      []Option{},
 			remainingArgs: []string{"file1", "-a", "file2"},
 		},
 		{
-			name:     "POSIXLY_CORRECT with options first",
+			name:      "POSIXLY_CORRECT with options first",
 			optstring: "ab",
-			args:     []string{"-a", "-b", "file1", "-a"},
-			envValue: "1",
+			args:      []string{"-a", "-b", "file1", "-a"},
+			envValue:  "1",
 			expected: []Option{
 				{Name: "a", HasArg: false, Arg: ""},
 				{Name: "b", HasArg: false, Arg: ""},
@@ -557,11 +558,11 @@ func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 			remainingArgs: []string{"file1", "-a"},
 		},
 		{
-			name:     "plus prefix overrides environment variable",
-			optstring: "+a",
-			args:     []string{"file1", "-a", "file2"},
-			envValue: "", // Even without env var, + prefix should work
-			expected: []Option{},
+			name:          "plus prefix overrides environment variable",
+			optstring:     "+a",
+			args:          []string{"file1", "-a", "file2"},
+			envValue:      "", // Even without env var, + prefix should work
+			expected:      []Option{},
 			remainingArgs: []string{"file1", "-a", "file2"},
 		},
 	}

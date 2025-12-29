@@ -7,7 +7,7 @@ import (
 func TestFullCommandIntegration(t *testing.T) {
 	// This test demonstrates the full workflow: mycmd mysubcmd --verbose
 	// where --verbose is defined in the root parser but used by the subcommand
-	
+
 	// Create root parser with global --verbose option
 	rootParser, err := GetOptLong([]string{}, "v", []Flag{
 		{Name: "verbose", HasArg: NoArgument},
@@ -73,7 +73,7 @@ func TestFullCommandIntegration(t *testing.T) {
 
 func TestNestedCommandInheritance(t *testing.T) {
 	// Test multiple levels of command nesting with option inheritance
-	
+
 	// Root parser: mycmd --verbose
 	rootParser, err := GetOptLong([]string{}, "v", []Flag{
 		{Name: "verbose", HasArg: NoArgument},
@@ -127,7 +127,7 @@ func TestNestedCommandInheritance(t *testing.T) {
 
 func TestCommandWithGlobalOptions(t *testing.T) {
 	// Test that global options work with subcommands
-	
+
 	// Create root parser
 	rootParser, err := GetOptLong([]string{}, "v", []Flag{
 		{Name: "verbose", HasArg: NoArgument},

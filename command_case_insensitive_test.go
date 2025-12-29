@@ -9,7 +9,7 @@ func TestCommandCaseInsensitive(t *testing.T) {
 	config := ParserConfig{
 		commandCaseIgnore: true,
 	}
-	
+
 	parser, err := NewParser(config, map[byte]*Flag{}, map[string]*Flag{}, []string{})
 	if err != nil {
 		t.Fatalf("NewParser() unexpected error: %v", err)
@@ -78,7 +78,7 @@ func TestCommandCaseSensitive(t *testing.T) {
 	config := ParserConfig{
 		commandCaseIgnore: false,
 	}
-	
+
 	parser, err := NewParser(config, map[byte]*Flag{}, map[string]*Flag{}, []string{})
 	if err != nil {
 		t.Fatalf("NewParser() unexpected error: %v", err)

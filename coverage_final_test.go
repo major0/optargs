@@ -110,10 +110,10 @@ func TestOptionsCommandExecutionWithError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	// Add a command with nil parser to trigger the error in ExecuteCommand
 	parser.Commands["subcmd"] = nil
-	
+
 	// Iterate through options - this should execute the command and hit the error path
 	errorCount := 0
 	for _, err := range parser.Options() {
@@ -127,7 +127,7 @@ func TestOptionsCommandExecutionWithError(t *testing.T) {
 		}
 		break // Only check first iteration
 	}
-	
+
 	// Should have encountered the error
 	if errorCount != 1 {
 		t.Errorf("Expected 1 error, got %d", errorCount)
@@ -141,10 +141,10 @@ func TestOptionsCommandExecutionDirectError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	// Manually add a command that exists but set it to nil to trigger error
 	parser.Commands["testcmd"] = nil
-	
+
 	// This should trigger the error path in Options -> ExecuteCommand
 	errorFound := false
 	for _, err := range parser.Options() {
@@ -156,7 +156,7 @@ func TestOptionsCommandExecutionDirectError(t *testing.T) {
 		}
 		break
 	}
-	
+
 	if !errorFound {
 		t.Error("Expected error from command execution")
 	}
@@ -169,11 +169,11 @@ func TestOptionsCommandExecutionUnknownCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	// Add a different command so HasCommands() returns true
 	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
 	parser.AddCmd("existing", subParser)
-	
+
 	// Since the command doesn't exist, it should be treated as a non-option
 	// and not trigger the error path in ExecuteCommand
 	optionCount := 0
@@ -183,12 +183,12 @@ func TestOptionsCommandExecutionUnknownCommand(t *testing.T) {
 		}
 		optionCount++
 	}
-	
+
 	// Should have processed no options (nonexistent treated as non-option)
 	if optionCount != 0 {
 		t.Errorf("Expected 0 options, got %d", optionCount)
 	}
-	
+
 	// The nonexistent command should be in Args as a non-option
 	found := false
 	for _, arg := range parser.Args {
@@ -210,7 +210,7 @@ func TestOptionsParseDefaultMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionCount := 0
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -220,12 +220,12 @@ func TestOptionsParseDefaultMode(t *testing.T) {
 			optionCount++
 		}
 	}
-	
+
 	// Should have processed both -v options
 	if optionCount != 2 {
 		t.Errorf("Expected 2 -v options, got %d", optionCount)
 	}
-	
+
 	// Should have "non-option" in Args
 	found := false
 	for _, arg := range parser.Args {
@@ -249,7 +249,7 @@ func TestOptionsLongOptsOnlyFallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	options := []string{}
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -257,7 +257,7 @@ func TestOptionsLongOptsOnlyFallback(t *testing.T) {
 		}
 		options = append(options, option.Name)
 	}
-	
+
 	// Should have processed the verbose option
 	if len(options) != 1 {
 		t.Errorf("Expected 1 option, got %d: %v", len(options), options)
@@ -276,7 +276,7 @@ func TestOptionsYieldReturnFalse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionCount := 0
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -288,7 +288,7 @@ func TestOptionsYieldReturnFalse(t *testing.T) {
 			break
 		}
 	}
-	
+
 	// Should have only processed one option due to early break
 	if optionCount != 1 {
 		t.Errorf("Expected 1 option processed, got %d", optionCount)
@@ -297,9 +297,9 @@ func TestOptionsYieldReturnFalse(t *testing.T) {
 
 // Helper function to check if a string contains a substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || (len(s) > len(substr) && 
-		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || 
-		 containsAt(s, substr, 1))))
+	return len(s) >= len(substr) && (s == substr || (len(s) > len(substr) &&
+		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
+			containsAt(s, substr, 1))))
 }
 
 func containsAt(s, substr string, start int) bool {
@@ -311,13 +311,14 @@ func containsAt(s, substr string, start int) bool {
 	}
 	return containsAt(s, substr, start+1)
 }
+
 // TestOptionsCleanupDeferredExecution tests the deferred cleanup logic
 func TestOptionsCleanupDeferredExecution(t *testing.T) {
 	parser, err := NewParser(ParserConfig{parseMode: ParseDefault}, map[byte]*Flag{}, map[string]*Flag{}, []string{"non-option1", "non-option2"})
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	// Don't iterate through all options to test the deferred cleanup
 	optionCount := 0
 	for _, err := range parser.Options() {
@@ -328,7 +329,7 @@ func TestOptionsCleanupDeferredExecution(t *testing.T) {
 		// Break early to test deferred cleanup
 		break
 	}
-	
+
 	// The deferred cleanup should have moved non-options to Args
 	if len(parser.Args) < 2 {
 		t.Errorf("Expected at least 2 args after cleanup, got %d: %v", len(parser.Args), parser.Args)
@@ -344,14 +345,14 @@ func TestOptionsCommandExecutionPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create subparser: %v", err)
 	}
-	
+
 	// Create main parser with command and remaining args
 	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"subcmd", "remaining"})
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
 	parser.AddCmd("subcmd", subParser)
-	
+
 	// Iterate through options - this should execute the command
 	optionCount := 0
 	for _, err := range parser.Options() {
@@ -360,7 +361,7 @@ func TestOptionsCommandExecutionPath(t *testing.T) {
 		}
 		optionCount++
 	}
-	
+
 	// After command execution, Args should be empty (command consumed all args)
 	if len(parser.Args) != 0 {
 		t.Errorf("Expected Args to be empty after command execution, got %v", parser.Args)
@@ -376,7 +377,7 @@ func TestOptionsLongOptWithRemainingArgs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	options := []string{}
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -384,12 +385,12 @@ func TestOptionsLongOptWithRemainingArgs(t *testing.T) {
 		}
 		options = append(options, option.Name)
 	}
-	
+
 	// Should have processed both long options
 	if len(options) != 2 {
 		t.Errorf("Expected 2 options, got %d: %v", len(options), options)
 	}
-	
+
 	// Should have "remaining" in Args
 	found := false
 	for _, arg := range parser.Args {
@@ -412,7 +413,7 @@ func TestOptionsShortOptWithRemainingArgs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	options := []string{}
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -420,12 +421,12 @@ func TestOptionsShortOptWithRemainingArgs(t *testing.T) {
 		}
 		options = append(options, option.Name)
 	}
-	
+
 	// Should have processed both short options
 	if len(options) != 2 {
 		t.Errorf("Expected 2 options, got %d: %v", len(options), options)
 	}
-	
+
 	// Should have "remaining" in Args
 	found := false
 	for _, arg := range parser.Args {
@@ -447,7 +448,7 @@ func TestOptionsEmptyArgsAfterProcessing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionCount := 0
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -457,17 +458,18 @@ func TestOptionsEmptyArgsAfterProcessing(t *testing.T) {
 			optionCount++
 		}
 	}
-	
+
 	// Should have processed exactly one option
 	if optionCount != 1 {
 		t.Errorf("Expected 1 option, got %d", optionCount)
 	}
-	
+
 	// Args should be empty after processing
 	if len(parser.Args) != 0 {
 		t.Errorf("Expected empty Args, got %v", parser.Args)
 	}
 }
+
 // TestOptionsLongOptNoRemainingArgs tests long option processing with no remaining args
 func TestOptionsLongOptNoRemainingArgs(t *testing.T) {
 	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{
@@ -476,7 +478,7 @@ func TestOptionsLongOptNoRemainingArgs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionCount := 0
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -486,7 +488,7 @@ func TestOptionsLongOptNoRemainingArgs(t *testing.T) {
 			optionCount++
 		}
 	}
-	
+
 	// Should have processed exactly one option
 	if optionCount != 1 {
 		t.Errorf("Expected 1 option, got %d", optionCount)
@@ -501,7 +503,7 @@ func TestOptionsShortOptNoRemainingArgs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionCount := 0
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -511,7 +513,7 @@ func TestOptionsShortOptNoRemainingArgs(t *testing.T) {
 			optionCount++
 		}
 	}
-	
+
 	// Should have processed exactly one option
 	if optionCount != 1 {
 		t.Errorf("Expected 1 option, got %d", optionCount)
@@ -526,7 +528,7 @@ func TestOptionsLongOptsOnlyNoRemainingArgs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionCount := 0
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -536,7 +538,7 @@ func TestOptionsLongOptsOnlyNoRemainingArgs(t *testing.T) {
 			optionCount++
 		}
 	}
-	
+
 	// Should have processed exactly one option
 	if optionCount != 1 {
 		t.Errorf("Expected 1 option, got %d", optionCount)
@@ -552,7 +554,7 @@ func TestOptionsShortOptCompactedNoRemainingArgs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	options := []string{}
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -560,12 +562,13 @@ func TestOptionsShortOptCompactedNoRemainingArgs(t *testing.T) {
 		}
 		options = append(options, option.Name)
 	}
-	
+
 	// Should have processed both options
 	if len(options) != 2 {
 		t.Errorf("Expected 2 options, got %d: %v", len(options), options)
 	}
 }
+
 // TestOptionsDoubleBreakOut tests the break out logic with double dash
 func TestOptionsDoubleBreakOut(t *testing.T) {
 	parser, err := NewParser(ParserConfig{parseMode: ParseDefault}, map[byte]*Flag{
@@ -574,7 +577,7 @@ func TestOptionsDoubleBreakOut(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionCount := 0
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -584,12 +587,12 @@ func TestOptionsDoubleBreakOut(t *testing.T) {
 			optionCount++
 		}
 	}
-	
+
 	// Should have processed one option before hitting --
 	if optionCount != 1 {
 		t.Errorf("Expected 1 option, got %d", optionCount)
 	}
-	
+
 	// Should have remaining args after --
 	if len(parser.Args) < 2 {
 		t.Errorf("Expected at least 2 remaining args, got %d: %v", len(parser.Args), parser.Args)
@@ -604,7 +607,7 @@ func TestOptionsNonOptInDefaultMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionCount := 0
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -614,12 +617,12 @@ func TestOptionsNonOptInDefaultMode(t *testing.T) {
 			optionCount++
 		}
 	}
-	
+
 	// Should have processed one option
 	if optionCount != 1 {
 		t.Errorf("Expected 1 option, got %d", optionCount)
 	}
-	
+
 	// Should have both non-options in Args
 	if len(parser.Args) < 2 {
 		t.Errorf("Expected at least 2 args, got %d: %v", len(parser.Args), parser.Args)
@@ -633,7 +636,7 @@ func TestOptionsCommandWithoutHasCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	// Don't add any commands - HasCommands() should return false
 	optionCount := 0
 	for _, err := range parser.Options() {
@@ -642,7 +645,7 @@ func TestOptionsCommandWithoutHasCommands(t *testing.T) {
 		}
 		optionCount++
 	}
-	
+
 	// Should treat "potential-command" as a non-option
 	if len(parser.Args) == 0 {
 		t.Error("Expected 'potential-command' to remain in Args")
@@ -655,7 +658,7 @@ func TestOptionsCleanupDoneTrue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionCount := 0
 	for _, err := range parser.Options() {
 		if err != nil {
@@ -663,17 +666,18 @@ func TestOptionsCleanupDoneTrue(t *testing.T) {
 		}
 		optionCount++
 	}
-	
+
 	// Should have processed no options (just the -- terminator)
 	if optionCount != 0 {
 		t.Errorf("Expected 0 options, got %d", optionCount)
 	}
-	
+
 	// Should have both args after --
 	if len(parser.Args) != 2 {
 		t.Errorf("Expected 2 args, got %d: %v", len(parser.Args), parser.Args)
 	}
 }
+
 // TestOptionsComprehensiveCoverage tests all paths through Options function
 func TestOptionsComprehensiveCoverage(t *testing.T) {
 	// Test case 1: Empty args
@@ -761,7 +765,7 @@ func TestOptionsIteratorYieldBehavior(t *testing.T) {
 		'b': {Name: "b", HasArg: NoArgument},
 		'c': {Name: "c", HasArg: NoArgument},
 	}, map[string]*Flag{}, []string{"-a", "-b", "-c"})
-	
+
 	// Test that yield returning false stops iteration
 	count := 0
 	for option, err := range parser.Options() {
@@ -774,7 +778,7 @@ func TestOptionsIteratorYieldBehavior(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if count != 1 {
 		t.Errorf("Expected iteration to stop after 1 option, got %d", count)
 	}
@@ -785,7 +789,7 @@ func TestOptionsLongOptsOnlyWithShortFallback(t *testing.T) {
 	parser, _ := NewParser(ParserConfig{longOptsOnly: true}, map[byte]*Flag{
 		'h': {Name: "h", HasArg: NoArgument},
 	}, map[string]*Flag{}, []string{"-h"}) // Single char should fall back to short option
-	
+
 	count := 0
 	for option, err := range parser.Options() {
 		if err != nil {
@@ -798,7 +802,7 @@ func TestOptionsLongOptsOnlyWithShortFallback(t *testing.T) {
 			count++
 		}
 	}
-	
+
 	// The test passes if we attempted to process the option (even if it failed)
 	if count == 0 {
 		t.Error("Expected at least one option processing attempt")
@@ -808,11 +812,11 @@ func TestOptionsLongOptsOnlyWithShortFallback(t *testing.T) {
 // TestExecuteCommandDirect tests the ExecuteCommand function directly
 func TestExecuteCommandDirect(t *testing.T) {
 	registry := NewCommandRegistry()
-	
+
 	// Test with valid command
 	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
 	registry.AddCmd("test", subParser)
-	
+
 	parser, err := registry.ExecuteCommand("test", []string{"arg1", "arg2"})
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -823,7 +827,7 @@ func TestExecuteCommandDirect(t *testing.T) {
 	if len(parser.Args) != 2 || parser.Args[0] != "arg1" || parser.Args[1] != "arg2" {
 		t.Errorf("Expected args [arg1, arg2], got %v", parser.Args)
 	}
-	
+
 	// Test with unknown command
 	_, err = registry.ExecuteCommand("unknown", []string{})
 	if err == nil {
@@ -833,7 +837,7 @@ func TestExecuteCommandDirect(t *testing.T) {
 	if err.Error() != expectedMsg {
 		t.Errorf("Expected error message '%s', got '%s'", expectedMsg, err.Error())
 	}
-	
+
 	// Test with nil parser
 	registry["nilcmd"] = nil
 	_, err = registry.ExecuteCommand("nilcmd", []string{})
@@ -859,16 +863,16 @@ func TestNewParserWithCaseInsensitiveCommands(t *testing.T) {
 	if parser == nil {
 		t.Fatal("Expected parser to be created")
 	}
-	
+
 	// Verify that command case ignore is enabled
 	if !parser.config.commandCaseIgnore {
 		t.Error("Expected commandCaseIgnore to be true")
 	}
-	
+
 	// Test case insensitive command matching
 	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
 	parser.AddCmd("Test", subParser)
-	
+
 	// Should find command with different case
 	foundParser, exists := parser.GetCommand("test")
 	if !exists {

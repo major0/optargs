@@ -26,7 +26,7 @@ type ParserConfig struct {
 
 	longCaseIgnore bool
 	longOptsOnly   bool
-	
+
 	// Command case sensitivity
 	commandCaseIgnore bool
 }
@@ -38,7 +38,7 @@ type Parser struct {
 	longOpts   map[string]*Flag
 	config     ParserConfig
 	lockConfig bool
-	
+
 	// Command support - simple map of command name to parser
 	Commands CommandRegistry
 	parent   *Parser
@@ -76,7 +76,7 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 		}
 	}
 	parser.longOpts = longOpts
-	
+
 	// Initialize command registry
 	parser.Commands = NewCommandRegistry()
 
@@ -180,12 +180,12 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, Option, erro
 	if best.Name != "" {
 		return args, best, nil
 	}
-	
+
 	// Only log error if there's no parent to fall back to
 	if p.parent == nil {
 		return args, Option{}, p.optError("unknown option: " + name)
 	}
-	
+
 	// Return error without logging - parent will be consulted
 	return args, Option{}, errors.New("unknown option: " + name)
 }
@@ -263,7 +263,7 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 	if p.parent == nil {
 		return args, word, Option{}, p.optError("unknown option: " + string(c))
 	}
-	
+
 	// Return error without logging - parent will be consulted
 	return args, word, Option{}, errors.New("unknown option: " + string(c))
 }
@@ -354,7 +354,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 						break out
 					}
 				}
-				
+
 				// Not a command, handle as non-option
 				switch p.config.parseMode {
 				case ParseDefault:
@@ -375,11 +375,12 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				p.Args = p.Args[1:]
 			}
 		}
-		
+
 		cleanupDone = true
 		p.Args = append(p.nonOpts, p.Args...)
 	}
 }
+
 // AddCmd registers a new subcommand with this parser
 func (p *Parser) AddCmd(name string, parser *Parser) *Parser {
 	// Set up parent relationship for option inheritance
@@ -423,23 +424,23 @@ func (p *Parser) GetAliases(targetParser *Parser) []string {
 func (p *Parser) findLongOptWithFallback(name string, args []string) ([]string, Option, error) {
 	// Try to find in current parser first
 	remainingArgs, option, err := p.findLongOpt(name, args)
-	
+
 	// If found in current parser, return it
 	if err == nil {
 		return remainingArgs, option, err
 	}
-	
+
 	// Only fall back to parent for "unknown option" errors
 	// Other errors like "option requires an argument" should be returned immediately
 	if err != nil && !strings.Contains(err.Error(), "unknown option") {
 		return remainingArgs, option, err
 	}
-	
+
 	// If not found and we have a parent, try parent
 	if p.parent != nil {
 		return p.parent.findLongOptWithFallback(name, args)
 	}
-	
+
 	// If we get here and there's an error, log it (no parent to fall back to)
 	return remainingArgs, option, p.optError("unknown option: " + name)
 }
@@ -448,12 +449,12 @@ func (p *Parser) findLongOptWithFallback(name string, args []string) ([]string, 
 func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([]string, string, Option, error) {
 	// Try to find in current parser first
 	remainingArgs, remainingWord, option, err := p.findShortOpt(c, word, args)
-	
+
 	// If found in current parser, return it
 	if err == nil {
 		return remainingArgs, remainingWord, option, err
 	}
-	
+
 	// If not found and we have a parent, try parent
 	if p.parent != nil {
 		// Check if parent has this option by looking up the flag definition
@@ -465,12 +466,12 @@ func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([
 				HasArg: false,
 				Arg:    "",
 			}
-			
+
 			switch parentFlag.HasArg {
 			case NoArgument:
 				// No argument needed, just return the option
 				return args, word, parentOption, nil
-				
+
 			case RequiredArgument:
 				// Parent option requires an argument
 				var arg string
@@ -489,7 +490,7 @@ func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([
 				parentOption.Arg = arg
 				parentOption.HasArg = true
 				return args, word, parentOption, nil
-				
+
 			case OptionalArgument:
 				// Parent option has optional argument
 				var arg string
@@ -506,16 +507,16 @@ func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([
 				}
 				parentOption.Arg = arg
 				return args, word, parentOption, nil
-				
+
 			default:
 				return args, word, parentOption, p.optErrorf("unknown argument type: %d", parentFlag.HasArg)
 			}
 		}
-		
+
 		// Parent doesn't have it either, continue with fallback chain
 		return p.parent.findShortOptWithFallback(c, word, args)
 	}
-	
+
 	// If we get here and there's an error, return the original error from findShortOpt
 	return remainingArgs, remainingWord, option, err
 }

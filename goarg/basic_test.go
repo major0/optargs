@@ -56,14 +56,14 @@ func TestBasicParsing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var cmd BasicCmd
 			err := ParseArgs(&cmd, tt.args)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("ParseArgs() expected error, got nil")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("ParseArgs() unexpected error: %v", err)
 				return
@@ -138,14 +138,14 @@ func TestPositionalArguments(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var cmd CopyCmd
 			err := ParseArgs(&cmd, tt.args)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("ParseArgs() expected error, got nil")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("ParseArgs() unexpected error: %v", err)
 				return
@@ -169,9 +169,9 @@ func TestPositionalArguments(t *testing.T) {
 
 func TestEnvironmentVariables(t *testing.T) {
 	type EnvCmd struct {
-		Token  string `arg:"--token,env:API_TOKEN" help:"API token"`
-		Debug  bool   `arg:"--debug,env:DEBUG" help:"enable debug mode"`
-		Port   int    `arg:"--port,env:PORT" default:"8080" help:"server port"`
+		Token string `arg:"--token,env:API_TOKEN" help:"API token"`
+		Debug bool   `arg:"--debug,env:DEBUG" help:"enable debug mode"`
+		Port  int    `arg:"--port,env:PORT" default:"8080" help:"server port"`
 	}
 
 	// Set environment variables for testing
@@ -231,10 +231,10 @@ func TestEnvironmentVariables(t *testing.T) {
 
 func TestDefaultValues(t *testing.T) {
 	type DefaultCmd struct {
-		StringVal string  `arg:"--string" default:"default-string" help:"string value"`
-		IntVal    int     `arg:"--int" default:"42" help:"integer value"`
-		FloatVal  float64 `arg:"--float" default:"3.14" help:"float value"`
-		BoolVal   bool    `arg:"--bool" default:"true" help:"boolean value"`
+		StringVal string   `arg:"--string" default:"default-string" help:"string value"`
+		IntVal    int      `arg:"--int" default:"42" help:"integer value"`
+		FloatVal  float64  `arg:"--float" default:"3.14" help:"float value"`
+		BoolVal   bool     `arg:"--bool" default:"true" help:"boolean value"`
 		SliceVal  []string `arg:"--slice" default:"a,b,c" help:"slice value"`
 	}
 
@@ -258,10 +258,10 @@ func TestDefaultValues(t *testing.T) {
 			name: "override_some_defaults",
 			args: []string{"--string", "custom", "--int", "100"},
 			expected: DefaultCmd{
-				StringVal: "custom", // Overridden
-				IntVal:    100,      // Overridden
-				FloatVal:  3.14,     // Default
-				BoolVal:   true,     // Default
+				StringVal: "custom",                // Overridden
+				IntVal:    100,                     // Overridden
+				FloatVal:  3.14,                    // Default
+				BoolVal:   true,                    // Default
 				SliceVal:  []string{"a", "b", "c"}, // Default
 			},
 		},

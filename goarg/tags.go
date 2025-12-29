@@ -21,20 +21,20 @@ type StructMetadata struct {
 
 // FieldMetadata represents a single struct field's CLI mapping
 type FieldMetadata struct {
-	Name        string
-	Type        reflect.Type
-	Tag         string
-	Short       string
-	Long        string
-	Help        string
-	Required    bool
-	Positional  bool
-	Env         string
-	Default     interface{}
+	Name       string
+	Type       reflect.Type
+	Tag        string
+	Short      string
+	Long       string
+	Help       string
+	Required   bool
+	Positional bool
+	Env        string
+	Default    interface{}
 
 	// Subcommand support
-	IsSubcommand    bool
-	SubcommandName  string
+	IsSubcommand   bool
+	SubcommandName string
 
 	// Direct OptArgs Core mapping
 	CoreFlag *optargs.Flag
@@ -69,7 +69,7 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 	// Parse each field in the struct
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
-		
+
 		// Skip unexported fields
 		if !field.IsExported() {
 			continue
@@ -86,13 +86,13 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 			if subcommandName == "" {
 				subcommandName = strings.ToLower(field.Name)
 			}
-			
+
 			// Parse the subcommand struct for metadata only
 			fieldValue := destElem.Field(i)
 			if fieldValue.Kind() == reflect.Ptr {
 				var subInstance interface{}
 				wasNil := fieldValue.IsNil()
-				
+
 				if wasNil {
 					// Create a temporary instance for parsing metadata only
 					tempInstance := reflect.New(field.Type.Elem())
@@ -100,13 +100,13 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 				} else {
 					subInstance = fieldValue.Interface()
 				}
-				
+
 				subMetadata, err := tp.ParseStruct(subInstance)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse subcommand %s: %w", subcommandName, err)
 				}
 				metadata.Subcommands[subcommandName] = subMetadata
-				
+
 				// If the field was originally nil, keep it nil (don't persist the temp instance)
 				// The subcommand will only be initialized when actually invoked
 			}
@@ -182,10 +182,10 @@ func (tp *TagParser) parseArgTag(metadata *FieldMetadata, argTag string) error {
 	// 8. "env:VAR_NAME" - environment variable (can be combined)
 
 	parts := strings.Split(argTag, ",")
-	
+
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
-		
+
 		if part == "" {
 			continue
 		}
@@ -260,7 +260,7 @@ func (tp *TagParser) parseDefaultValue(defaultStr string, fieldType reflect.Type
 		parts := strings.Split(defaultStr, ",")
 		slice := reflect.MakeSlice(fieldType, len(parts), len(parts))
 		elemType := fieldType.Elem()
-		
+
 		for i, part := range parts {
 			part = strings.TrimSpace(part)
 			elemVal, err := tp.parseDefaultValue(part, elemType)
@@ -289,8 +289,8 @@ func (tp *TagParser) mapToOptArgsCore(metadata *FieldMetadata) error {
 	case reflect.Bool:
 		argType = optargs.NoArgument
 	case reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		 reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		 reflect.Float32, reflect.Float64:
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
 		argType = optargs.RequiredArgument
 	case reflect.Slice:
 		argType = optargs.RequiredArgument
@@ -364,7 +364,7 @@ func (tp *TagParser) GetEnvironmentValue(metadata *FieldMetadata) (string, bool)
 	if metadata.Env == "" {
 		return "", false
 	}
-	
+
 	value, exists := os.LookupEnv(metadata.Env)
 	return value, exists
 }

@@ -184,7 +184,7 @@ func TestMultipleCommands(t *testing.T) {
 	serverParser, _ := GetOptLong([]string{}, "p:", []Flag{
 		{Name: "port", HasArg: RequiredArgument},
 	})
-	
+
 	clientParser, _ := GetOptLong([]string{}, "u:", []Flag{
 		{Name: "url", HasArg: RequiredArgument},
 	})
@@ -284,7 +284,7 @@ func TestCommandAliases(t *testing.T) {
 	// Test GetAliases function
 	aliases := rootParser.GetAliases(serverParser)
 	expectedAliases := []string{"server", "srv", "s"}
-	
+
 	if len(aliases) != len(expectedAliases) {
 		t.Errorf("Expected %d aliases, got %d", len(expectedAliases), len(aliases))
 	}
@@ -334,7 +334,7 @@ func TestCommandInspection(t *testing.T) {
 	serverParser, _ := GetOptLong([]string{}, "p:", []Flag{
 		{Name: "port", HasArg: RequiredArgument},
 	})
-	
+
 	clientParser, _ := GetOptLong([]string{}, "u:", []Flag{
 		{Name: "url", HasArg: RequiredArgument},
 	})
@@ -347,7 +347,7 @@ func TestCommandInspection(t *testing.T) {
 
 	// Test command inspection
 	commands := rootParser.ListCommands()
-	
+
 	// Should have 4 entries: server, srv, client, c
 	if len(commands) != 4 {
 		t.Errorf("Expected 4 command entries, got %d", len(commands))

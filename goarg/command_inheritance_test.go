@@ -30,7 +30,7 @@ func TestCommandInheritanceIntegration(t *testing.T) {
 		if !cmd.Debug {
 			t.Errorf("Expected Debug=true, got %v", cmd.Debug)
 		}
-		
+
 		// When no subcommand is specified, the subcommand field should remain nil
 		// or if initialized, should have default values only
 		if cmd.Server != nil {
@@ -78,7 +78,7 @@ func TestCommandInheritanceIntegration(t *testing.T) {
 		if !cmd.Verbose {
 			t.Errorf("Expected Verbose=true (inherited from root), got %v", cmd.Verbose)
 		}
-		
+
 		// Subcommand should be initialized and have its options set
 		if cmd.Server == nil {
 			t.Fatalf("Expected Server to be initialized")
@@ -98,7 +98,7 @@ func TestCommandInheritanceIntegration(t *testing.T) {
 		if cmd.Server == nil {
 			t.Fatalf("Expected Server to be initialized")
 		}
-		
+
 		// Check default values are applied
 		if cmd.Server.Port != 8080 {
 			t.Errorf("Expected Server.Port=8080 (default), got %v", cmd.Server.Port)

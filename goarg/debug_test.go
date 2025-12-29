@@ -42,7 +42,7 @@ func TestDebugStructParsing(t *testing.T) {
 
 	fmt.Printf("Metadata: %+v\n", metadata)
 	for i, field := range metadata.Fields {
-		fmt.Printf("Field %d: Name=%s, Short=%s, Long=%s, Type=%v\n", 
+		fmt.Printf("Field %d: Name=%s, Short=%s, Long=%s, Type=%v\n",
 			i, field.Name, field.Short, field.Long, field.Type)
 	}
 }
