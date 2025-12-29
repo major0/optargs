@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   issues: write
 
@@ -224,13 +224,53 @@ jobs:
       run: |
         COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
         echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+        echo "Coverage: ${COVERAGE}%"
+        
+    - name: Determine badge color
+      run: |
+        if (( $(echo "$COVERAGE >= 95" | bc -l) )); then
+          echo "BADGE_COLOR=brightgreen" >> $GITHUB_ENV
+        elif (( $(echo "$COVERAGE >= 85" | bc -l) )); then
+          echo "BADGE_COLOR=yellow" >> $GITHUB_ENV
+        else
+          echo "BADGE_COLOR=red" >> $GITHUB_ENV
+        fi
+        echo "Badge color: $BADGE_COLOR"
         
     - name: Create coverage badge
-      uses: schneegans/dynamic-badges-action@v1.6.0
+      uses: schneegans/dynamic-badges-action@v1.7.0
       with:
         auth: ${{ secrets.GITHUB_TOKEN }}
-        gistID: ${{ secrets.COVERAGE_GIST_ID }}
+        gistID: 8842003e742d16ca9cbd5a8da3129a28d7407d16d0e55702c97ca1d4795b4a13
         filename: optargs-coverage.json
         label: Coverage
         message: ${{ env.COVERAGE }}%
-        color: ${{ env.COVERAGE > 95 && 'brightgreen' || env.COVERAGE > 85 && 'yellow' || 'red' }}
+        color: ${{ env.BADGE_COLOR }}
+      continue-on-error: true
+      
+    - name: Create coverage badge (fallback)
+      if: failure()
+      run: |
+        echo "Dynamic badge creation failed, creating simple badge file"
+        mkdir -p .github/badges
+        cat > .github/badges/coverage.json << EOF
+        {
+          "schemaVersion": 1,
+          "label": "Coverage",
+          "message": "${COVERAGE}%",
+          "color": "${BADGE_COLOR}"
+        }
+        EOF
+        
+    - name: Commit badge file (fallback)
+      if: failure()
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .github/badges/coverage.json
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "chore(ci): Update coverage badge to ${COVERAGE}%"
+          git push
+        fi
