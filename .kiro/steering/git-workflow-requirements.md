@@ -169,10 +169,11 @@ pre-commit install --hook-type commit-msg
 2. **Implement changes** with frequent commits
 3. **Run local validation** using Makefile targets
 4. **Create secure commit messages** using temporary files (NEVER CLI message body)
-5. **Push topic branch** and create pull request using secure temp file method
-6. **Address review feedback** and CI failures
-7. **Merge after approval** and clean up branch
-8. **Clean up temporary files** used for commit messages and PR descriptions
+5. **Push topic branch** using `git push -u origin <branch-name>`
+6. **Create pull request** using secure temp file method with `gh pr create -F .pr-desc.txt`
+7. **Address review feedback** and CI failures
+8. **Merge after approval** and clean up branch
+9. **Clean up temporary files** used for commit messages and PR descriptions
 
 ### Commit Practices
 - Make atomic commits that represent complete, working changes

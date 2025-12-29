@@ -162,6 +162,9 @@ rm ".commit-msg.txt"
 
 ### Pull Request Security Pattern
 ```bash
+# Push branch to remote first
+git push -u origin <branch-name>
+
 # Create PR description file using direct file creation (NOT shell commands)
 # Use file editor/IDE to create .pr-desc.txt with content:
 # ## Summary
@@ -190,10 +193,12 @@ rm ".pr-desc.txt"
 2. **Complete the task** - Implement all code changes for the current task
 3. **Run tests** - Ensure all tests pass before committing
 4. **Stage changes** - `git add .` or selectively stage relevant files
-5. **Create commit message temp file** - Write commit message to temporary file
+5. **Create commit message temp file** - Write commit message to temporary file using file editor/IDE
 6. **Commit changes** - `git commit -F <temp-file>` (NEVER use `-m` for multi-line messages)
 7. **Clean up temp file** - Remove temporary commit message file
 8. **Verify commit** - `git log --oneline -1` to confirm commit was created
+9. **Push branch** - `git push -u origin <branch-name>` to push branch to remote
+10. **Create PR** - Use `gh pr create` with temp file for description
 
 ## Topic Branch Management
 
