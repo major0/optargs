@@ -149,6 +149,149 @@ gh run watch
 - **MUST** ensure all workflow checks pass before requesting review
 - **MUST** address any workflow failures promptly
 - **MUST** re-run workflows if needed using `gh run rerun`
+- **MUST** wait for all required PR checks to complete before proceeding with development
+- **MUST** fix any errors encountered in PR checks before continuing to next tasks
+
+### Mandatory PR Check Waiting and Error Handling
+
+#### After Every Push to Branch with Existing PR
+```bash
+# Check if current branch has a PR and monitor workflows
+if gh pr view --json state 2>/dev/null; then
+  echo "Branch has existing PR - monitoring workflows after push"
+
+  # Monitor workflow status
+  gh pr checks
+  gh pr status
+
+  # Wait for workflows to complete (check every 30 seconds)
+  echo "Waiting for all PR checks to complete..."
+  while true; do
+    # Get check status
+    CHECKS_STATUS=$(gh pr checks --json state --jq '.[].state' | sort -u)
+
+    # Check if all workflows are complete (SUCCESS, FAILURE, or CANCELLED)
+    if echo "$CHECKS_STATUS" | grep -q "PENDING\|IN_PROGRESS"; then
+      echo "Workflows still running... waiting 30 seconds"
+      sleep 30
+    else
+      echo "All workflows completed"
+      break
+    fi
+  done
+
+  # Check for failures and require fixes
+  FAILED_CHECKS=$(gh pr checks --json name,conclusion --jq '.[] | select(.conclusion == "FAILURE") | .name')
+  if [ -n "$FAILED_CHECKS" ]; then
+    echo "❌ FAILED CHECKS DETECTED:"
+    echo "$FAILED_CHECKS"
+    echo ""
+    echo "🛠️  REQUIRED ACTIONS:"
+    echo "1. Review failed check details: gh pr checks"
+    echo "2. Fix the issues causing failures"
+    echo "3. Commit and push fixes"
+    echo "4. Wait for checks to pass before proceeding"
+    echo ""
+    echo "⚠️  DO NOT PROCEED until all checks pass"
+    exit 1
+  else
+    echo "✅ All PR checks passed - safe to proceed"
+  fi
+else
+  echo "No PR exists for this branch yet"
+fi
+```
+
+#### After PR Creation
+```bash
+# Create PR and immediately monitor workflows
+gh pr create --title "<type>(scope): Task X.Y - Description" -F ".pr-desc.txt"
+
+echo "PR created - monitoring GitHub workflows..."
+
+# Wait for initial workflow triggers (GitHub needs time to start workflows)
+echo "Waiting for workflows to initialize..."
+sleep 10
+
+# Monitor workflow status
+gh pr checks
+gh pr status
+
+# Wait for all workflows to complete
+echo "Waiting for all PR checks to complete..."
+while true; do
+  # Get check status
+  CHECKS_STATUS=$(gh pr checks --json state --jq '.[].state' | sort -u)
+
+  # Check if all workflows are complete
+  if echo "$CHECKS_STATUS" | grep -q "PENDING\|IN_PROGRESS"; then
+    echo "Workflows still running... waiting 30 seconds"
+    sleep 30
+  else
+    echo "All workflows completed"
+    break
+  fi
+done
+
+# Validate all checks passed
+FAILED_CHECKS=$(gh pr checks --json name,conclusion --jq '.[] | select(.conclusion == "FAILURE") | .name')
+if [ -n "$FAILED_CHECKS" ]; then
+  echo "❌ FAILED CHECKS DETECTED:"
+  echo "$FAILED_CHECKS"
+  echo ""
+  echo "🛠️  REQUIRED ACTIONS:"
+  echo "1. Review failed check details: gh pr checks"
+  echo "2. Fix the issues causing failures"
+  echo "3. Commit and push fixes"
+  echo "4. Re-run this validation"
+  echo ""
+  echo "⚠️  DO NOT PROCEED until all checks pass"
+  exit 1
+else
+  echo "✅ All PR checks passed - PR is ready for review"
+fi
+```
+
+#### Error Handling and Fix Requirements
+
+When PR checks fail, the following process MUST be followed:
+
+1. **Identify Failed Checks**:
+   ```bash
+   # Get detailed information about failed checks
+   gh pr checks
+   gh pr status
+
+   # View specific workflow run details
+   gh run list --branch <branch-name>
+   gh run view <run-id>
+   ```
+
+2. **Fix Common Issues**:
+   - **Pre-commit failures**: Run `make pre-commit` locally and fix formatting/linting issues
+   - **Build failures**: Run `make build-check` locally and fix compilation errors
+   - **Coverage failures**: Run `make coverage-validate` locally and add missing tests
+   - **Test failures**: Run `make test` locally and fix failing tests
+
+3. **Re-run Validation**:
+   ```bash
+   # After fixing issues, commit and push
+   git add .
+   git commit -F ".commit-msg.txt"
+   git push
+
+   # Re-run the PR check monitoring script
+   # (Use the "After Every Push" script above)
+   ```
+
+4. **Manual Re-run if Needed**:
+   ```bash
+   # Re-run specific failed workflows
+   gh run rerun <run-id>
+
+   # Re-run all failed workflows for the PR
+   gh pr checks --json name,workflowRunId --jq '.[] | select(.conclusion == "FAILURE") | .workflowRunId' | xargs -I {} gh run rerun {}
+   ```
 
 ### Push Workflow Monitoring
 
@@ -212,12 +355,35 @@ pre-commit install --hook-type commit-msg
 3. **Run local validation** using Makefile targets
 4. **Create secure commit messages** using temporary files (NEVER CLI message body)
 5. **Push topic branch** using `git push -u origin <branch-name>`
-6. **Monitor workflows after push** if branch has existing PR using `gh pr checks` and `gh pr status`
-7. **Create pull request** using secure temp file method with `gh pr create -F .pr-desc.txt` (if not already created)
-8. **Monitor GitHub workflows after PR creation/update** using `gh pr checks` and `gh pr status` to validate no errors
-9. **Address review feedback** and CI failures if any
-10. **Merge after approval** and clean up branch
-11. **Clean up temporary files** used for commit messages and PR descriptions
+6. **Monitor workflows after push** if branch has existing PR using comprehensive monitoring script
+7. **Wait for all PR checks to complete** before proceeding with development
+8. **Fix any workflow failures** immediately when detected
+9. **Create pull request** using secure temp file method with `gh pr create -F .pr-desc.txt` (if not already created)
+10. **Monitor GitHub workflows after PR creation** and wait for completion
+11. **Validate all checks pass** before requesting review or proceeding
+12. **Address review feedback** and CI failures if any
+13. **Merge after approval** and clean up branch
+14. **Clean up temporary files** used for commit messages and PR descriptions
+
+### Enhanced Workflow Monitoring Requirements
+
+#### Mandatory Workflow Waiting
+- **MUST** wait for all PR checks to complete before proceeding to next development tasks
+- **MUST** use automated scripts to monitor workflow status and detect failures
+- **MUST** fix any detected failures before continuing development
+- **MUST** validate that fixes resolve the issues by re-running checks
+
+#### Automated Error Detection
+- **MUST** use scripted monitoring to detect failed checks automatically
+- **MUST** provide clear error messages and fix instructions when failures occur
+- **MUST** prevent proceeding when checks are failing
+- **MUST** validate successful fixes before continuing
+
+#### Comprehensive Check Coverage
+- **MUST** monitor all required workflow types: pre-commit, build, coverage
+- **MUST** handle different failure types with appropriate fix strategies
+- **MUST** support manual re-running of workflows when needed
+- **MUST** provide detailed status reporting throughout the process
 
 ### Commit Practices
 - Make atomic commits that represent complete, working changes

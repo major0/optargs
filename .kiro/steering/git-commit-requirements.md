@@ -213,10 +213,81 @@ rm ".pr-desc.txt"
 7. **Clean up temp file** - Remove temporary commit message file
 8. **Verify commit** - `git log --oneline -1` to confirm commit was created
 9. **Push branch** - `git push -u origin <branch-name>` to push branch to remote
-10. **Monitor workflows** - If branch has PR, check GitHub workflows status after push
+10. **Monitor workflows** - If branch has PR, wait for all GitHub workflows to complete and fix any failures
 11. **Create PR** - Use `gh pr create` with temp file for description (if not already created)
-12. **Monitor workflows** - Check GitHub workflows status after PR creation and validate no errors
-13. **Clean up PR temp file** - Remove temporary PR description file
+12. **Monitor PR workflows** - Wait for all GitHub workflows to complete and validate no errors
+13. **Fix any failures** - Address any workflow failures before proceeding to next task
+14. **Clean up PR temp file** - Remove temporary PR description file
+
+## PR Workflow Integration Requirements
+
+### After Each Commit and Push
+When working on a branch with an existing PR, the following process MUST be followed after every `git push`:
+
+1. **Automatic Workflow Monitoring**:
+   ```bash
+   # This script MUST be run after every push to a branch with existing PR
+   if gh pr view --json state 2>/dev/null; then
+     echo "Monitoring workflows for existing PR after push..."
+
+     # Wait for workflows to complete
+     while true; do
+       CHECKS_STATUS=$(gh pr checks --json state --jq '.[].state' | sort -u)
+       if echo "$CHECKS_STATUS" | grep -q "PENDING\|IN_PROGRESS"; then
+         echo "Workflows running... waiting 30 seconds"
+         sleep 30
+       else
+         break
+       fi
+     done
+
+     # Check for failures and require fixes
+     FAILED_CHECKS=$(gh pr checks --json name,conclusion --jq '.[] | select(.conclusion == "FAILURE") | .name')
+     if [ -n "$FAILED_CHECKS" ]; then
+       echo "❌ WORKFLOW FAILURES DETECTED - MUST FIX BEFORE PROCEEDING"
+       echo "$FAILED_CHECKS"
+       exit 1
+     fi
+   fi
+   ```
+
+2. **Mandatory Failure Resolution**:
+   - **MUST** fix any workflow failures before proceeding to next task
+   - **MUST** commit and push fixes
+   - **MUST** wait for workflows to pass before continuing development
+
+### After PR Creation
+When creating a new PR, the following process MUST be followed:
+
+1. **Immediate Workflow Monitoring**:
+   ```bash
+   # Create PR and wait for workflows
+   gh pr create --title "<type>(scope): Task X.Y - Description" -F ".pr-desc.txt"
+
+   # Wait for workflows to initialize and complete
+   sleep 10
+   while true; do
+     CHECKS_STATUS=$(gh pr checks --json state --jq '.[].state' | sort -u)
+     if echo "$CHECKS_STATUS" | grep -q "PENDING\|IN_PROGRESS"; then
+       sleep 30
+     else
+       break
+     fi
+   done
+
+   # Validate all checks passed
+   FAILED_CHECKS=$(gh pr checks --json name,conclusion --jq '.[] | select(.conclusion == "FAILURE") | .name')
+   if [ -n "$FAILED_CHECKS" ]; then
+     echo "❌ PR CREATION FAILED - WORKFLOWS FAILING"
+     echo "$FAILED_CHECKS"
+     exit 1
+   fi
+   ```
+
+2. **Validation Requirements**:
+   - **MUST** wait for all workflows to complete before considering PR ready
+   - **MUST** fix any failures detected during PR creation
+   - **MUST** validate that all required workflows are triggered and pass
 
 ## Topic Branch Management
 
@@ -277,3 +348,6 @@ This validation confirms that the security requirements are not only documented 
 - **Debugging Aid**: Isolate issues to specific task implementations using commit scopes
 - **Collaboration**: Clear change history for team members or future reference with standardized format
 - **CI/CD Integration**: Conventional commits can trigger automated workflows based on commit types
+- **Quality Assurance**: Mandatory PR workflow monitoring ensures all changes pass quality checks
+- **Error Prevention**: Automated failure detection prevents proceeding with broken code
+- **Workflow Reliability**: Comprehensive monitoring ensures consistent development process across all contributors
