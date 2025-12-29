@@ -53,6 +53,17 @@ jobs:
     - name: Install Go dependencies
       run: go mod download
 
+    - name: Install Go tools
+      run: |
+        # Install goimports
+        go install golang.org/x/tools/cmd/goimports@latest
+
+        # Install golangci-lint
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
+
+        # Add Go bin to PATH
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
     - name: Install pre-commit
       run: pip install pre-commit
 
