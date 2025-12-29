@@ -15,7 +15,7 @@ All code in the OptArgs project must achieve:
 
 ### Core Tests
 - Unit tests for all parsing functions
-- Integration tests for complete parsing workflows  
+- Integration tests for complete parsing workflows
 - Property-based tests using Go's testing/quick or similar framework
 - POSIX compliance tests validating against posix/ directory examples
 
@@ -36,6 +36,35 @@ All code in the OptArgs project must achieve:
 - All tests must pass before merging
 - Coverage reports must be generated and maintained
 - Property-based tests should run with sufficient iterations (minimum 100)
+
+### Build Workflow Requirements
+
+All code changes must pass the automated build workflow which includes:
+
+#### Multi-Version Go Support
+- **MUST** build and test successfully on Go 1.21, 1.22, and 1.23
+- **MUST** maintain compatibility with the minimum supported Go version
+- **MUST** use the latest stable Go version for primary development
+
+#### Code Quality Checks
+- Code quality checks are handled by separate workflows
+- Build workflow focuses solely on compilation verification
+
+#### Build Verification
+- **MUST** build successfully with `go build -v ./...`
+- **MUST** verify all dependencies with `go mod verify`
+
+#### Cross-Platform Compatibility
+- **MUST** build successfully for Linux (amd64, arm64)
+- **MUST** build successfully for macOS (amd64, arm64)
+- **MUST** build successfully for Windows (amd64)
+- **MUST** build successfully for FreeBSD (amd64)
+
+#### Workflow Integration
+- Build workflow **MUST** run on all pushes to main and develop branches
+- Build workflow **MUST** run on all pull requests
+- All build jobs **MUST** pass before code can be merged
+- Build artifacts **MUST** be cached for performance optimization
 
 ## Round-Trip Testing
 

@@ -1,5 +1,6 @@
 # OptArgs
 
+[![Build](https://github.com/major0/optargs/actions/workflows/build.yml/badge.svg)](https://github.com/major0/optargs/actions/workflows/build.yml)
 [![Test Coverage](https://github.com/major0/optargs/actions/workflows/coverage.yml/badge.svg)](https://github.com/major0/optargs/actions/workflows/coverage.yml)
 
 This is a [Go](https://golang.org/) library for parsing optional arguments from
@@ -198,7 +199,7 @@ Flags that can be repeated to increase a counter value, useful for verbosity lev
 ```bash
 # Increase verbosity level
 ./myapp -v                    # verbosity = 1
-./myapp -vv                   # verbosity = 2  
+./myapp -vv                   # verbosity = 2
 ./myapp -vvv                  # verbosity = 3
 
 # Long form repetition
