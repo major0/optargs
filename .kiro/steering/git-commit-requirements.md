@@ -103,16 +103,19 @@ Closes: Task 10.2
 # Create temporary commit message file
 COMMIT_MSG_FILE=$(mktemp /tmp/commit-msg-XXXXXX.txt)
 
-# Write commit message to temp file
-cat > "$COMMIT_MSG_FILE" << 'EOF'
-<type>(scope): Task X.Y - brief description
-
-- Specific changes made
-- Requirements addressed
-- Any notable implementation details
-
-Closes: Task X.Y
-EOF
+# Edit temp file directly using file editor (NOT shell commands)
+# Use your editor or IDE to write the commit message to $COMMIT_MSG_FILE
+# Example content:
+# feat(specs): Add comprehensive module dependencies and testing infrastructure
+#
+# - Updated goarg and pflags specs with complete testing infrastructure requirements
+# - Added module dependency management with local/remote configurations
+# - Implemented cascading build system with intelligent change detection
+# - Enhanced GitHub workflows to handle all modules without duplication
+# - Added script flexibility requirements for target directory parameters
+# - Ensured 100% coverage requirements for module-specific core functions
+#
+# Closes: Task spec-module-dependencies
 
 # Commit using temp file
 git commit -F "$COMMIT_MSG_FILE"
@@ -122,37 +125,42 @@ rm "$COMMIT_MSG_FILE"
 ```
 
 ### Security Rationale
-**Why Temp Files Are Required:**
-- Markdown syntax in commit messages often contains backticks (`) for code blocks
-- When passed via CLI arguments, shells may interpret backticks as command substitution
-- This can lead to unintended command execution and security vulnerabilities
+**Why Direct File Editing Is Required:**
+- Shell commands like `echo`, `printf`, `cat` can cause shell expansion
+- Direct file editing eliminates risk of command substitution or expansion
 - Temporary files isolate the message content from shell interpretation
 - This requirement applies to both `git commit` and `gh pr create` commands
+
+### CRITICAL: Shell Command Prohibition
+**NEVER use shell commands to write commit messages or PR descriptions:**
+- `echo`, `printf`, `cat` can cause shell expansion and security issues
+- Here-docs (<<EOF) can cause command execution to hang indefinitely
+- Automated systems cannot detect when here-doc commands complete
+- Use direct file editing tools instead of shell commands
 
 ### Prohibited Patterns
 ```bash
 # NEVER DO THIS - Security Risk
-git commit -m "feat: Add parser
+git commit -m "feat: Add parser with \`parseArgs()\` function"
 
-- Added \`parseArgs()\` function
-- Fixed \`--help\` option"
+# NEVER DO THIS - Shell Expansion Risk
+echo "feat: Add parser with \`parseArgs()\` function" > "$COMMIT_MSG_FILE"
 
-# NEVER DO THIS - Security Risk
-gh pr create -b "## Changes
-- Updated \`main()\` function
-- Added \`$(dangerous_command)\` handling"
+# NEVER DO THIS - Causes Hanging
+cat > "$COMMIT_MSG_FILE" << 'EOF'
+feat: Add parser
+EOF
+
+# NEVER DO THIS - Shell Expansion Risk
+printf "feat: Add parser\n- Added \`parseArgs()\` function\n" > "$COMMIT_MSG_FILE"
 ```
 
 ### Required Secure Patterns
 ```bash
-# ALWAYS DO THIS - Secure
+# ALWAYS DO THIS - Safe and Reliable
 COMMIT_MSG_FILE=$(mktemp /tmp/commit-msg-XXXXXX.txt)
-cat > "$COMMIT_MSG_FILE" << 'EOF'
-feat: Add parser
-
-- Added `parseArgs()` function
-- Fixed `--help` option
-EOF
+# Edit $COMMIT_MSG_FILE directly using file editor/IDE
+# Write commit message content directly to the file
 git commit -F "$COMMIT_MSG_FILE"
 rm "$COMMIT_MSG_FILE"
 ```
@@ -162,21 +170,21 @@ rm "$COMMIT_MSG_FILE"
 # Create temporary PR description file
 PR_DESC_FILE=$(mktemp /tmp/pr-desc-XXXXXX.txt)
 
-# Write PR description to temp file
-cat > "$PR_DESC_FILE" << 'EOF'
-## Summary
-Brief description of changes
-
-## Changes Made
-- Specific implementation details
-- Requirements addressed
-
-## Testing
-- Tests added/modified
-- Coverage validation
-
-Closes: Task X.Y
-EOF
+# Edit temp file directly using file editor (NOT shell commands)
+# Use your editor or IDE to write the PR description to $PR_DESC_FILE
+# Example content:
+# ## Summary
+# Brief description of changes
+#
+# ## Changes Made
+# - Specific implementation details
+# - Requirements addressed
+#
+# ## Testing
+# - Tests added/modified
+# - Coverage validation
+#
+# Closes: Task X.Y
 
 # Create PR using temp file
 gh pr create --title "<type>(scope): Task X.Y - Description" -F "$PR_DESC_FILE"

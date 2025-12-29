@@ -16,6 +16,10 @@ This specification defines the requirements for implementing a complete go-arg c
 - **Command System**: OptArgs Core's hierarchical command/subcommand system with parent/child relationships
 - **Option Inheritance**: Feature allowing child parsers to inherit and use options defined in parent parsers
 - **Case Insensitive Commands**: Feature allowing commands to match regardless of case (server, SERVER, SeRvEr)
+- **Go Module**: Independent Go module with its own go.mod file and dependency management
+- **Local Development**: Build configuration using local file system paths for dependencies
+- **Remote Dependencies**: Production configuration using git URLs for module dependencies
+- **Cascading Builds**: Build system where changes in dependencies trigger builds in dependent modules
 
 ## Requirements
 
@@ -106,7 +110,31 @@ This specification defines the requirements for implementing a complete go-arg c
 4. THE Direct Integration SHALL avoid unnecessary abstraction overhead
 5. THE Performance SHALL scale linearly with the number of arguments and options
 
-### Requirement 8: Development and Testing Strategy
+### Requirement 8: Go Module Dependency Management
+
+**User Story:** As a Go developer, I want goarg to be a proper Go module that depends on the optargs module, so that I can use it as a standalone dependency in my projects while ensuring proper version management and build isolation.
+
+#### Acceptance Criteria
+
+1. THE goarg Module SHALL be defined as an independent Go module with its own go.mod file
+2. WHEN building for production, THE goarg Module SHALL depend on the optargs module via git URL (github.com/major0/optargs)
+3. WHEN building locally or in CI/CD, THE goarg Module SHALL use local file system replacement for the optargs dependency
+4. THE goarg Module SHALL specify the minimum required Go version and any additional dependencies
+5. THE goarg Module SHALL support standard Go module operations (go get, go mod tidy, go mod verify)
+
+### Requirement 9: Build System Integration
+
+**User Story:** As a CI/CD system, I want to build and test goarg only when goarg or optargs sources change, so that I can optimize build times and resource usage through cascading dependency builds.
+
+#### Acceptance Criteria
+
+1. WHEN optargs source files change, THE Build System SHALL trigger goarg builds and tests
+2. WHEN only goarg source files change, THE Build System SHALL build and test goarg without rebuilding optargs
+3. WHEN neither optargs nor goarg sources change, THE Build System SHALL skip goarg builds and tests
+4. THE Build System SHALL use local dependency replacement during CI/CD builds for testing
+5. THE Build System SHALL validate that goarg works with both local and remote optargs dependencies
+
+### Requirement 10: Development and Testing Strategy
 
 **User Story:** As a library maintainer, I want incremental development and comprehensive testing, so that I can ensure correctness and identify issues early.
 
@@ -117,3 +145,4 @@ This specification defines the requirements for implementing a complete go-arg c
 3. THE Development Process SHALL include both unit tests and property-based tests
 4. THE Test Framework SHALL support module alias switching for upstream compatibility validation
 5. THE Implementation SHALL include comprehensive documentation and working examples
+6. THE Module Dependencies SHALL be validated in both local development and production configurations
