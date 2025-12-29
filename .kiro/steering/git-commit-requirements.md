@@ -100,12 +100,8 @@ Closes: Task 10.2
 
 ### Temp File Security Pattern
 ```bash
-# Create temporary commit message file
-COMMIT_MSG_FILE=$(mktemp /tmp/commit-msg-XXXXXX.txt)
-
-# Edit temp file directly using file editor (NOT shell commands)
-# Use your editor or IDE to write the commit message to $COMMIT_MSG_FILE
-# Example content:
+# Create commit message file using direct file creation (NOT shell commands)
+# Use file editor/IDE to create .commit-msg.txt with content:
 # feat(specs): Add comprehensive module dependencies and testing infrastructure
 #
 # - Updated goarg and pflags specs with complete testing infrastructure requirements
@@ -118,10 +114,10 @@ COMMIT_MSG_FILE=$(mktemp /tmp/commit-msg-XXXXXX.txt)
 # Closes: Task spec-module-dependencies
 
 # Commit using temp file
-git commit -F "$COMMIT_MSG_FILE"
+git commit -F ".commit-msg.txt"
 
 # Clean up temp file
-rm "$COMMIT_MSG_FILE"
+rm ".commit-msg.txt"
 ```
 
 ### Security Rationale
@@ -158,21 +154,16 @@ printf "feat: Add parser\n- Added \`parseArgs()\` function\n" > "$COMMIT_MSG_FIL
 ### Required Secure Patterns
 ```bash
 # ALWAYS DO THIS - Safe and Reliable
-COMMIT_MSG_FILE=$(mktemp /tmp/commit-msg-XXXXXX.txt)
-# Edit $COMMIT_MSG_FILE directly using file editor/IDE
+# Create .commit-msg.txt using file editor/IDE (NOT shell commands)
 # Write commit message content directly to the file
-git commit -F "$COMMIT_MSG_FILE"
-rm "$COMMIT_MSG_FILE"
+git commit -F ".commit-msg.txt"
+rm ".commit-msg.txt"
 ```
 
 ### Pull Request Security Pattern
 ```bash
-# Create temporary PR description file
-PR_DESC_FILE=$(mktemp /tmp/pr-desc-XXXXXX.txt)
-
-# Edit temp file directly using file editor (NOT shell commands)
-# Use your editor or IDE to write the PR description to $PR_DESC_FILE
-# Example content:
+# Create PR description file using direct file creation (NOT shell commands)
+# Use file editor/IDE to create .pr-desc.txt with content:
 # ## Summary
 # Brief description of changes
 #
@@ -187,10 +178,10 @@ PR_DESC_FILE=$(mktemp /tmp/pr-desc-XXXXXX.txt)
 # Closes: Task X.Y
 
 # Create PR using temp file
-gh pr create --title "<type>(scope): Task X.Y - Description" -F "$PR_DESC_FILE"
+gh pr create --title "<type>(scope): Task X.Y - Description" -F ".pr-desc.txt"
 
 # Clean up temp file
-rm "$PR_DESC_FILE"
+rm ".pr-desc.txt"
 ```
 
 ## Git Workflow Steps
