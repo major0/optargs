@@ -480,24 +480,6 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 
 		// Should behave the same as environment variable
 		return posixModeOptions == prefixModeOptions
-
-		// In POSIX mode, should have exactly numInitialOpts options
-		if posixModeOptions != numInitialOpts {
-			return false
-		}
-
-		// In POSIX mode, remaining args should include the non-option and all subsequent args
-		expectedRemainingArgs := len(args) - numInitialOpts
-		if len(parser2.Args) != expectedRemainingArgs {
-			return false
-		}
-
-		// First remaining arg should be the non-option argument
-		if parser2.Args[0] != nonOptArg {
-			return false
-		}
-
-		return true
 	}
 
 	config := &quick.Config{MaxCount: 100}
