@@ -14,10 +14,11 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
 ## Tasks
 
 - [x] 1. Set up project structure and compatibility testing framework
-  - Create goarg package directory structure
+  - Create goarg package directory structure as independent Go module
+  - Set up go.mod file with optargs dependency and local development replacement
   - Set up module alias testing configuration for alexflint/go-arg compatibility
   - Create compatibility testing framework interfaces
-  - _Requirements: 3.1, 8.4_
+  - _Requirements: 3.1, 8.4, 8.1, 8.2_
 
 - [x] 1.1 Write property test for compatibility test framework correctness
   - **Property 4: Compatibility Test Framework Correctness**
@@ -257,13 +258,74 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
     - Create command system usage examples
     - _Requirements: 8.5_
 
-- [ ] 12. Final integration and validation
+- [ ] 12. Implement comprehensive testing infrastructure
+  - [ ] 12.1 Create Makefile with all testing targets
+    - Implement all testing targets matching optargs (test, coverage, coverage-html, coverage-func, coverage-validate, coverage-report)
+    - Add static analysis targets (lint, static-check, security-check, fmt, imports, vet, mod-tidy, mod-verify, build-check)
+    - Add CI integration targets (ci-coverage, ci-static, pre-commit)
+    - Add development targets (dev-coverage, clean, help)
+    - _Requirements: 10.1, 10.2_
+
+  - [ ] 12.2 Create coverage validation scripts
+    - Create scripts/validate_coverage.sh for 100% coverage validation of core functions
+    - Create scripts/generate_coverage_report.sh for comprehensive coverage analysis
+    - Create scripts/performance_validation.sh for performance regression testing
+    - **CRITICAL**: All scripts must accept optional target directory parameter (defaults to current directory)
+    - Scripts must work from any location: `./scripts/validate_coverage.sh goarg/` or `./scripts/validate_coverage.sh pflags/`
+    - Ensure scripts validate goarg-specific core functions (Parse, ParseArgs, MustParse, NewParser, struct tag processing)
+    - _Requirements: 10.1, 10.2_
+
+  - [ ] 12.3 Set up pre-commit workflow
+    - **IMPORTANT**: Enhance existing .github/workflows/precommit.yml to handle all modules (optargs, goarg, pflags)
+    - Configure pre-commit hooks to work across all module directories
+    - Set up automated PR comments for pre-commit results across all modules
+    - **DO NOT** create duplicate workflow files - extend existing workflows
+    - _Requirements: 10.1, 10.2_
+
+  - [ ] 12.4 Configure static analysis tools
+    - Create .golangci.yml configuration file
+    - Set up .pre-commit-config.yaml with all hooks
+    - Configure coverage targets for goarg-specific functions
+    - _Requirements: 10.1, 10.2_
+
+  - [ ]* 12.5 Write comprehensive test suites
+    - Unit tests for all goarg functions with 100% coverage target
+    - Property-based tests for parsing correctness across all input ranges
+    - Performance benchmarks and regression tests
+    - Round-trip testing for struct tag parsing and generation
+    - _Requirements: 10.1, 10.2, 10.3_
+
+- [ ] 13. Module dependency validation and build system integration
+  - [ ] 13.1 Validate module dependency configurations
+    - Test goarg module with local optargs dependency replacement
+    - Test goarg module with remote optargs dependency (git URL)
+    - Validate go.mod file correctness and dependency resolution
+    - Test standard Go module operations (go get, go mod tidy, go mod verify)
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+
+  - [ ] 13.2 Implement cascading build system
+    - **IMPORTANT**: Enhance existing .github/workflows/build.yml and .github/workflows/coverage.yml
+    - Extend existing workflows to handle goarg module builds and testing
+    - Implement intelligent change detection for goarg sources
+    - **DO NOT** create duplicate workflow files - extend existing multi-module workflows
+    - Test build system with various change scenarios (optargs only, goarg only, both, neither)
+    - Validate build optimization and resource usage
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
+
+  - [ ]* 13.3 Write integration tests for module dependencies
+    - Test module import and usage from external projects
+    - Test version compatibility and semantic versioning
+    - Test dependency resolution in various Go environments
+    - _Requirements: 8.5, 9.5_
+
+- [ ] 14. Final integration and validation
   - [ ] 12.1 Run comprehensive test suite
     - Execute all compatibility tests with both implementations
     - Validate performance benchmarks meet requirements
     - Ensure 100% compatibility with alexflint/go-arg
     - Validate enhanced command system features
-    - _Requirements: 8.1, 8.2_
+    - Test module dependencies in both local and remote configurations
+    - _Requirements: 10.1, 10.2_
 
   - [ ] 12.2 Validate extension system
     - Test that extensions work correctly when included
@@ -276,9 +338,10 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
     - Validate real-world usage scenarios
     - Test enhanced features with extensions
     - Test command system integration scenarios
-    - _Requirements: 8.3_
+    - Test module dependency scenarios
+    - _Requirements: 10.3_
 
-- [ ] 13. Final checkpoint - go-arg compatibility layer complete
+- [ ] 15. Final checkpoint - go-arg compatibility layer complete
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
@@ -290,6 +353,30 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
 - Direct OptArgs Core integration without intermediate layers
 - Perfect compatibility with alexflint/go-arg is the primary goal
 - Extension files (`-ext.go`) provide enhanced features without compromising base compatibility
+- **Testing Infrastructure Requirements**:
+  - All modules must have identical testing infrastructure to optargs
+  - 100% line and branch coverage for core functions (Parse, ParseArgs, MustParse, NewParser, struct tag processing)
+  - Comprehensive static analysis (fmt, imports, vet, lint, security-check)
+  - Performance benchmarks and regression testing
+  - Pre-commit hooks and automated quality checks
+- **Centralized Workflow Management**:
+  - **DO NOT** create duplicate GitHub workflow files
+  - Enhance existing .github/workflows/ files to handle all modules
+  - Single source of truth for build, test, and coverage workflows
+  - Intelligent change detection across all modules
+- **Script Flexibility Requirements**:
+  - All validation scripts must accept optional target directory parameter
+  - Scripts must work from any location: `./scripts/validate_coverage.sh goarg/`
+  - Default to current working directory if no path specified
+- **Module Dependencies**:
+  - goarg is an independent Go module depending on optargs
+  - Local development uses file system replacement for rapid iteration
+  - CI/CD builds use local replacement for integration testing
+  - Production releases depend on published optargs module via git URL
+- **Cascading Builds**:
+  - Changes in optargs trigger goarg builds and tests
+  - Changes only in goarg trigger goarg builds without rebuilding optargs
+  - No changes in either module skip goarg builds for optimization
 - **Enhanced Features Implemented**:
   - Full command/subcommand system with option inheritance
   - Case insensitive command matching for improved usability

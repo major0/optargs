@@ -7,10 +7,11 @@ This implementation plan creates a drop-in replacement for spf13/pflag that main
 ## Tasks
 
 - [x] 1. Set up project structure and core interfaces
-  - Create pflags package directory and basic Go module structure
+  - Create pflags package directory as independent Go module
+  - Set up go.mod file with goarg dependency and local development replacement
   - Define core interfaces (FlagSet, Flag, Value) matching spf13/pflag signatures
   - Set up testing framework with both unit and property-based testing support
-  - _Requirements: 1.1, 5.1, 6.1_
+  - _Requirements: 1.1, 5.1, 6.1, 11.1, 11.2_
 
 - [x] 2. Implement basic flag value types
   - [x] 2.1 Implement string, int, bool, float64, and duration value types
@@ -168,22 +169,86 @@ This implementation plan creates a drop-in replacement for spf13/pflag that main
     - **Property 12: POSIX Compliance Preservation**
     - **Validates: Requirements 10.3, 10.4, 10.5**
 
-- [ ] 14. Integration and compatibility testing
-  - [ ] 14.1 Create comprehensive integration tests
+- [ ] 14. Implement comprehensive testing infrastructure
+  - [ ] 14.1 Create Makefile with all testing targets
+    - Implement all testing targets matching optargs (test, coverage, coverage-html, coverage-func, coverage-validate, coverage-report)
+    - Add static analysis targets (lint, static-check, security-check, fmt, imports, vet, mod-tidy, mod-verify, build-check)
+    - Add CI integration targets (ci-coverage, ci-static, pre-commit)
+    - Add development targets (dev-coverage, clean, help)
+    - _Requirements: All requirements_
+
+  - [ ] 14.2 Create coverage validation scripts
+    - Create scripts/validate_coverage.sh for 100% coverage validation of core functions
+    - Create scripts/generate_coverage_report.sh for comprehensive coverage analysis
+    - Create scripts/performance_validation.sh for performance regression testing
+    - **CRITICAL**: All scripts must accept optional target directory parameter (defaults to current directory)
+    - Scripts must work from any location: `./scripts/validate_coverage.sh pflags/` or `cd pflags && ../scripts/validate_coverage.sh`
+    - Ensure scripts validate pflags-specific core functions (FlagSet methods, Value implementations, parsing logic)
+    - _Requirements: All requirements_
+
+  - [ ] 14.3 Set up pre-commit workflow
+    - **IMPORTANT**: Enhance existing .github/workflows/precommit.yml to handle all modules (optargs, goarg, pflags)
+    - Configure pre-commit hooks to work across all module directories
+    - Set up automated PR comments for pre-commit results across all modules
+    - **DO NOT** create duplicate workflow files - extend existing workflows
+    - _Requirements: All requirements_
+
+  - [ ] 14.4 Configure static analysis tools
+    - Create .golangci.yml configuration file
+    - Set up .pre-commit-config.yaml with all hooks
+    - Configure coverage targets for pflags-specific functions
+    - _Requirements: All requirements_
+
+  - [ ]* 14.5 Write comprehensive test suites
+    - Unit tests for all pflags functions with 100% coverage target
+    - Property-based tests for flag parsing correctness across all input ranges
+    - Performance benchmarks and regression tests
+    - Round-trip testing for flag definition and parsing
+    - _Requirements: All requirements_
+
+- [ ] 15. Integration and compatibility testing
+  - [ ] 15.1 Create comprehensive integration tests
     - Test compatibility with existing spf13/pflag code patterns
     - Verify API signature compatibility
     - Test integration with Cobra-style usage patterns
+    - Test goarg module integration and functionality
     - _Requirements: All requirements_
 
-  - [ ] 14.2 Write performance comparison tests
+  - [ ] 15.2 Write performance comparison tests
     - Compare performance against original spf13/pflag
     - Ensure memory usage is comparable or better
     - Validate parsing speed meets or exceeds pflag performance
 
-- [ ] 15. Final checkpoint - Implementation complete
+- [ ] 16. Module dependency validation and build system integration
+  - [ ] 16.1 Validate module dependency configurations
+    - Test pflags module with local goarg dependency replacement
+    - Test pflags module with remote goarg dependency (git URL)
+    - Validate go.mod file correctness and dependency resolution
+    - Test standard Go module operations (go get, go mod tidy, go mod verify)
+    - Test transitive optargs dependency through goarg
+    - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
+
+  - [ ] 16.2 Implement cascading build system
+    - **IMPORTANT**: Enhance existing .github/workflows/build.yml and .github/workflows/coverage.yml
+    - Extend existing workflows to handle pflags module builds and testing
+    - Implement intelligent change detection for pflags sources and full dependency chain
+    - **DO NOT** create duplicate workflow files - extend existing multi-module workflows
+    - Test build system with various change scenarios (optargs only, goarg only, pflags only, combinations)
+    - Validate build optimization and resource usage across full dependency chain
+    - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
+
+  - [ ]* 16.3 Write integration tests for module dependencies
+    - Test module import and usage from external projects
+    - Test version compatibility and semantic versioning across dependency chain
+    - Test dependency resolution in various Go environments
+    - Test goarg integration functionality
+    - _Requirements: 11.5, 12.5_
+
+- [ ] 17. Final checkpoint - Implementation complete
   - Ensure all tests pass, ask the user if questions arise.
   - Confirm all requirements are implemented and tested
   - Validate API compatibility with spf13/pflag
+  - Validate module dependencies and cascading build system
 
 ## Notes
 
@@ -191,4 +256,30 @@ This implementation plan creates a drop-in replacement for spf13/pflag that main
 - Property tests validate universal correctness properties using Go's testing/quick framework
 - Unit tests validate specific examples and edge cases
 - Integration tests ensure compatibility with existing pflag usage patterns
-- The implementation maintains strict API compatibility while leveraging OptArgs Core's superior parsing
+- The implementation maintains strict API compatibility while leveraging OptArgs Core's superior parsing through goarg
+- **Testing Infrastructure Requirements**:
+  - All modules must have identical testing infrastructure to optargs
+  - 100% line and branch coverage for core functions (FlagSet methods, Value implementations, parsing logic)
+  - Comprehensive static analysis (fmt, imports, vet, lint, security-check)
+  - Performance benchmarks and regression testing
+  - Pre-commit hooks and automated quality checks
+- **Centralized Workflow Management**:
+  - **DO NOT** create duplicate GitHub workflow files
+  - Enhance existing .github/workflows/ files to handle all modules
+  - Single source of truth for build, test, and coverage workflows
+  - Intelligent change detection across full dependency chain
+- **Script Flexibility Requirements**:
+  - All validation scripts must accept optional target directory parameter
+  - Scripts must work from any location: `./scripts/validate_coverage.sh pflags/`
+  - Default to current working directory if no path specified
+- **Module Dependencies**:
+  - pflags is an independent Go module depending on goarg
+  - goarg provides enhanced functionality and optargs integration
+  - Local development uses file system replacement for rapid iteration
+  - CI/CD builds use local replacement for integration testing
+  - Production releases depend on published goarg module via git URL
+- **Cascading Builds**:
+  - Changes in optargs or goarg trigger pflags builds and tests
+  - Changes only in pflags trigger pflags builds without rebuilding dependencies
+  - No changes in any module skip pflags builds for optimization
+  - Full dependency chain: pflags → goarg → optargs

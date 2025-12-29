@@ -10,9 +10,48 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build
+  # Detect which modules need building based on changed files
+  detect-changes:
+    name: Detect Changes
     runs-on: ubuntu-latest
+    outputs:
+      optargs-changed: ${{ steps.changes.outputs.optargs }}
+      goarg-changed: ${{ steps.changes.outputs.goarg }}
+      pflags-changed: ${{ steps.changes.outputs.pflags }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    - name: Detect changes
+      id: changes
+      run: |
+        # Check for changes in each module
+        if git diff --name-only HEAD~1 | grep -E '^(api_stability_test\.go|benchmark_test\.go|command\.go|command_case_insensitive_test\.go|command_test\.go|comparison_benchmark_test\.go|coverage_completion_test\.go|coverage_fallback_test\.go|coverage_final_test\.go|coverage_gap_test\.go|debug_equals_test\.go|edge_case_test\.go|example_command_usage_test\.go|findshortopt_coverage_test\.go|getopt\.go|getopt_long_test\.go|getopt_test\.go|gnu_long_compliance_test\.go|integration_command_test\.go|integration_test\.go|misc\.go|misc_test\.go|optargs_test\.go|parser\.go|parser_test\.go|performance_regression_test\.go|posix_compliance_test\.go|property_test\.go|round_trip_test\.go|go\.mod|go\.sum)$' || [ "${{ github.event_name }}" = "push" ]; then
+          echo "optargs=true" >> $GITHUB_OUTPUT
+        else
+          echo "optargs=false" >> $GITHUB_OUTPUT
+        fi
+
+        if git diff --name-only HEAD~1 | grep -E '^(goarg/|optargs/)' || [ "${{ github.event_name }}" = "push" ]; then
+          echo "goarg=true" >> $GITHUB_OUTPUT
+        else
+          echo "goarg=false" >> $GITHUB_OUTPUT
+        fi
+
+        if git diff --name-only HEAD~1 | grep -E '^(pflags/|goarg/|optargs/)' || [ "${{ github.event_name }}" = "push" ]; then
+          echo "pflags=true" >> $GITHUB_OUTPUT
+        else
+          echo "pflags=false" >> $GITHUB_OUTPUT
+        fi
+
+  # Build optargs core module
+  build-optargs:
+    name: Build OptArgs Core
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.optargs-changed == 'true'
     strategy:
       matrix:
         go-version: ['1.23', '1.22', '1.21']
@@ -38,9 +77,9 @@ jobs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-${{ matrix.go-version }}-optargs-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go-${{ matrix.go-version }}-
+          ${{ runner.os }}-go-${{ matrix.go-version }}-optargs-
 
     - name: Download dependencies
       run: go mod download
@@ -48,7 +87,107 @@ jobs:
     - name: Verify dependencies
       run: go mod verify
 
-    - name: Build for ${{ matrix.goos }}/${{ matrix.goarch }}
+    - name: Build OptArgs Core for ${{ matrix.goos }}/${{ matrix.goarch }}
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: go build -v ./...
+
+  # Build goarg module
+  build-goarg:
+    name: Build GoArg Module
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-optargs]
+    if: always() && needs.detect-changes.outputs.goarg-changed == 'true'
+    strategy:
+      matrix:
+        go-version: ['1.23', '1.22', '1.21']
+        goos: [linux, darwin, windows, freebsd]
+        goarch: [amd64, arm64]
+        exclude:
+          # FreeBSD arm64 is not commonly used
+          - goos: freebsd
+            goarch: arm64
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ matrix.go-version }}-goarg-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ matrix.go-version }}-goarg-
+
+    - name: Download dependencies
+      working-directory: goarg
+      run: go mod download
+
+    - name: Verify dependencies
+      working-directory: goarg
+      run: go mod verify
+
+    - name: Build GoArg Module for ${{ matrix.goos }}/${{ matrix.goarch }}
+      working-directory: goarg
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: go build -v ./...
+
+  # Build pflags module
+  build-pflags:
+    name: Build PFlags Module
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-goarg]
+    if: always() && needs.detect-changes.outputs.pflags-changed == 'true'
+    strategy:
+      matrix:
+        go-version: ['1.23', '1.22', '1.21']
+        goos: [linux, darwin, windows, freebsd]
+        goarch: [amd64, arm64]
+        exclude:
+          # FreeBSD arm64 is not commonly used
+          - goos: freebsd
+            goarch: arm64
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ matrix.go-version }}-pflags-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ matrix.go-version }}-pflags-
+
+    - name: Download dependencies
+      working-directory: pflags
+      run: go mod download
+
+    - name: Verify dependencies
+      working-directory: pflags
+      run: go mod verify
+
+    - name: Build PFlags Module for ${{ matrix.goos }}/${{ matrix.goarch }}
+      working-directory: pflags
       env:
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}

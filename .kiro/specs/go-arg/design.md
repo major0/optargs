@@ -2,11 +2,11 @@
 
 ## Overview
 
-This design implements a complete go-arg compatibility layer that provides 100% API compatibility with alexflint/go-arg while leveraging OptArgs Core's POSIX/GNU compliance and advanced command system. The architecture is intentionally simple: go-arg interfaces directly with OptArgs Core without intermediate layers. 
+This design implements a complete go-arg compatibility layer that provides 100% API compatibility with alexflint/go-arg while leveraging OptArgs Core's POSIX/GNU compliance and advanced command system. The architecture is intentionally simple: go-arg interfaces directly with OptArgs Core without intermediate layers.
 
 Key enhancements include:
 - **Full Command System Integration**: Direct use of OptArgs Core's command/subcommand system
-- **Case Insensitive Commands**: Flexible command matching for improved usability  
+- **Case Insensitive Commands**: Flexible command matching for improved usability
 - **Option Inheritance**: Parent-to-child option inheritance through parser hierarchy
 - **Enhanced POSIX/GNU Compliance**: Access to OptArgs Core's advanced parsing features
 
@@ -14,31 +14,39 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
 
 ## Architecture
 
-### Enhanced Two-Layer Architecture with Command System
+## Architecture
+
+### Enhanced Two-Layer Architecture with Command System and Module Dependencies
 
 ```mermaid
 graph TB
     A[CLI Applications] --> B[go-arg API Layer]
     B --> C[OptArgs Core with Command System]
-    
+
     C --> C1[Command Registry]
     C --> C2[Parent/Child Parsers]
     C --> C3[Option Inheritance]
     C --> C4[Case Insensitive Matching]
-    
+
     D[Extension Files *-ext.go] -.-> B
     D -.-> C
-    
+
     E[Compatibility Tests] --> F[Module Alias System]
     F --> G[Our go-arg Implementation]
     F --> H[Upstream alexflint/go-arg]
-    
+
     I[Test Framework] --> E
-    
+
     J[Command System Tests] --> C1
     J --> C2
     J --> C3
     J --> C4
+
+    subgraph "Go Module Dependencies"
+        K[goarg Module<br/>github.com/major0/optargs/goarg] --> L[optargs Module<br/>github.com/major0/optargs]
+        M[Local Development<br/>replace github.com/major0/optargs => ../] -.-> K
+        N[CI/CD Builds<br/>replace github.com/major0/optargs => ../] -.-> K
+    end
 ```
 
 ### Core Principles
@@ -51,6 +59,140 @@ graph TB
 6. **Architectural Extensions**: Enhanced features through `-ext.go` files
 7. **Build-Time Configuration**: Extensions included/excluded at compile time
 8. **Zero Runtime Overhead**: No runtime extension system complexity
+9. **Module Independence**: Standalone Go module with proper dependency management
+10. **Cascading Builds**: Optimized build system that responds to dependency changes
+
+## Module Dependency Management
+
+### Go Module Structure
+
+The goarg package is implemented as an independent Go module with proper dependency management:
+
+```go
+// goarg/go.mod
+module github.com/major0/optargs/goarg
+
+go 1.23.4
+
+require github.com/major0/optargs v0.0.0
+
+// Local development - replace with parent module
+replace github.com/major0/optargs => ../
+
+// Module alias configuration for compatibility testing
+// Uncomment to test with upstream alexflint/go-arg:
+// replace github.com/alexflint/go-arg => github.com/alexflint/go-arg v1.4.3
+```
+
+### Dependency Configuration Modes
+
+**Local Development Mode:**
+- Uses `replace github.com/major0/optargs => ../` for local file system access
+- Enables rapid development and testing with immediate changes
+- Supports debugging across module boundaries
+
+**CI/CD Build Mode:**
+- Uses local replacement during automated testing
+- Validates integration with current optargs development state
+- Ensures compatibility before release
+
+**Production Mode:**
+- Depends on published optargs module via git URL
+- Uses semantic versioning for stable releases
+- Supports standard Go module operations (go get, go mod download)
+
+### Build System Integration
+
+The build system enhances existing GitHub workflows rather than creating duplicates. The existing `.github/workflows/build.yml` and `.github/workflows/coverage.yml` are extended to handle all modules:
+
+```yaml
+# Enhanced GitHub Actions workflow logic (extends existing workflows)
+- name: Detect changes
+  run: |
+    # Detect changes across all modules
+    if git diff --name-only HEAD~1 | grep -E '^(api_stability_test\.go|benchmark_test\.go|command\.go|...)$'; then
+      echo "OPTARGS_CHANGED=true" >> $GITHUB_ENV
+    fi
+    if git diff --name-only HEAD~1 | grep -E '^(goarg/|optargs/)'; then
+      echo "GOARG_CHANGED=true" >> $GITHUB_ENV
+    fi
+    if git diff --name-only HEAD~1 | grep -E '^(pflags/|goarg/|optargs/)'; then
+      echo "PFLAGS_CHANGED=true" >> $GITHUB_ENV
+    fi
+
+# Existing optargs job continues unchanged
+- name: Build OptArgs Core
+  if: needs.detect-changes.outputs.optargs-changed == 'true'
+  # ... existing logic
+
+# New goarg job added to existing workflow
+- name: Build GoArg Module
+  if: needs.detect-changes.outputs.goarg-changed == 'true'
+  working-directory: goarg
+  # ... goarg-specific build logic
+
+# New pflags job added to existing workflow
+- name: Build PFlags Module
+  if: needs.detect-changes.outputs.pflags-changed == 'true'
+  working-directory: pflags
+  # ... pflags-specific build logic
+```
+
+**Key Principles:**
+- **Single Source of Truth**: One set of workflow files handles all modules
+- **Intelligent Triggering**: Only builds modules when their sources or dependencies change
+- **No Duplication**: Extends existing workflows rather than creating new ones
+- **Centralized Management**: All build logic in existing `.github/workflows/` directory
+
+### Script Flexibility Requirements
+
+All validation scripts must be modified to accept an optional target directory parameter while defaulting to the current working directory. This enables the scripts to work with different module directories:
+
+```bash
+# Example: Enhanced validate_coverage.sh script header
+#!/bin/bash
+# Coverage validation script - works with any module directory
+# Usage: ./scripts/validate_coverage.sh [target_directory] [coverage_file]
+
+set -e
+
+# Parse arguments
+TARGET_DIR="${1:-.}"  # Default to current directory if not specified
+COVERAGE_FILE="${2:-coverage.out}"
+
+# Change to target directory if specified
+if [[ "$TARGET_DIR" != "." ]]; then
+    echo "Validating coverage in directory: $TARGET_DIR"
+    cd "$TARGET_DIR"
+fi
+
+# Rest of script works with current directory
+if [[ ! -f "$COVERAGE_FILE" ]]; then
+    echo "Error: Coverage file $COVERAGE_FILE not found in $(pwd)"
+    echo "Run 'make coverage' first to generate coverage data"
+    exit 1
+fi
+
+# Script continues with normal logic...
+```
+
+**Usage Examples:**
+```bash
+# From project root - validate optargs
+./scripts/validate_coverage.sh
+
+# From project root - validate goarg
+./scripts/validate_coverage.sh goarg/
+
+# From project root - validate pflags
+./scripts/validate_coverage.sh pflags/
+
+# From within goarg directory
+cd goarg && ../scripts/validate_coverage.sh
+
+# From within pflags directory
+cd pflags && ../scripts/validate_coverage.sh
+```
 
 ## Components and Interfaces
 
@@ -67,7 +209,7 @@ type Parser struct {
     config   Config
     dest     interface{}
     metadata *StructMetadata
-    
+
     // Direct OptArgs Core integration
     coreParser *optargs.Parser
     shortOpts  map[byte]*optargs.Flag
@@ -120,7 +262,7 @@ type FieldMetadata struct {
     Positional  bool
     Env         string
     Default     interface{}
-    
+
     // Direct OptArgs Core mapping
     CoreFlag    *optargs.Flag
     ArgType     optargs.ArgType
@@ -185,19 +327,19 @@ type ExampleStruct struct {
     // Basic options
     Verbose bool   `arg:"-v,--verbose" help:"enable verbose output"`
     Count   int    `arg:"-c,--count" help:"number of items"`
-    
+
     // Required options
     Input   string `arg:"--input,required" help:"input file path"`
-    
+
     // Positional arguments
     Files   []string `arg:"positional" help:"files to process"`
-    
+
     // Environment variables
     Token   string `arg:"--token,env:API_TOKEN" help:"API authentication token"`
-    
+
     // Default values
     Port    int    `arg:"-p,--port" default:"8080" help:"server port"`
-    
+
     // Subcommands
     Server  *ServerCmd `arg:"subcommand:server"`
     Client  *ClientCmd `arg:"subcommand:client"`
@@ -398,7 +540,7 @@ When extension files are included, enhanced diagnostic information is available:
 
 func (et *ErrorTranslator) TranslateErrorWithEnhancements(err error, context ParseContext) error {
     baseErr := et.TranslateError(err, context)
-    
+
     // Add enhanced diagnostic information from OptArgs Core
     if diagnostic, ok := err.(*optargs.DiagnosticError); ok {
         return &EnhancedError{
@@ -407,7 +549,7 @@ func (et *ErrorTranslator) TranslateErrorWithEnhancements(err error, context Par
             Context:    context,
         }
     }
-    
+
     return baseErr
 }
 ```
@@ -440,19 +582,19 @@ type TestScenario struct {
 // Run tests against both implementations
 func (ts *TestSuite) RunCompatibilityTests() *CompatibilityReport {
     report := &CompatibilityReport{}
-    
+
     for _, scenario := range ts.scenarios {
         // Test our implementation
         ourResult := ts.runWithOurImplementation(scenario)
-        
+
         // Test upstream implementation
         upstreamResult := ts.runWithUpstreamImplementation(scenario)
-        
+
         // Compare results
         comparison := ts.compareResults(ourResult, upstreamResult)
         report.AddComparison(scenario.Name, comparison)
     }
-    
+
     return report
 }
 ```

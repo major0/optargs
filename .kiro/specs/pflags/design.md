@@ -6,7 +6,7 @@ The PFlags wrapper provides a drop-in replacement for spf13/pflag that maintains
 
 ## Architecture
 
-The wrapper architecture creates a compatibility layer that translates pflag API calls into OptArgs Core operations:
+The wrapper architecture creates a compatibility layer that translates pflag API calls into OptArgs Core operations through the goarg module:
 
 ```
 ┌─────────────────────────────────────┐
@@ -16,21 +16,193 @@ The wrapper architecture creates a compatibility layer that translates pflag API
 │      Flag Registry & Management     │
 │   (Type conversion, validation)     │
 ├─────────────────────────────────────┤
+│       GoArg Module Integration      │
+│    (Leverages goarg compatibility)  │
+├─────────────────────────────────────┤
 │       OptArgs Core Integration      │
 │    (Parser, Option processing)      │
 ├─────────────────────────────────────┤
 │         OptArgs Core Engine         │
 │   (POSIX/GNU compliant parsing)     │
 └─────────────────────────────────────┘
+
+Go Module Dependencies:
+pflags → goarg → optargs
 ```
 
 ### Design Principles
 
 1. **API Compatibility**: Maintain exact method signatures and behavior of spf13/pflag
 2. **Zero Breaking Changes**: Existing pflag code should work without modification
-3. **Enhanced Reliability**: Leverage OptArgs Core's standards compliance
+3. **Enhanced Reliability**: Leverage OptArgs Core's standards compliance through goarg
 4. **Performance Preservation**: Match or exceed pflag's performance characteristics
 5. **Clear Error Messages**: Provide helpful, actionable error messages
+6. **Module Independence**: Standalone Go module with proper dependency management
+7. **Cascading Builds**: Optimized build system that responds to dependency changes
+8. **GoArg Integration**: Leverage goarg module for enhanced functionality and compatibility
+
+## Module Dependency Management
+
+### Go Module Structure
+
+The pflags package is implemented as an independent Go module that depends on the goarg module:
+
+```go
+// pflags/go.mod
+module github.com/major0/optargs/pflags
+
+go 1.23.4
+
+require github.com/major0/optargs/goarg v0.0.0
+
+// Local development - replace with local goarg module
+replace github.com/major0/optargs/goarg => ../goarg
+
+// Transitive dependency on optargs through goarg
+// goarg/go.mod handles optargs dependency
+```
+
+### Dependency Configuration Modes
+
+**Local Development Mode:**
+- Uses `replace github.com/major0/optargs/goarg => ../goarg` for local file system access
+- Enables rapid development and testing with immediate changes
+- Supports debugging across module boundaries
+- Inherits optargs dependency through goarg module
+
+**CI/CD Build Mode:**
+- Uses local replacement during automated testing
+- Validates integration with current goarg and optargs development state
+- Ensures compatibility before release
+- Tests full dependency chain: pflags → goarg → optargs
+
+**Production Mode:**
+- Depends on published goarg module via git URL
+- Uses semantic versioning for stable releases
+- Supports standard Go module operations (go get, go mod download)
+- Automatically resolves transitive optargs dependency
+
+### Build System Integration
+
+The build system enhances existing GitHub workflows rather than creating duplicates. The existing `.github/workflows/build.yml` and `.github/workflows/coverage.yml` are extended to handle the full dependency chain:
+
+```yaml
+# Enhanced GitHub Actions workflow logic (extends existing workflows)
+- name: Detect changes
+  run: |
+    # Detect changes across all modules in dependency chain
+    if git diff --name-only HEAD~1 | grep -E '^(api_stability_test\.go|benchmark_test\.go|command\.go|...)$'; then
+      echo "OPTARGS_CHANGED=true" >> $GITHUB_ENV
+    fi
+    if git diff --name-only HEAD~1 | grep -E '^(goarg/|optargs/)'; then
+      echo "GOARG_CHANGED=true" >> $GITHUB_ENV
+    fi
+    if git diff --name-only HEAD~1 | grep -E '^(pflags/|goarg/|optargs/)'; then
+      echo "PFLAGS_CHANGED=true" >> $GITHUB_ENV
+    fi
+
+# Existing jobs continue unchanged
+- name: Build OptArgs Core
+  if: needs.detect-changes.outputs.optargs-changed == 'true'
+  # ... existing optargs logic
+
+- name: Build GoArg Module
+  if: needs.detect-changes.outputs.goarg-changed == 'true'
+  # ... goarg build logic (added by goarg implementation)
+
+# New pflags job added to existing workflow
+- name: Build PFlags Module
+  if: needs.detect-changes.outputs.pflags-changed == 'true'
+  working-directory: pflags
+  run: |
+    go mod tidy
+    go build -v ./...
+    go test -v ./...
+```
+
+**Centralized Workflow Management:**
+- **No Workflow Duplication**: Extends existing `.github/workflows/` files
+- **Full Chain Support**: Handles pflags → goarg → optargs dependency chain
+- **Intelligent Builds**: Only builds what's needed based on source changes
+- **Unified Management**: All modules managed through single workflow set
+
+### Script Flexibility Requirements
+
+All validation scripts must be modified to accept an optional target directory parameter while defaulting to the current working directory. This enables the scripts to work with different module directories:
+
+```bash
+# Example: Enhanced validate_coverage.sh script header
+#!/bin/bash
+# Coverage validation script - works with any module directory
+# Usage: ./scripts/validate_coverage.sh [target_directory] [coverage_file]
+
+set -e
+
+# Parse arguments
+TARGET_DIR="${1:-.}"  # Default to current directory if not specified
+COVERAGE_FILE="${2:-coverage.out}"
+
+# Change to target directory if specified
+if [[ "$TARGET_DIR" != "." ]]; then
+    echo "Validating coverage in directory: $TARGET_DIR"
+    cd "$TARGET_DIR"
+fi
+
+# Define pflags-specific core functions that must have 100% coverage
+CORE_FUNCTIONS=(
+    "NewFlagSet"
+    "Parse"
+    "StringVar"
+    "IntVar"
+    "BoolVar"
+    "Float64Var"
+    "DurationVar"
+    "StringP"
+    "IntP"
+    "BoolP"
+    "Lookup"
+    "VisitAll"
+    "Visit"
+)
+
+# Rest of script works with current directory...
+```
+
+**Usage Examples:**
+```bash
+# From project root - validate pflags
+./scripts/validate_coverage.sh pflags/
+
+# From project root - validate goarg (dependency)
+./scripts/validate_coverage.sh goarg/
+
+# From within pflags directory
+cd pflags && ../scripts/validate_coverage.sh
+
+# From any location with absolute path
+/path/to/project/scripts/validate_coverage.sh /path/to/project/pflags/
+```
+
+### GoArg Integration Layer
+
+The pflags module leverages goarg for enhanced functionality:
+
+```go
+// Integration with goarg module
+import "github.com/major0/optargs/goarg"
+
+type FlagSet struct {
+    // ... pflags-specific fields
+    goargParser *goarg.Parser  // Leverage goarg compatibility layer
+}
+
+// Delegate complex parsing to goarg when beneficial
+func (f *FlagSet) parseWithGoArg(args []string) error {
+    // Convert pflags definitions to goarg struct format
+    // Use goarg's enhanced parsing capabilities
+    // Translate results back to pflags format
+}
+```
 
 ## Components and Interfaces
 
@@ -146,12 +318,12 @@ func (ci *CoreIntegration) registerFlag(flag *Flag) error {
     if flag.Value.Type() != "bool" {
         argType = optargs.RequiredArgument
     }
-    
+
     coreFlag := &optargs.Flag{
         Name:   flag.Name,
         HasArg: argType,
     }
-    
+
     return ci.parser.AddLongOpt(flag.Name, coreFlag)
 }
 
@@ -161,16 +333,16 @@ func (ci *CoreIntegration) processOptions() error {
         if err != nil {
             return ci.translateError(err)
         }
-        
+
         flag := ci.flagSet.flags[option.Name]
         if flag == nil {
             return fmt.Errorf("unknown flag: --%s", option.Name)
         }
-        
+
         if err := flag.Value.Set(option.Arg); err != nil {
             return fmt.Errorf("invalid value for flag --%s: %v", option.Name, err)
         }
-        
+
         flag.Changed = true
     }
     return nil
