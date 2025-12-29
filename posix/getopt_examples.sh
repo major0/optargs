@@ -3,7 +3,7 @@
 # `getopt(3)`. This script relies on the util-linux version of the
 # `getopt(1)` CLI utility which makes significant efforts to expose
 # `getopt(3)`, `getopt_long(3)`, and `getopt_long_onlyy(3)` to the CLI.
-# 
+#
 # Some of the use of the `getopt(1)` utility may seem non-intuitive to
 # anyone reviewing this script. From the `getopt(1)` man page:
 #
@@ -12,7 +12,7 @@
 #       options). This getopt(1) treats optional arguments that are empty
 #       as if they were not present.
 #
-#       The syntax if you do not want any short option variables at all 
+#       The syntax if you do not want any short option variables at all
 #       is not very intuitive (you have to set them explicitly to the empty
 #       string).
 set -e

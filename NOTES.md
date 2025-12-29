@@ -12,5 +12,4 @@
  *      flag any   // nil == return then return `val`, else set `flag` to the value of `val`
  *   }
  *
- */ 
-
+ */

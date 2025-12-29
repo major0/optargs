@@ -12,7 +12,7 @@ repos:
       - id: go-fmt
       - id: go-imports
       - id: no-go-testing
-      - id: golangci-lint
+      # - id: golangci-lint  # Temporarily disabled due to Go 1.23 compatibility issues
       - id: go-mod-tidy
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
     rev: v9.20.0
@@ -33,6 +33,12 @@ repos:
         files: requirements.*\.txt$
   - repo: local
     hooks:
+      - id: golangci-lint-local
+        name: golangci-lint (local config)
+        entry: golangci-lint run
+        language: system
+        types: [go]
+        pass_filenames: false
       - id: go-mod-verify
         name: go mod verify
         entry: go mod verify
