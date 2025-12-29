@@ -105,36 +105,100 @@ func TestFindShortOptOptionalArgumentNoArgs(t *testing.T) {
 
 // TestOptionsCommandExecutionWithError tests command execution that returns an error
 func TestOptionsCommandExecutionWithError(t *testing.T) {
-	// Create a subcommand parser that will cause an error
-	subParser, err := NewParser(ParserConfig{}, map[byte]*Flag{
-		's': {Name: "s", HasArg: RequiredArgument}, // Requires argument
-	}, map[string]*Flag{}, []string{"-s"}) // Missing required argument
-	if err != nil {
-		t.Fatalf("Failed to create subparser: %v", err)
-	}
-	
-	// Create main parser with command
+	// Create a parser with a nil command to trigger the error path
 	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"subcmd"})
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	parser.AddCmd("subcmd", subParser)
 	
-	// Iterate through options - this should execute the command
-	// The command execution itself doesn't yield errors through the iterator
-	// Instead, it processes the subcommand's arguments internally
+	// Add a command with nil parser to trigger the error in ExecuteCommand
+	parser.Commands["subcmd"] = nil
+	
+	// Iterate through options - this should execute the command and hit the error path
+	errorCount := 0
+	for _, err := range parser.Options() {
+		if err != nil {
+			errorCount++
+			// This should trigger the uncovered error handling path
+			expectedMsg := "command subcmd has no parser"
+			if err.Error() != expectedMsg {
+				t.Errorf("Expected error message '%s', got '%s'", expectedMsg, err.Error())
+			}
+		}
+		break // Only check first iteration
+	}
+	
+	// Should have encountered the error
+	if errorCount != 1 {
+		t.Errorf("Expected 1 error, got %d", errorCount)
+	}
+}
+
+// TestOptionsCommandExecutionDirectError tests direct command execution error
+func TestOptionsCommandExecutionDirectError(t *testing.T) {
+	// Create a parser and manually trigger ExecuteCommand with error
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"testcmd"})
+	if err != nil {
+		t.Fatalf("Failed to create parser: %v", err)
+	}
+	
+	// Manually add a command that exists but set it to nil to trigger error
+	parser.Commands["testcmd"] = nil
+	
+	// This should trigger the error path in Options -> ExecuteCommand
+	errorFound := false
+	for _, err := range parser.Options() {
+		if err != nil {
+			errorFound = true
+			if !contains(err.Error(), "has no parser") {
+				t.Errorf("Expected error about 'has no parser', got: %v", err)
+			}
+		}
+		break
+	}
+	
+	if !errorFound {
+		t.Error("Expected error from command execution")
+	}
+}
+
+// TestOptionsCommandExecutionUnknownCommand tests command execution with unknown command
+func TestOptionsCommandExecutionUnknownCommand(t *testing.T) {
+	// Create a parser with commands but try to execute a non-existent one
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"nonexistent"})
+	if err != nil {
+		t.Fatalf("Failed to create parser: %v", err)
+	}
+	
+	// Add a different command so HasCommands() returns true
+	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	parser.AddCmd("existing", subParser)
+	
+	// Since the command doesn't exist, it should be treated as a non-option
+	// and not trigger the error path in ExecuteCommand
 	optionCount := 0
 	for _, err := range parser.Options() {
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
 		optionCount++
-		break // Only check first iteration
 	}
 	
-	// After command execution, Args should be empty
-	if len(parser.Args) != 0 {
-		t.Errorf("Expected Args to be empty after command execution, got %v", parser.Args)
+	// Should have processed no options (nonexistent treated as non-option)
+	if optionCount != 0 {
+		t.Errorf("Expected 0 options, got %d", optionCount)
+	}
+	
+	// The nonexistent command should be in Args as a non-option
+	found := false
+	for _, arg := range parser.Args {
+		if arg == "nonexistent" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected 'nonexistent' to be treated as non-option in Args")
 	}
 }
 
