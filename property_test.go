@@ -11,93 +11,7 @@ import (
 
 // Property-based test generators and utilities
 
-// Generate valid short option characters (printable ASCII except :, ;, -)
-func generateValidShortOpt(rand *rand.Rand) byte {
-	for {
-		c := byte(rand.Intn(127))
-		if isGraph(c) && c != ':' && c != ';' && c != '-' {
-			return c
-		}
-	}
-}
-
 // Generate valid long option names (printable non-space characters)
-func generateValidLongOpt(rand *rand.Rand) string {
-	length := rand.Intn(10) + 1 // 1-10 characters
-	var result strings.Builder
-	for i := 0; i < length; i++ {
-		for {
-			c := byte(rand.Intn(127))
-			if isGraph(c) && c != ' ' {
-				result.WriteByte(c)
-				break
-			}
-		}
-	}
-	return result.String()
-}
-
-// Generate optstring with various argument types
-func generateOptString(rand *rand.Rand) string {
-	var result strings.Builder
-
-	// Add behavior flags randomly
-	if rand.Float32() < 0.3 {
-		result.WriteByte(':') // Silent errors
-	}
-	if rand.Float32() < 0.3 {
-		result.WriteByte('+') // POSIXLY_CORRECT
-	}
-	if rand.Float32() < 0.3 {
-		result.WriteByte('-') // Non-opts mode
-	}
-
-	// Add 1-5 options
-	numOpts := rand.Intn(5) + 1
-	for i := 0; i < numOpts; i++ {
-		c := generateValidShortOpt(rand)
-		result.WriteByte(c)
-
-		// Add argument specification
-		argType := rand.Intn(3)
-		switch argType {
-		case 1: // Required argument
-			result.WriteByte(':')
-		case 2: // Optional argument
-			result.WriteString("::")
-		}
-	}
-
-	return result.String()
-}
-
-// Generate argument lists for testing
-func generateArgs(rand *rand.Rand) []string {
-	numArgs := rand.Intn(10)
-	args := make([]string, numArgs)
-
-	for i := 0; i < numArgs; i++ {
-		switch rand.Intn(4) {
-		case 0: // Short option
-			args[i] = "-" + string(generateValidShortOpt(rand))
-		case 1: // Long option
-			args[i] = "--" + generateValidLongOpt(rand)
-		case 2: // Compacted short options
-			length := rand.Intn(3) + 2 // 2-4 options
-			var compacted strings.Builder
-			compacted.WriteByte('-')
-			for j := 0; j < length; j++ {
-				compacted.WriteByte(generateValidShortOpt(rand))
-			}
-			args[i] = compacted.String()
-		case 3: // Regular argument
-			args[i] = fmt.Sprintf("arg%d", i)
-		}
-	}
-
-	return args
-}
-
 // Property 1: POSIX/GNU Specification Compliance
 // Feature: optargs-core, Property 1: For any valid POSIX optstring and GNU long option specification, the parser should produce results that match the behavior of the reference GNU getopt implementation
 func TestProperty1_POSIXGNUSpecificationCompliance(t *testing.T) {
@@ -165,14 +79,6 @@ func TestProperty1_POSIXGNUSpecificationCompliance(t *testing.T) {
 	if err := quick.Check(property, config); err != nil {
 		t.Errorf("Property 1 failed: %v", err)
 	}
-}
-
-// Helper function for min
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // Property 2: Option Compaction and Argument Assignment
@@ -308,11 +214,7 @@ func TestProperty3_ArgumentTypeHandling(t *testing.T) {
 				}
 			}
 		}
-		if !found4 {
-			return false
-		}
-
-		return true
+		return found4
 	}
 
 	config := &quick.Config{MaxCount: 100}
@@ -586,11 +488,7 @@ func TestProperty5_LongOptionSyntaxSupport(t *testing.T) {
 				}
 			}
 		}
-		if !found4 {
-			return false
-		}
-
-		return true
+		return found4
 	}
 
 	config := &quick.Config{MaxCount: 100}
@@ -712,11 +610,7 @@ func TestProperty7_PartialLongOptionMatching(t *testing.T) {
 				found3 = true
 			}
 		}
-		if !found3 {
-			return false
-		}
-
-		return true
+		return found3
 	}
 
 	config := &quick.Config{MaxCount: 100}
@@ -904,11 +798,7 @@ func TestProperty8_LongOnlyModeBehavior(t *testing.T) {
 				found4 = true
 			}
 		}
-		if !found4 {
-			return false
-		}
-
-		return true
+		return found4
 	}
 
 	config := &quick.Config{MaxCount: 100}
@@ -1008,11 +898,7 @@ func TestProperty9_GNUWExtensionSupport(t *testing.T) {
 				}
 			}
 		}
-		if !found4 {
-			return false
-		}
-
-		return true
+		return found4
 	}
 
 	config := &quick.Config{MaxCount: 100}
@@ -1137,11 +1023,7 @@ func TestProperty10_NegativeArgumentSupport(t *testing.T) {
 				}
 			}
 		}
-		if !found5 {
-			return false
-		}
-
-		return true
+		return found5
 	}
 
 	config := &quick.Config{MaxCount: 100}
@@ -1201,11 +1083,7 @@ func TestProperty11_CharacterValidation(t *testing.T) {
 		}
 
 		_, err = GetOpt([]string{}, "a;")
-		if err == nil {
-			return false // Should error - semicolon not allowed as option character
-		}
-
-		return true
+		return err != nil
 	}
 
 	config := &quick.Config{MaxCount: 100}
@@ -1326,11 +1204,7 @@ func TestProperty12_OptionRedefinitionHandling(t *testing.T) {
 				}
 			}
 		}
-		if !found5 {
-			return false
-		}
-
-		return true
+		return found5
 	}
 
 	config := &quick.Config{MaxCount: 100}

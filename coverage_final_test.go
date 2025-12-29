@@ -329,6 +329,7 @@ func TestOptionsCleanupDeferredExecution(t *testing.T) {
 		// Break early to test deferred cleanup
 		break
 	}
+	_ = optionCount // Suppress ineffassign warning
 
 	// The deferred cleanup should have moved non-options to Args
 	if len(parser.Args) < 2 {
@@ -823,6 +824,7 @@ func TestExecuteCommandDirect(t *testing.T) {
 	}
 	if parser == nil {
 		t.Error("Expected parser to be returned")
+		return
 	}
 	if len(parser.Args) != 2 || parser.Args[0] != "arg1" || parser.Args[1] != "arg2" {
 		t.Errorf("Expected args [arg1, arg2], got %v", parser.Args)

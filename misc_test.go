@@ -106,7 +106,7 @@ func BenchmarkHasPrefixNoMatchIgnoreCase(b *testing.B) {
 
 func FuzzHasPrefix(f *testing.F) {
 	f.Fuzz(func(t *testing.T, s string, prefix string, ignoreCase bool) {
-		hasPrefix(s, prefix, ignoreCase)
+		_ = hasPrefix(s, prefix, ignoreCase)
 	})
 }
 
@@ -209,6 +209,6 @@ func BenchmarkTrimPrefixNoMatchIgnoreCase(b *testing.B) {
 
 func FuzzTrimPrefix(f *testing.F) {
 	f.Fuzz(func(t *testing.T, s string, prefix string, ignoreCase bool) {
-		trimPrefix(s, prefix, ignoreCase)
+		_ = trimPrefix(s, prefix, ignoreCase)
 	})
 }

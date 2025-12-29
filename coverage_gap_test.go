@@ -1075,6 +1075,8 @@ func TestEmptyArgsAndWord(t *testing.T) {
 
 	// Test optional argument with empty word and args
 	args, word, option, err = parser.findShortOpt('b', "", []string{})
+	_ = args // Suppress ineffassign warning
+	_ = word // Suppress ineffassign warning
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
