@@ -35,7 +35,7 @@ echo "Overall Coverage: ${OVERALL_COVERAGE}%"
 # Define core parsing functions that must have 100% coverage
 CORE_FUNCTIONS=(
     "GetOpt"
-    "GetOptLong" 
+    "GetOptLong"
     "GetOptLongOnly"
     "getOpt"
     "findLongOpt"
@@ -56,12 +56,12 @@ echo "================================"
 for func in "${CORE_FUNCTIONS[@]}"; do
     # Extract coverage for this function
     FUNC_COVERAGE=$(go tool cover -func="$COVERAGE_FILE" | grep -E "\s${func}\s" | awk '{print $3}' | sed 's/%//' | head -1)
-    
+
     if [[ -z "$FUNC_COVERAGE" ]]; then
         echo -e "${YELLOW}Warning: Function $func not found in coverage report${NC}"
         continue
     fi
-    
+
     # Compare coverage (using bc for floating point comparison)
     if (( $(echo "$FUNC_COVERAGE >= $CORE_FUNCTIONS_TARGET" | bc -l) )); then
         echo -e "${GREEN}✓ $func: ${FUNC_COVERAGE}%${NC}"

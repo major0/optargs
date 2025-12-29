@@ -82,19 +82,19 @@ func TestHasPrefix(t *testing.T) {
 
 func BenchmarkHasPrefixMatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		hasPrefix("abc123ABC123Abc123", "abc123", false)
+		hasPrefix("abc123ABC123Abc123", "abc123", false) // pragma: allowlist secret
 	}
 }
 
 func BenchmarkHasPrefixMatchIgnoreCase(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		hasPrefix("abc123ABC123Abc123", "ABC123", true)
+		hasPrefix("abc123ABC123Abc123", "ABC123", true) // pragma: allowlist secret
 	}
 }
 
 func BenchmarkHasPrefixNoMatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		hasPrefix("abc123ABC123Abc123", "ABC123", false)
+		hasPrefix("abc123ABC123Abc123", "ABC123", false) // pragma: allowlist secret
 	}
 }
 
@@ -185,19 +185,19 @@ func TestTrimPrefixEmptyPrefixCaseIgnore(t *testing.T) {
 
 func BenchmarkTrimPrefixMatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		trimPrefix("abc123ABC123Abc123", "abc123", false)
+		trimPrefix("abc123ABC123Abc123", "abc123", false) // pragma: allowlist secret
 	}
 }
 
 func BenchmarkTrimPrefixMatchIgnoreCase(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		trimPrefix("abc123ABC123Abc123", "ABC123", true)
+		trimPrefix("abc123ABC123Abc123", "ABC123", true) // pragma: allowlist secret
 	}
 }
 
 func BenchmarkTrimPrefixNoMatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		trimPrefix("abc123ABC123Abc123", "ABC123", false)
+		trimPrefix("abc123ABC123Abc123", "ABC123", false) // pragma: allowlist secret
 	}
 }
 
