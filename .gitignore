@@ -46,7 +46,7 @@ coverage_validation_report.md
 benchmark_results_*.txt
 benchmark-results*.txt
 performance_report_*.md
-performance_baselines.json
+# Keep performance_baselines.json - it should be tracked
 
 # Test artifacts and reports
 final_validation_report.md
