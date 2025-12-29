@@ -2,84 +2,84 @@
   "baselines": [
     {
       "test_name": "GetOpt_SimpleShortOptions",
-      "ns_per_op": 9033,
+      "ns_per_op": 9004,
       "allocs_per_op": 89,
       "bytes_per_op": 2840,
-      "timestamp": "2025-12-29T05:00:59.171183389-08:00",
+      "timestamp": "2025-12-29T05:06:36.34023403-08:00",
       "go_version": "go1.23.4",
       "goos": "linux",
       "goarch": "amd64"
     },
     {
       "test_name": "GetOpt_CompactedOptions",
-      "ns_per_op": 8711,
+      "ns_per_op": 8468,
       "allocs_per_op": 87,
       "bytes_per_op": 2776,
-      "timestamp": "2025-12-29T05:01:00.30204905-08:00",
+      "timestamp": "2025-12-29T05:06:37.620843142-08:00",
       "go_version": "go1.23.4",
       "goos": "linux",
       "goarch": "amd64"
     },
     {
       "test_name": "GetOpt_WithArguments",
-      "ns_per_op": 7860,
+      "ns_per_op": 7217,
       "allocs_per_op": 72,
       "bytes_per_op": 2608,
-      "timestamp": "2025-12-29T05:01:01.502457079-08:00",
+      "timestamp": "2025-12-29T05:06:38.805005451-08:00",
       "go_version": "go1.23.4",
       "goos": "linux",
       "goarch": "amd64"
     },
     {
       "test_name": "GetOptLong_LongOptionsOnly",
-      "ns_per_op": 7410,
+      "ns_per_op": 7361,
       "allocs_per_op": 36,
-      "bytes_per_op": 2248,
-      "timestamp": "2025-12-29T05:01:02.777825632-08:00",
+      "bytes_per_op": 2250,
+      "timestamp": "2025-12-29T05:06:40.192645373-08:00",
       "go_version": "go1.23.4",
       "goos": "linux",
       "goarch": "amd64"
     },
     {
       "test_name": "GetOptLong_EqualsForm",
-      "ns_per_op": 7424,
+      "ns_per_op": 7351,
       "allocs_per_op": 36,
-      "bytes_per_op": 2256,
-      "timestamp": "2025-12-29T05:01:04.020048852-08:00",
+      "bytes_per_op": 2249,
+      "timestamp": "2025-12-29T05:06:41.437594378-08:00",
       "go_version": "go1.23.4",
       "goos": "linux",
       "goarch": "amd64"
     },
     {
       "test_name": "GetOptLong_MixedShortLong",
-      "ns_per_op": 10415,
+      "ns_per_op": 10386,
       "allocs_per_op": 74,
-      "bytes_per_op": 2876,
-      "timestamp": "2025-12-29T05:01:05.262207312-08:00",
+      "bytes_per_op": 2875,
+      "timestamp": "2025-12-29T05:06:42.83807118-08:00",
       "go_version": "go1.23.4",
       "goos": "linux",
       "goarch": "amd64"
     },
     {
       "test_name": "Iterator_FullConsumption",
-      "ns_per_op": 12173,
+      "ns_per_op": 11952,
       "allocs_per_op": 130,
       "bytes_per_op": 3440,
-      "timestamp": "2025-12-29T05:01:06.62829829-08:00",
+      "timestamp": "2025-12-29T05:06:44.224370241-08:00",
       "go_version": "go1.23.4",
       "goos": "linux",
       "goarch": "amd64"
     },
     {
       "test_name": "Iterator_PartialConsumption",
-      "ns_per_op": 7417,
+      "ns_per_op": 7447,
       "allocs_per_op": 69,
       "bytes_per_op": 2544,
-      "timestamp": "2025-12-29T05:01:07.916567303-08:00",
+      "timestamp": "2025-12-29T05:06:45.492690164-08:00",
       "go_version": "go1.23.4",
       "goos": "linux",
       "goarch": "amd64"
     }
   ],
-  "generated": "2025-12-29T05:01:07.916588583-08:00"
+  "generated": "2025-12-29T05:06:45.492719114-08:00"
 }

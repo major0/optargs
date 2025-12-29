@@ -804,3 +804,77 @@ func TestOptionsLongOptsOnlyWithShortFallback(t *testing.T) {
 		t.Error("Expected at least one option processing attempt")
 	}
 }
+
+// TestExecuteCommandDirect tests the ExecuteCommand function directly
+func TestExecuteCommandDirect(t *testing.T) {
+	registry := NewCommandRegistry()
+	
+	// Test with valid command
+	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	registry.AddCmd("test", subParser)
+	
+	parser, err := registry.ExecuteCommand("test", []string{"arg1", "arg2"})
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if parser == nil {
+		t.Error("Expected parser to be returned")
+	}
+	if len(parser.Args) != 2 || parser.Args[0] != "arg1" || parser.Args[1] != "arg2" {
+		t.Errorf("Expected args [arg1, arg2], got %v", parser.Args)
+	}
+	
+	// Test with unknown command
+	_, err = registry.ExecuteCommand("unknown", []string{})
+	if err == nil {
+		t.Error("Expected error for unknown command")
+	}
+	expectedMsg := "unknown command: unknown"
+	if err.Error() != expectedMsg {
+		t.Errorf("Expected error message '%s', got '%s'", expectedMsg, err.Error())
+	}
+	
+	// Test with nil parser
+	registry["nilcmd"] = nil
+	_, err = registry.ExecuteCommand("nilcmd", []string{})
+	if err == nil {
+		t.Error("Expected error for nil parser")
+	}
+	expectedMsg = "command nilcmd has no parser"
+	if err.Error() != expectedMsg {
+		t.Errorf("Expected error message '%s', got '%s'", expectedMsg, err.Error())
+	}
+}
+
+// TestNewParserWithCaseInsensitiveCommands tests the case insensitive parser constructor
+func TestNewParserWithCaseInsensitiveCommands(t *testing.T) {
+	parser, err := NewParserWithCaseInsensitiveCommands(
+		map[byte]*Flag{'v': {Name: "v", HasArg: NoArgument}},
+		map[string]*Flag{"verbose": {Name: "verbose", HasArg: NoArgument}},
+		[]string{},
+	)
+	if err != nil {
+		t.Fatalf("Failed to create parser: %v", err)
+	}
+	if parser == nil {
+		t.Fatal("Expected parser to be created")
+	}
+	
+	// Verify that command case ignore is enabled
+	if !parser.config.commandCaseIgnore {
+		t.Error("Expected commandCaseIgnore to be true")
+	}
+	
+	// Test case insensitive command matching
+	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	parser.AddCmd("Test", subParser)
+	
+	// Should find command with different case
+	foundParser, exists := parser.GetCommand("test")
+	if !exists {
+		t.Error("Expected to find command with case insensitive matching")
+	}
+	if foundParser != subParser {
+		t.Error("Expected to get the same parser back")
+	}
+}
