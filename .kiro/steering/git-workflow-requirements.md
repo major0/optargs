@@ -143,11 +143,27 @@ gh run watch
 
 ### Workflow Validation Requirements
 
+- **MUST** monitor workflows after every `git push` if the current branch has an existing PR
 - **MUST** monitor workflows immediately after PR creation
 - **MUST** validate that all required workflows are triggered
 - **MUST** ensure all workflow checks pass before requesting review
 - **MUST** address any workflow failures promptly
 - **MUST** re-run workflows if needed using `gh run rerun`
+
+### Push Workflow Monitoring
+
+After every `git push` to a branch with an existing PR:
+
+```bash
+# Check if current branch has a PR
+if gh pr view --json state 2>/dev/null; then
+  echo "Monitoring workflows for existing PR after push..."
+  gh pr checks
+  gh pr status
+else
+  echo "No PR exists for this branch yet"
+fi
+```
 
 ## Branch Cleanup
 
@@ -196,11 +212,12 @@ pre-commit install --hook-type commit-msg
 3. **Run local validation** using Makefile targets
 4. **Create secure commit messages** using temporary files (NEVER CLI message body)
 5. **Push topic branch** using `git push -u origin <branch-name>`
-6. **Create pull request** using secure temp file method with `gh pr create -F .pr-desc.txt`
-7. **Monitor GitHub workflows** using `gh pr checks` and `gh pr status` to validate no errors
-8. **Address review feedback** and CI failures if any
-9. **Merge after approval** and clean up branch
-10. **Clean up temporary files** used for commit messages and PR descriptions
+6. **Monitor workflows after push** if branch has existing PR using `gh pr checks` and `gh pr status`
+7. **Create pull request** using secure temp file method with `gh pr create -F .pr-desc.txt` (if not already created)
+8. **Monitor GitHub workflows after PR creation/update** using `gh pr checks` and `gh pr status` to validate no errors
+9. **Address review feedback** and CI failures if any
+10. **Merge after approval** and clean up branch
+11. **Clean up temporary files** used for commit messages and PR descriptions
 
 ### Commit Practices
 - Make atomic commits that represent complete, working changes

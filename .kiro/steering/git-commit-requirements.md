@@ -165,6 +165,13 @@ rm ".commit-msg.txt"
 # Push branch to remote first
 git push -u origin <branch-name>
 
+# Check if branch has existing PR and monitor workflows after push
+if gh pr view --json state 2>/dev/null; then
+  echo "Branch has existing PR - monitoring workflows after push"
+  gh pr checks
+  gh pr status
+fi
+
 # Create PR description file using direct file creation (NOT shell commands)
 # Use file editor/IDE to create .pr-desc.txt with content:
 # ## Summary
@@ -180,10 +187,12 @@ git push -u origin <branch-name>
 #
 # Closes: Task X.Y
 
-# Create PR using temp file
-gh pr create --title "<type>(scope): Task X.Y - Description" -F ".pr-desc.txt"
+# Create PR using temp file (if not already exists)
+if ! gh pr view --json state 2>/dev/null; then
+  gh pr create --title "<type>(scope): Task X.Y - Description" -F ".pr-desc.txt"
+fi
 
-# Monitor GitHub workflows for the PR
+# Monitor GitHub workflows after PR creation/update
 gh pr checks
 
 # Validate no workflow errors (all checks should pass)
@@ -204,9 +213,10 @@ rm ".pr-desc.txt"
 7. **Clean up temp file** - Remove temporary commit message file
 8. **Verify commit** - `git log --oneline -1` to confirm commit was created
 9. **Push branch** - `git push -u origin <branch-name>` to push branch to remote
-10. **Create PR** - Use `gh pr create` with temp file for description
-11. **Monitor workflows** - Check GitHub workflows status and validate no errors
-12. **Clean up PR temp file** - Remove temporary PR description file
+10. **Monitor workflows** - If branch has PR, check GitHub workflows status after push
+11. **Create PR** - Use `gh pr create` with temp file for description (if not already created)
+12. **Monitor workflows** - Check GitHub workflows status after PR creation and validate no errors
+13. **Clean up PR temp file** - Remove temporary PR description file
 
 ## Topic Branch Management
 
