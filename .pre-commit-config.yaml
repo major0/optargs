@@ -12,9 +12,48 @@ repos:
       - id: go-fmt
       - id: go-imports
       - id: no-go-testing
+      - id: golangci-lint
+      - id: go-mod-tidy
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
     rev: v9.20.0
     hooks:
       - id: commitlint
         stages: [commit-msg]
         additional_dependencies: ['@commitlint/config-conventional']
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: go.sum
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.3
+    hooks:
+      - id: python-safety-dependencies-check
+        files: requirements.*\.txt$
+  - repo: local
+    hooks:
+      - id: go-mod-verify
+        name: go mod verify
+        entry: go mod verify
+        language: system
+        files: go\.(mod|sum)$
+        pass_filenames: false
+      - id: go-vet
+        name: go vet
+        entry: go vet
+        language: system
+        args: [./...]
+        pass_filenames: false
+      - id: go-build
+        name: go build
+        entry: go build
+        language: system
+        args: [-v, ./...]
+        pass_filenames: false
+      - id: go-test-short
+        name: go test (short)
+        entry: go test
+        language: system
+        args: [-short, -race, ./...]
+        pass_filenames: false

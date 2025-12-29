@@ -1,7 +1,7 @@
 # OptArgs Core - Test Coverage Tracking Makefile
 # Implements automated coverage reporting and validation
 
-.PHONY: test coverage coverage-html coverage-func coverage-validate coverage-report clean help
+.PHONY: test coverage coverage-html coverage-func coverage-validate coverage-report clean help lint static-check security-check fmt imports vet mod-tidy mod-verify build-check
 
 # Default target
 help:
@@ -15,6 +15,15 @@ help:
 	@echo "  coverage-func     - Display function-level coverage"
 	@echo "  coverage-validate - Validate coverage meets targets"
 	@echo "  coverage-report   - Generate comprehensive coverage analysis"
+	@echo "  lint              - Run golangci-lint static analysis"
+	@echo "  static-check      - Run comprehensive static analysis"
+	@echo "  security-check    - Run security vulnerability checks"
+	@echo "  fmt               - Format Go code"
+	@echo "  imports           - Fix Go imports"
+	@echo "  vet               - Run go vet"
+	@echo "  mod-tidy          - Tidy go.mod and go.sum"
+	@echo "  mod-verify        - Verify go.mod dependencies"
+	@echo "  build-check       - Verify code builds successfully"
 	@echo "  clean             - Remove coverage files"
 	@echo "  help              - Show this help message"
 	@echo ""
@@ -72,3 +81,79 @@ ci-coverage: coverage coverage-validate
 # Development target for quick feedback
 dev-coverage: coverage coverage-func
 	@echo "Development coverage check complete"
+
+# Static Analysis Targets
+# =======================
+
+# Run golangci-lint with comprehensive static analysis
+lint:
+	@echo "Running golangci-lint static analysis..."
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run --config .golangci.yml ./...; \
+	else \
+		echo "golangci-lint not found. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
+		exit 1; \
+	fi
+
+# Comprehensive static analysis suite
+static-check: fmt imports vet mod-tidy mod-verify lint build-check
+	@echo "Static analysis complete"
+
+# Security vulnerability checks
+security-check:
+	@echo "Running security vulnerability checks..."
+	@if command -v govulncheck >/dev/null 2>&1; then \
+		govulncheck ./...; \
+	else \
+		echo "govulncheck not found. Install with: go install golang.org/x/vuln/cmd/govulncheck@latest"; \
+		echo "Running go list -json -deps ./... | nancy sleuth instead..."; \
+		if command -v nancy >/dev/null 2>&1; then \
+			go list -json -deps ./... | nancy sleuth; \
+		else \
+			echo "Neither govulncheck nor nancy found. Skipping security check."; \
+		fi; \
+	fi
+
+# Format Go code
+fmt:
+	@echo "Formatting Go code..."
+	go fmt ./...
+
+# Fix Go imports
+imports:
+	@echo "Fixing Go imports..."
+	@if command -v goimports >/dev/null 2>&1; then \
+		goimports -w .; \
+	else \
+		echo "goimports not found. Install with: go install golang.org/x/tools/cmd/goimports@latest"; \
+		echo "Using go fmt instead..."; \
+		go fmt ./...; \
+	fi
+
+# Run go vet
+vet:
+	@echo "Running go vet..."
+	go vet ./...
+
+# Tidy go.mod and go.sum
+mod-tidy:
+	@echo "Tidying go.mod and go.sum..."
+	go mod tidy
+
+# Verify go.mod dependencies
+mod-verify:
+	@echo "Verifying go.mod dependencies..."
+	go mod verify
+
+# Verify code builds successfully
+build-check:
+	@echo "Verifying code builds successfully..."
+	go build -v ./...
+
+# Pre-commit checks (runs all static analysis)
+pre-commit: static-check test
+	@echo "Pre-commit checks complete"
+
+# CI static analysis target
+ci-static: static-check security-check
+	@echo "CI static analysis complete"
