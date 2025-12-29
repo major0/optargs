@@ -207,6 +207,9 @@ fi
 # Create PR and immediately monitor workflows
 gh pr create --title "<type>(scope): Task X.Y - Description" -F ".pr-desc.txt"
 
+# Clean up temp file immediately after PR creation
+rm ".pr-desc.txt"
+
 echo "PR created - monitoring GitHub workflows..."
 
 # Wait for initial workflow triggers (GitHub needs time to start workflows)
@@ -359,11 +362,11 @@ pre-commit install --hook-type commit-msg
 7. **Wait for all PR checks to complete** before proceeding with development
 8. **Fix any workflow failures** immediately when detected
 9. **Create pull request** using secure temp file method with `gh pr create -F .pr-desc.txt` (if not already created)
-10. **Monitor GitHub workflows after PR creation** and wait for completion
-11. **Validate all checks pass** before requesting review or proceeding
-12. **Address review feedback** and CI failures if any
-13. **Merge after approval** and clean up branch
-14. **Clean up temporary files** used for commit messages and PR descriptions
+10. **Clean up temporary files** used for PR descriptions immediately after creation
+11. **Monitor GitHub workflows after PR creation** and wait for completion
+12. **Validate all checks pass** before requesting review or proceeding
+13. **Address review feedback** and CI failures if any
+14. **Merge after approval** and clean up branch
 
 ### Enhanced Workflow Monitoring Requirements
 
