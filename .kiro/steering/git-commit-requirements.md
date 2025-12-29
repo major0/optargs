@@ -183,6 +183,12 @@ git push -u origin <branch-name>
 # Create PR using temp file
 gh pr create --title "<type>(scope): Task X.Y - Description" -F ".pr-desc.txt"
 
+# Monitor GitHub workflows for the PR
+gh pr checks
+
+# Validate no workflow errors (all checks should pass)
+gh pr status
+
 # Clean up temp file
 rm ".pr-desc.txt"
 ```
@@ -199,6 +205,8 @@ rm ".pr-desc.txt"
 8. **Verify commit** - `git log --oneline -1` to confirm commit was created
 9. **Push branch** - `git push -u origin <branch-name>` to push branch to remote
 10. **Create PR** - Use `gh pr create` with temp file for description
+11. **Monitor workflows** - Check GitHub workflows status and validate no errors
+12. **Clean up PR temp file** - Remove temporary PR description file
 
 ## Topic Branch Management
 

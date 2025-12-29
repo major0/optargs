@@ -123,6 +123,32 @@ All pull requests must pass these status checks:
 - **Build failures**: Detailed error reporting and platform-specific guidance
 - **Coverage failures**: Coverage analysis and gap identification
 
+### Workflow Monitoring Commands
+
+After creating a PR, use these commands to monitor workflow status:
+
+```bash
+# Check current status of all workflows for the PR
+gh pr checks
+
+# View detailed PR status including workflow results
+gh pr status
+
+# View workflow runs for the current branch
+gh run list --branch <branch-name>
+
+# Watch workflow progress in real-time (optional)
+gh run watch
+```
+
+### Workflow Validation Requirements
+
+- **MUST** monitor workflows immediately after PR creation
+- **MUST** validate that all required workflows are triggered
+- **MUST** ensure all workflow checks pass before requesting review
+- **MUST** address any workflow failures promptly
+- **MUST** re-run workflows if needed using `gh run rerun`
+
 ## Branch Cleanup
 
 ### After Merge
@@ -171,9 +197,10 @@ pre-commit install --hook-type commit-msg
 4. **Create secure commit messages** using temporary files (NEVER CLI message body)
 5. **Push topic branch** using `git push -u origin <branch-name>`
 6. **Create pull request** using secure temp file method with `gh pr create -F .pr-desc.txt`
-7. **Address review feedback** and CI failures
-8. **Merge after approval** and clean up branch
-9. **Clean up temporary files** used for commit messages and PR descriptions
+7. **Monitor GitHub workflows** using `gh pr checks` and `gh pr status` to validate no errors
+8. **Address review feedback** and CI failures if any
+9. **Merge after approval** and clean up branch
+10. **Clean up temporary files** used for commit messages and PR descriptions
 
 ### Commit Practices
 - Make atomic commits that represent complete, working changes
