@@ -31,6 +31,8 @@ debug.test
 test_*
 
 # Git workflow temporary files (security requirement)
+.commit-msg.txt
+.pr-desc.txt
 commit-msg-*.txt
 pr-desc-*.txt
 /tmp/commit-msg-*.txt
