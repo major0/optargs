@@ -480,7 +480,7 @@ func TestPerformanceBaselines_Establish(t *testing.T) {
 	}
 
 	// Remove existing baselines file to start fresh
-	os.Remove(baselineFile)
+	_ = os.Remove(baselineFile)
 
 	t.Log("Establishing performance baselines...")
 

@@ -212,7 +212,7 @@ func TestNewParser(t *testing.T) {
 			},
 			args:      []string{},
 			expectErr: true,
-			errMsg:    "Invalid long option",
+			errMsg:    "invalid long option",
 		},
 		{
 			name:      "invalid long option with control char",
@@ -223,7 +223,7 @@ func TestNewParser(t *testing.T) {
 			},
 			args:      []string{},
 			expectErr: true,
-			errMsg:    "Invalid long option",
+			errMsg:    "invalid long option",
 		},
 	}
 
