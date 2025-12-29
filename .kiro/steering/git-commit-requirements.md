@@ -192,14 +192,14 @@ if ! gh pr view --json state 2>/dev/null; then
   gh pr create --title "<type>(scope): Task X.Y - Description" -F ".pr-desc.txt"
 fi
 
+# Clean up temp file
+rm ".pr-desc.txt"
+
 # Monitor GitHub workflows after PR creation/update
 gh pr checks
 
 # Validate no workflow errors (all checks should pass)
 gh pr status
-
-# Clean up temp file
-rm ".pr-desc.txt"
 ```
 
 ## Git Workflow Steps
@@ -215,9 +215,9 @@ rm ".pr-desc.txt"
 9. **Push branch** - `git push -u origin <branch-name>` to push branch to remote
 10. **Monitor workflows** - If branch has PR, wait for all GitHub workflows to complete and fix any failures
 11. **Create PR** - Use `gh pr create` with temp file for description (if not already created)
-12. **Monitor PR workflows** - Wait for all GitHub workflows to complete and validate no errors
-13. **Fix any failures** - Address any workflow failures before proceeding to next task
-14. **Clean up PR temp file** - Remove temporary PR description file
+12. **Clean up PR temp file** - Remove temporary PR description file immediately after PR creation
+13. **Monitor PR workflows** - Wait for all GitHub workflows to complete and validate no errors
+14. **Fix any failures** - Address any workflow failures before proceeding to next task
 
 ## PR Workflow Integration Requirements
 
