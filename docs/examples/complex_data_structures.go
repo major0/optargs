@@ -2,32 +2,32 @@ package main
 
 import (
 	"fmt"
-	"strings"
 	"github.com/major0/optargs/pflags"
+	"strings"
 )
 
 func main() {
 	fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
-	
+
 	// Built-in slice support
 	var tags []string
 	var ports []int
-	
+
 	fs.StringSliceVar(&tags, "tag", []string{}, "Add tags (can be repeated or comma-separated)")
 	fs.IntSliceVar(&ports, "port", []int{}, "Add ports (can be repeated or comma-separated)")
-	
+
 	// Usage examples:
 	// ./app --tag=web --tag=api --port=8080,8081,8082
 	// ./app --tag=web,api,database --port=8080 --port=8081
-	
+
 	fs.Parse([]string{"--tag=web,api", "--port=8080", "--port=8081"})
 	fmt.Printf("Tags: %v\n", tags)   // Output: Tags: [web api]
 	fmt.Printf("Ports: %v\n", ports) // Output: Ports: [8080 8081]
-	
+
 	// Custom map implementation
 	var env map[string]string
 	fs.Var(&MapValue{&env}, "env", "Set environment variables (key=value)")
-	
+
 	fs.Parse([]string{"--env=DEBUG=true", "--env=PORT=8080"})
 	fmt.Printf("Environment: %v\n", env) // Output: Environment: map[DEBUG:true PORT:8080]
 }
@@ -38,7 +38,9 @@ type MapValue struct {
 }
 
 func (mv *MapValue) String() string {
-	if *mv.m == nil { return "{}" }
+	if *mv.m == nil {
+		return "{}"
+	}
 	return fmt.Sprintf("%v", *mv.m)
 }
 

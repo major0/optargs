@@ -7,31 +7,31 @@ import (
 
 func main() {
 	fs := pflags.NewFlagSet("compaction-example", pflags.ContinueOnError)
-	
+
 	// Define various short options with different argument requirements
 	var (
-		verbose   bool
-		force     bool
-		extract   bool
-		archive   bool
-		file      string
-		level     int
-		output    string
+		verbose bool
+		force   bool
+		extract bool
+		archive bool
+		file    string
+		level   int
+		output  string
 	)
-	
+
 	// Boolean flags (no arguments)
 	fs.BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	fs.BoolVarP(&force, "force", "f", false, "Force operation")
 	fs.BoolVarP(&extract, "extract", "x", false, "Extract mode")
 	fs.BoolVarP(&archive, "archive", "a", false, "Archive mode")
-	
+
 	// Flags that require arguments
 	fs.StringVarP(&file, "file", "F", "", "Input file")
 	fs.IntVarP(&level, "level", "l", 0, "Compression level")
 	fs.StringVarP(&output, "output", "o", "", "Output destination")
-	
+
 	fmt.Println("=== Short-Option Compaction Examples ===\n")
-	
+
 	// Example 1: Basic compaction (all boolean flags)
 	fmt.Println("1. Basic compaction: -vfx")
 	fs1 := copyFlagSet(fs)
@@ -41,7 +41,7 @@ func main() {
 	} else {
 		printFlags(fs1, "verbose", "force", "extract")
 	}
-	
+
 	// Example 2: Compaction with argument to last option
 	fmt.Println("\n2. Compaction with argument: -vfo output.txt")
 	fs2 := copyFlagSet(fs)
@@ -51,7 +51,7 @@ func main() {
 	} else {
 		printFlags(fs2, "verbose", "force", "output")
 	}
-	
+
 	// Example 3: Compaction with attached argument
 	fmt.Println("\n3. Compaction with attached argument: -vfl5")
 	fs3 := copyFlagSet(fs)
@@ -61,7 +61,7 @@ func main() {
 	} else {
 		printFlags(fs3, "verbose", "force", "level")
 	}
-	
+
 	// Example 4: Complex compaction (tar-style)
 	fmt.Println("\n4. Tar-style compaction: -xvfF archive.tar")
 	fs4 := copyFlagSet(fs)
@@ -71,7 +71,7 @@ func main() {
 	} else {
 		printFlags(fs4, "extract", "verbose", "force", "file")
 	}
-	
+
 	// Example 5: Mixed compaction and regular flags
 	fmt.Println("\n5. Mixed usage: -vf --output=result.txt -l 9")
 	fs5 := copyFlagSet(fs)
@@ -86,13 +86,13 @@ func main() {
 // Helper function to copy a FlagSet for multiple parsing examples
 func copyFlagSet(original *pflags.FlagSet) *pflags.FlagSet {
 	fs := pflags.NewFlagSet("copy", pflags.ContinueOnError)
-	
+
 	var (
 		verbose, force, extract, archive bool
 		file, output                     string
-		level                           int
+		level                            int
 	)
-	
+
 	fs.BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	fs.BoolVarP(&force, "force", "f", false, "Force operation")
 	fs.BoolVarP(&extract, "extract", "x", false, "Extract mode")
@@ -100,7 +100,7 @@ func copyFlagSet(original *pflags.FlagSet) *pflags.FlagSet {
 	fs.StringVarP(&file, "file", "F", "", "Input file")
 	fs.IntVarP(&level, "level", "l", 0, "Compression level")
 	fs.StringVarP(&output, "output", "o", "", "Output destination")
-	
+
 	return fs
 }
 

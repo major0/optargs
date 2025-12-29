@@ -70,7 +70,7 @@ func NewParser(config Config, dest interface{}) (*Parser, error) {
 	if destValue.Kind() != reflect.Ptr {
 		return nil, fmt.Errorf("destination must be a pointer to a struct, got %T", dest)
 	}
-	
+
 	destElem := destValue.Elem()
 	if destElem.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("destination must be a pointer to a struct, got pointer to %s", destElem.Kind())
@@ -131,7 +131,7 @@ func (p *Parser) Parse(args []string) error {
 				if err != nil {
 					return fmt.Errorf("failed to execute subcommand %s: %w", arg, err)
 				}
-				
+
 				// Get the subcommand field from the destination struct
 				destValue := reflect.ValueOf(p.dest).Elem()
 				var subcommandField reflect.Value
@@ -143,16 +143,16 @@ func (p *Parser) Parse(args []string) error {
 						break
 					}
 				}
-				
+
 				if !subcommandField.IsValid() {
 					return fmt.Errorf("subcommand field not found for %s", arg)
 				}
-				
+
 				// Ensure subcommand field is initialized
 				if subcommandField.IsNil() {
 					subcommandField.Set(reflect.New(subcommandField.Type().Elem()))
 				}
-				
+
 				// Process all options from the subcommand parser in a single pass
 				// This handles both inherited options (set on parent) and subcommand options (set on subcommand)
 				return p.processOptionsWithInheritance(subParser, coreIntegration, subMetadata, subcommandField.Interface())
@@ -173,19 +173,19 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 		longOpts:    make(map[string]*optargs.Flag),
 		positionals: []PositionalArg{},
 	}
-	
+
 	// Build subcommand option mappings
 	subIntegration.BuildLongOpts()
-	
+
 	destValue := reflect.ValueOf(p.dest).Elem()
 	subDestValue := reflect.ValueOf(subcommandDest).Elem()
-	
+
 	// Process all options from the subcommand parser in a single pass
 	for option, err := range subParser.Options() {
 		if err != nil {
 			return fmt.Errorf("parsing error: %w", err)
 		}
-		
+
 		// First, try to find the option in the subcommand metadata
 		subField := p.findFieldInMetadata(option.Name, subMetadata)
 		if subField != nil {
@@ -196,7 +196,7 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 				if option.HasArg {
 					arg = option.Arg
 				}
-				
+
 				if err := subIntegration.setFieldValue(fieldValue, subField, arg); err != nil {
 					return fmt.Errorf("failed to set subcommand field %s: %w", subField.Name, err)
 				}
@@ -212,7 +212,7 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 					if option.HasArg {
 						arg = option.Arg
 					}
-					
+
 					if err := parentIntegration.setFieldValue(fieldValue, parentField, arg); err != nil {
 						return fmt.Errorf("failed to set inherited field %s: %w", parentField.Name, err)
 					}
@@ -221,31 +221,31 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 			// If not found in either parent or subcommand, it's an unknown option (already handled by OptArgs Core)
 		}
 	}
-	
+
 	// Process positional arguments for subcommand
 	if err := subIntegration.processPositionalArgs(subParser, subDestValue); err != nil {
 		return fmt.Errorf("failed to process subcommand positional arguments: %w", err)
 	}
-	
+
 	// Process environment variables for subcommand
 	if err := subIntegration.processEnvironmentVariables(subDestValue); err != nil {
 		return fmt.Errorf("failed to process subcommand environment variables: %w", err)
 	}
-	
+
 	// Set default values for subcommand
 	if err := subIntegration.setDefaultValues(subDestValue); err != nil {
 		return fmt.Errorf("failed to set subcommand default values: %w", err)
 	}
-	
+
 	// Process environment variables and defaults for parent as well
 	if err := parentIntegration.processEnvironmentVariables(destValue); err != nil {
 		return fmt.Errorf("failed to process parent environment variables: %w", err)
 	}
-	
+
 	if err := parentIntegration.setDefaultValues(destValue); err != nil {
 		return fmt.Errorf("failed to set parent default values: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -283,7 +283,7 @@ func (p *Parser) WriteHelp(w io.Writer) {
 	}
 
 	fmt.Fprintf(w, "Usage: %s", program)
-	
+
 	// Add options placeholder
 	if len(p.metadata.Fields) > 0 {
 		fmt.Fprint(w, " [OPTIONS]")
@@ -301,12 +301,12 @@ func (p *Parser) WriteHelp(w io.Writer) {
 	if len(p.metadata.Fields) > 0 {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Options:")
-		
+
 		for _, field := range p.metadata.Fields {
 			if field.Positional {
 				continue
 			}
-			
+
 			var optStr string
 			if field.Short != "" && field.Long != "" {
 				optStr = fmt.Sprintf("  -%s, --%s", field.Short, field.Long)
@@ -315,7 +315,7 @@ func (p *Parser) WriteHelp(w io.Writer) {
 			} else if field.Long != "" {
 				optStr = fmt.Sprintf("  --%s", field.Long)
 			}
-			
+
 			if field.Help != "" {
 				fmt.Fprintf(w, "%-20s %s\n", optStr, field.Help)
 			} else {
@@ -339,11 +339,11 @@ func (p *Parser) WriteUsage(w io.Writer) {
 	}
 
 	fmt.Fprintf(w, "Usage: %s", program)
-	
+
 	// Add options placeholder
 	if p.metadata != nil && len(p.metadata.Fields) > 0 {
 		fmt.Fprint(w, " [OPTIONS]")
-		
+
 		// Add positional arguments
 		for _, field := range p.metadata.Fields {
 			if field.Positional {
@@ -372,13 +372,13 @@ func (p *Parser) findSubcommand(name string) (*StructMetadata, string) {
 	if metadata, exists := p.metadata.Subcommands[name]; exists {
 		return metadata, name
 	}
-	
+
 	// Then try case insensitive match
 	for cmdName, metadata := range p.metadata.Subcommands {
 		if strings.EqualFold(cmdName, name) {
 			return metadata, cmdName
 		}
 	}
-	
+
 	return nil, ""
 }

@@ -204,8 +204,8 @@ func TestNewParser(t *testing.T) {
 			errMsg:    "Prohibited short option",
 		},
 		{
-			name:   "invalid long option with space",
-			config: ParserConfig{enableErrors: true},
+			name:      "invalid long option with space",
+			config:    ParserConfig{enableErrors: true},
 			shortOpts: nil,
 			longOpts: map[string]*Flag{
 				"help me": {Name: "help me", HasArg: NoArgument}, // space not allowed
@@ -215,8 +215,8 @@ func TestNewParser(t *testing.T) {
 			errMsg:    "Invalid long option",
 		},
 		{
-			name:   "invalid long option with control char",
-			config: ParserConfig{enableErrors: true},
+			name:      "invalid long option with control char",
+			config:    ParserConfig{enableErrors: true},
 			shortOpts: nil,
 			longOpts: map[string]*Flag{
 				"help\t": {Name: "help\t", HasArg: NoArgument}, // tab not allowed
@@ -230,7 +230,7 @@ func TestNewParser(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser, err := NewParser(tt.config, tt.shortOpts, tt.longOpts, tt.args)
-			
+
 			if tt.expectErr {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -273,7 +273,7 @@ func TestOptError(t *testing.T) {
 			parser := &Parser{
 				config: ParserConfig{enableErrors: tt.enableErrors},
 			}
-			
+
 			err := parser.optError(tt.message)
 			if err == nil {
 				t.Error("Expected error but got nil")
@@ -315,7 +315,7 @@ func TestOptErrorf(t *testing.T) {
 			parser := &Parser{
 				config: ParserConfig{enableErrors: tt.enableErrors},
 			}
-			
+
 			err := parser.optErrorf(tt.format, tt.args...)
 			if err == nil {
 				t.Error("Expected error but got nil")
@@ -331,13 +331,13 @@ func TestOptErrorf(t *testing.T) {
 func TestFindLongOptEdgeCases(t *testing.T) {
 	// Create a parser with specific long options to test edge cases
 	longOpts := map[string]*Flag{
-		"help":       {Name: "help", HasArg: NoArgument},
-		"output":     {Name: "output", HasArg: RequiredArgument},
-		"verbose":    {Name: "verbose", HasArg: OptionalArgument},
-		"foo=bar":    {Name: "foo=bar", HasArg: NoArgument}, // option name with equals
-		"config":     {Name: "config", HasArg: RequiredArgument},
+		"help":    {Name: "help", HasArg: NoArgument},
+		"output":  {Name: "output", HasArg: RequiredArgument},
+		"verbose": {Name: "verbose", HasArg: OptionalArgument},
+		"foo=bar": {Name: "foo=bar", HasArg: NoArgument}, // option name with equals
+		"config":  {Name: "config", HasArg: RequiredArgument},
 	}
-	
+
 	parser := &Parser{
 		longOpts: longOpts,
 		config: ParserConfig{
@@ -397,7 +397,7 @@ func TestFindLongOptEdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, option, err := parser.findLongOpt(tt.optName, tt.args)
-			
+
 			if tt.expectErr {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -423,7 +423,7 @@ func TestFindShortOptEdgeCases(t *testing.T) {
 		'b': {Name: "b", HasArg: RequiredArgument},
 		'c': {Name: "c", HasArg: OptionalArgument},
 	}
-	
+
 	parser := &Parser{
 		shortOpts: shortOpts,
 		config: ParserConfig{
@@ -505,7 +505,7 @@ func TestFindShortOptEdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, _, option, err := parser.findShortOpt(tt.c, tt.word, tt.args)
-			
+
 			if tt.expectErr {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -608,14 +608,14 @@ func TestOptionsIteratorEdgeCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var options []Option
 			var errors []error
-			
+
 			for option, err := range tt.parser.Options() {
 				options = append(options, option)
 				if err != nil {
 					errors = append(errors, err)
 				}
 			}
-			
+
 			if tt.expectErr && len(errors) == 0 {
 				t.Error("Expected error but got none")
 			}
@@ -632,7 +632,7 @@ func TestGetOptWithInvalidArgType(t *testing.T) {
 	shortOpts := map[byte]*Flag{
 		'a': {Name: "a", HasArg: ArgType(999)}, // Invalid ArgType
 	}
-	
+
 	parser := &Parser{
 		Args:      []string{"-a"},
 		shortOpts: shortOpts,
@@ -662,7 +662,7 @@ func TestCaseInsensitiveShortOptions(t *testing.T) {
 	shortOpts := map[byte]*Flag{
 		'a': {Name: "a", HasArg: NoArgument},
 	}
-	
+
 	parser := &Parser{
 		Args:      []string{"-A"}, // uppercase A
 		shortOpts: shortOpts,
@@ -684,11 +684,12 @@ func TestCaseInsensitiveShortOptions(t *testing.T) {
 		}
 		break
 	}
-	
+
 	if !foundOption {
 		t.Error("Expected to find option 'a' with case insensitive matching")
 	}
 }
+
 // TestIteratorBreakConditions tests various break conditions in the Options iterator
 func TestIteratorBreakConditions(t *testing.T) {
 	// Test processing multiple options normally
@@ -727,7 +728,7 @@ func TestLongOptContinueConditions(t *testing.T) {
 		"verbose": {Name: "verbose", HasArg: NoArgument},
 		"output":  {Name: "output", HasArg: RequiredArgument},
 	}
-	
+
 	parser := &Parser{
 		longOpts: longOpts,
 		config: ParserConfig{
@@ -761,7 +762,7 @@ func TestShortOptContinueConditions(t *testing.T) {
 		'a': {Name: "a", HasArg: NoArgument},
 		'b': {Name: "b", HasArg: RequiredArgument},
 	}
-	
+
 	parser := &Parser{
 		shortOpts: shortOpts,
 		config: ParserConfig{
@@ -850,7 +851,7 @@ func TestGetOptEdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := getOpt(tt.args, tt.optstring, tt.longOpts, tt.longOnly)
-			
+
 			if tt.expectErr {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -870,12 +871,12 @@ func TestGetOptEdgeCases(t *testing.T) {
 func TestLongOptBestMatch(t *testing.T) {
 	// Create options where multiple matches are possible to test best match logic
 	longOpts := map[string]*Flag{
-		"help":     {Name: "help", HasArg: NoArgument},
-		"help-me":  {Name: "help-me", HasArg: NoArgument},
-		"verbose":  {Name: "verbose", HasArg: NoArgument},
-		"verb":     {Name: "verb", HasArg: NoArgument},
+		"help":    {Name: "help", HasArg: NoArgument},
+		"help-me": {Name: "help-me", HasArg: NoArgument},
+		"verbose": {Name: "verbose", HasArg: NoArgument},
+		"verb":    {Name: "verb", HasArg: NoArgument},
 	}
-	
+
 	parser := &Parser{
 		longOpts: longOpts,
 		config: ParserConfig{
@@ -931,12 +932,13 @@ func TestOptionsNormalIteration(t *testing.T) {
 		t.Errorf("Expected to process 2 options, got %d", count)
 	}
 }
+
 // TestOptionalArgumentFromArgs tests optional argument taken from args array
 func TestOptionalArgumentFromArgs(t *testing.T) {
 	shortOpts := map[byte]*Flag{
 		'v': {Name: "v", HasArg: OptionalArgument},
 	}
-	
+
 	parser := &Parser{
 		shortOpts: shortOpts,
 		longOpts:  map[string]*Flag{},
@@ -973,7 +975,7 @@ func TestLongOptWithEqualsInName(t *testing.T) {
 		"config=file": {Name: "config=file", HasArg: NoArgument},
 		"output":      {Name: "output", HasArg: RequiredArgument},
 	}
-	
+
 	parser := &Parser{
 		longOpts: longOpts,
 		config: ParserConfig{
@@ -1010,7 +1012,7 @@ func TestCaseSensitiveLongOptions(t *testing.T) {
 		"Help": {Name: "Help", HasArg: NoArgument},
 		"help": {Name: "help", HasArg: NoArgument},
 	}
-	
+
 	parser := &Parser{
 		longOpts: longOpts,
 		config: ParserConfig{
@@ -1044,7 +1046,7 @@ func TestEmptyArgsAndWord(t *testing.T) {
 		'a': {Name: "a", HasArg: NoArgument},
 		'b': {Name: "b", HasArg: OptionalArgument},
 	}
-	
+
 	parser := &Parser{
 		shortOpts: shortOpts,
 		longOpts:  map[string]*Flag{},
@@ -1086,6 +1088,7 @@ func TestEmptyArgsAndWord(t *testing.T) {
 		t.Errorf("Expected empty argument, got '%s'", option.Arg)
 	}
 }
+
 // TestGotoOutPath tests normal short option processing
 func TestShortOptionProcessing(t *testing.T) {
 	parser := &Parser{
@@ -1130,7 +1133,7 @@ func TestLongOptCaseIgnorePrefix(t *testing.T) {
 		"verbose": {Name: "verbose", HasArg: NoArgument},
 		"version": {Name: "version", HasArg: NoArgument},
 	}
-	
+
 	parser := &Parser{
 		longOpts: longOpts,
 		config: ParserConfig{

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 	"time"
-	
+
 	"github.com/major0/optargs"
 )
 
@@ -20,22 +20,22 @@ func (f *FlagSet) Parse(arguments []string) error {
 	if err := f.coreIntegration.InitializeParser(arguments); err != nil {
 		return f.coreIntegration.TranslateError(err)
 	}
-	
+
 	// Get the parser from core integration
 	parser := f.coreIntegration.GetParser()
 	if parser == nil {
 		return fmt.Errorf("failed to initialize OptArgs Core parser")
 	}
-	
+
 	// Process options using OptArgs Core
 	if err := f.processOptions(parser); err != nil {
 		return err
 	}
-	
+
 	// Store remaining non-flag arguments
 	f.args = parser.Args
 	f.parsed = true
-	
+
 	return nil
 }
 
@@ -45,11 +45,11 @@ func (f *FlagSet) processOptions(parser *optargs.Parser) error {
 		if err != nil {
 			return f.coreIntegration.TranslateError(err)
 		}
-		
+
 		// Find the corresponding pflag Flag
 		var flag *Flag
 		var isNegation bool
-		
+
 		// Handle both short and long option names
 		if len(option.Name) == 1 {
 			// Short option - look up by shorthand
@@ -67,26 +67,26 @@ func (f *FlagSet) processOptions(parser *optargs.Parser) error {
 					flag = nil // Not a valid negation
 				}
 			}
-			
+
 			// If not a negation or negation lookup failed, try direct lookup
 			if flag == nil {
 				flag = f.flags[f.normalizeFlagName(option.Name)]
 			}
 		}
-		
+
 		if flag == nil {
 			return fmt.Errorf("unknown flag: %s", option.Name)
 		}
-		
+
 		// Set the flag value
 		if err := f.setFlagValue(flag, option, isNegation); err != nil {
 			return err
 		}
-		
+
 		// Mark flag as changed
 		flag.Changed = true
 	}
-	
+
 	return nil
 }
 
@@ -110,18 +110,18 @@ func (f *FlagSet) setFlagValue(flag *Flag, option optargs.Option, isNegation boo
 			return flag.Value.Set("true")
 		}
 	}
-	
+
 	// For non-boolean flags, use the provided argument
 	if !option.HasArg {
 		return fmt.Errorf("flag --%s requires an argument", flag.Name)
 	}
-	
+
 	// OptArgs Core includes the '=' in the argument for long options, so we need to strip it
 	arg := option.Arg
 	if strings.HasPrefix(arg, "=") {
 		arg = arg[1:]
 	}
-	
+
 	return flag.Value.Set(arg)
 }
 

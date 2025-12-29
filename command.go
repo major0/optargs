@@ -41,7 +41,7 @@ func (cr CommandRegistry) GetCommandCaseInsensitive(name string, caseIgnore bool
 	if !caseIgnore {
 		return cr.GetCommand(name)
 	}
-	
+
 	// Case insensitive lookup
 	for cmdName, parser := range cr {
 		if strings.EqualFold(cmdName, name) {
@@ -62,15 +62,15 @@ func (cr CommandRegistry) ExecuteCommand(name string, args []string) (*Parser, e
 	if !exists {
 		return nil, fmt.Errorf("unknown command: %s", name)
 	}
-	
+
 	if parser == nil {
 		return nil, fmt.Errorf("command %s has no parser", name)
 	}
-	
+
 	// Update the parser's args for this execution
 	parser.Args = args
 	parser.nonOpts = []string{}
-	
+
 	return parser, nil
 }
 
@@ -80,15 +80,15 @@ func (cr CommandRegistry) ExecuteCommandCaseInsensitive(name string, args []stri
 	if !exists {
 		return nil, fmt.Errorf("unknown command: %s", name)
 	}
-	
+
 	if parser == nil {
 		return nil, fmt.Errorf("command %s has no parser", name)
 	}
-	
+
 	// Update the parser's args for this execution
 	parser.Args = args
 	parser.nonOpts = []string{}
-	
+
 	return parser, nil
 }
 

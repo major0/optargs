@@ -1,11 +1,11 @@
 package goarg
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"testing/quick"
-	"fmt"
-	"strings"
 )
 
 // TestProperty1_CompleteAPICompatibility tests Property 1 from the design document:
@@ -88,23 +88,23 @@ func TestProperty1_CompleteAPICompatibility(t *testing.T) {
 // generateTestArgs generates command line arguments for testing
 func generateTestArgs(verbose bool, count int, input string, port int) []string {
 	var args []string
-	
+
 	if verbose {
 		args = append(args, "--verbose")
 	}
-	
+
 	if count > 0 {
 		args = append(args, "--count", fmt.Sprintf("%d", count))
 	}
-	
+
 	if input != "" {
 		args = append(args, "--input", input)
 	}
-	
+
 	if port != 8080 { // Only add if different from default
 		args = append(args, "--port", fmt.Sprintf("%d", port))
 	}
-	
+
 	return args
 }
 
@@ -119,7 +119,7 @@ func testOurImplementation(dest interface{}, args []string) error {
 func testUpstreamImplementation(dest interface{}, args []string) error {
 	// For now, simulate upstream behavior
 	// In practice, this would use module aliases to test against real upstream
-	
+
 	// Simulate successful parsing with same logic as our implementation
 	// This is a placeholder - real implementation would use actual upstream
 	return ParseArgs(dest, args)
@@ -133,16 +133,16 @@ func structsEqual(a, b interface{}) bool {
 // validateParserAPI validates that our Parser has the same API as alexflint/go-arg
 func validateParserAPI() bool {
 	parserType := reflect.TypeOf(&Parser{})
-	
+
 	// Expected methods from alexflint/go-arg Parser
 	expectedMethods := []string{"Parse", "WriteHelp", "WriteUsage", "Fail"}
-	
+
 	for _, methodName := range expectedMethods {
 		method, found := parserType.MethodByName(methodName)
 		if !found {
 			return false
 		}
-		
+
 		// Validate method signatures match expected patterns
 		switch methodName {
 		case "Parse":
@@ -162,7 +162,7 @@ func validateParserAPI() bool {
 			}
 		}
 	}
-	
+
 	return true
 }
 
@@ -177,7 +177,7 @@ func validateMainFunctions() bool {
 	if parseType.NumIn() != 1 || parseType.NumOut() != 1 {
 		return false
 	}
-	
+
 	// Check ParseArgs function
 	parseArgsFunc := reflect.ValueOf(ParseArgs)
 	if !parseArgsFunc.IsValid() {
@@ -187,7 +187,7 @@ func validateMainFunctions() bool {
 	if parseArgsType.NumIn() != 2 || parseArgsType.NumOut() != 1 {
 		return false
 	}
-	
+
 	// Check MustParse function
 	mustParseFunc := reflect.ValueOf(MustParse)
 	if !mustParseFunc.IsValid() {
@@ -197,7 +197,7 @@ func validateMainFunctions() bool {
 	if mustParseType.NumIn() != 1 || mustParseType.NumOut() != 0 {
 		return false
 	}
-	
+
 	// Check NewParser function
 	newParserFunc := reflect.ValueOf(NewParser)
 	if !newParserFunc.IsValid() {
@@ -207,7 +207,7 @@ func validateMainFunctions() bool {
 	if newParserType.NumIn() != 2 || newParserType.NumOut() != 2 {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -325,15 +325,15 @@ func TestProperty4_CompatibilityTestFrameworkCorrectness(t *testing.T) {
 // generateArgsForScenario generates command line arguments for a test scenario
 func generateArgsForScenario(verbose bool, count int) []string {
 	var args []string
-	
+
 	if verbose {
 		args = append(args, "-v")
 	}
-	
+
 	if count > 0 {
 		args = append(args, "-c", string(rune('0'+count%10))) // Simple single digit for testing
 	}
-	
+
 	return args
 }
 
@@ -440,7 +440,7 @@ func TestFrameworkAPICompatibilityValidation(t *testing.T) {
 	// This test validates that our Parser struct has the expected methods
 	// that match alexflint/go-arg's interface
 	parserType := reflect.TypeOf(&Parser{})
-	
+
 	expectedMethods := []string{"Parse", "WriteHelp", "WriteUsage", "Fail"}
 	for _, methodName := range expectedMethods {
 		if _, found := parserType.MethodByName(methodName); !found {

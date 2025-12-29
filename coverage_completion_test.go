@@ -20,7 +20,7 @@ func TestFindShortOptDefaultCase(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for unknown argument type")
 	}
-	
+
 	expectedMsg := "unknown argument type: 99"
 	if err.Error() != expectedMsg {
 		t.Errorf("Expected error message '%s', got '%s'", expectedMsg, err.Error())
@@ -39,14 +39,14 @@ func TestOptionsCommandExecution(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create subparser: %v", err)
 	}
-	
+
 	// Create main parser with command
 	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"subcmd", "--sub-flag"})
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
 	parser.AddCmd("subcmd", subParser)
-	
+
 	// Iterate through options - this should execute the command
 	optionCount := 0
 	for option, err := range parser.Options() {
@@ -59,7 +59,7 @@ func TestOptionsCommandExecution(t *testing.T) {
 			break // Command execution completed
 		}
 	}
-	
+
 	// After command execution, Args should be empty
 	if len(parser.Args) != 0 {
 		t.Errorf("Expected Args to be empty after command execution, got %v", parser.Args)
@@ -73,20 +73,20 @@ func TestOptionsParseNonOptsMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionFound := false
 	for option, err := range parser.Options() {
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
-		
+
 		// In ParseNonOpts mode, non-options are yielded as options with Name = byte(1)
 		if option.Name == string(byte(1)) && option.Arg == "non-option-arg" {
 			optionFound = true
 		}
 		break // Only check first option
 	}
-	
+
 	if !optionFound {
 		t.Error("Expected non-option to be yielded as option in ParseNonOpts mode")
 	}
@@ -101,19 +101,19 @@ func TestOptionsLongOptsOnlyMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionFound := false
 	for option, err := range parser.Options() {
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
-		
+
 		if option.Name == "verbose" {
 			optionFound = true
 		}
 		break
 	}
-	
+
 	if !optionFound {
 		t.Error("Expected long option to be found in longOptsOnly mode")
 	}
@@ -128,20 +128,20 @@ func TestOptionsGnuWordsTransformation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionFound := false
 	for option, err := range parser.Options() {
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
-		
+
 		// -W foo should be transformed to --foo
 		if option.Name == "foo" && option.Arg == "foo" {
 			optionFound = true
 		}
 		break
 	}
-	
+
 	if !optionFound {
 		t.Error("Expected -W option to be transformed to long option name")
 	}
@@ -156,7 +156,7 @@ func TestOptionsPosixlyCorrectMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	// In POSIXLY_CORRECT mode, parsing should stop at first non-option
 	optionCount := 0
 	for _, err := range parser.Options() {
@@ -165,12 +165,12 @@ func TestOptionsPosixlyCorrectMode(t *testing.T) {
 		}
 		optionCount++
 	}
-	
+
 	// Should not have processed any options due to early break
 	if optionCount > 0 {
 		t.Error("Expected no options to be processed in POSIXLY_CORRECT mode with leading non-option")
 	}
-	
+
 	// Args should contain both the non-option and the unprocessed flag
 	if len(parser.Args) != 2 {
 		t.Errorf("Expected 2 args remaining, got %d: %v", len(parser.Args), parser.Args)
@@ -187,14 +187,14 @@ func TestOptionsYieldFalseEarlyReturn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	optionCount := 0
 	for option, err := range parser.Options() {
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
 		optionCount++
-		
+
 		// Return false after first option to test early return
 		if optionCount == 1 {
 			if option.Name != "a" {
@@ -203,7 +203,7 @@ func TestOptionsYieldFalseEarlyReturn(t *testing.T) {
 			break // This simulates yield returning false
 		}
 	}
-	
+
 	// Should have only processed one option due to early return
 	if optionCount != 1 {
 		t.Errorf("Expected exactly 1 option to be processed, got %d", optionCount)
@@ -266,7 +266,7 @@ func TestOptionsCommandNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
-	
+
 	// Add a command registry but not the command we're looking for
 	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
 	parser.AddCmd("known-command", subParser)
@@ -297,7 +297,7 @@ func TestFindShortOptDashError(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for '-' character as short option")
 	}
-	
+
 	expectedMsg := "invalid option: -"
 	if err.Error() != expectedMsg {
 		t.Errorf("Expected error message '%s', got '%s'", expectedMsg, err.Error())
@@ -325,13 +325,14 @@ func TestOptionsDefaultCaseWithoutCommands(t *testing.T) {
 		t.Error("Expected plain argument to remain in Args")
 	}
 }
+
 // TestFindShortOptAllBranches tests all remaining branches in findShortOpt
 func TestFindShortOptAllBranches(t *testing.T) {
 	// Test OptionalArgument with args available
 	parser1, _ := NewParser(ParserConfig{}, map[byte]*Flag{
 		'o': {Name: "o", HasArg: OptionalArgument},
 	}, map[string]*Flag{}, []string{})
-	
+
 	// Test optional argument taken from args (not word)
 	_, _, option, err := parser1.findShortOpt('o', "", []string{"value", "extra"})
 	if err != nil {
@@ -346,7 +347,7 @@ func TestFindShortOptAllBranches(t *testing.T) {
 		'a': {Name: "a", HasArg: NoArgument},
 		'b': {Name: "b", HasArg: NoArgument},
 	}, map[string]*Flag{}, []string{})
-	
+
 	// This should continue through the loop and not find 'A' (case sensitive)
 	_, _, _, err = parser2.findShortOpt('A', "", []string{})
 	if err == nil {
@@ -364,20 +365,20 @@ func TestOptionsComplexIteratorFlow(t *testing.T) {
 		"verbose": {Name: "verbose", HasArg: NoArgument},
 		"file":    {Name: "file", HasArg: RequiredArgument},
 	}, []string{"-vf", "filename", "--verbose", "--file=test.txt", "--", "remaining", "args"})
-	
+
 	// Collect all options that are processed
 	var processedOptions []struct {
 		name   string
 		hasArg bool
 		arg    string
 	}
-	
+
 	for option, err := range parser.Options() {
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 			continue
 		}
-		
+
 		processedOptions = append(processedOptions, struct {
 			name   string
 			hasArg bool
@@ -388,17 +389,17 @@ func TestOptionsComplexIteratorFlow(t *testing.T) {
 			arg:    option.Arg,
 		})
 	}
-	
+
 	// We should have processed some options (exact count may vary based on parsing behavior)
 	if len(processedOptions) == 0 {
 		t.Error("Expected at least some options to be processed")
 	}
-	
+
 	// Check that remaining args contain the expected non-option arguments after --
 	if len(parser.Args) < 2 {
 		t.Errorf("Expected at least 2 remaining args after --, got %d: %v", len(parser.Args), parser.Args)
 	}
-	
+
 	// The remaining args should include "remaining" and "args" somewhere
 	argsStr := fmt.Sprintf("%v", parser.Args)
 	if !strings.Contains(argsStr, "remaining") || !strings.Contains(argsStr, "args") {

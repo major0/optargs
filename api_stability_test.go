@@ -217,7 +217,7 @@ func TestAPIStability(t *testing.T) {
 	t.Run("posixly_correct_compatibility", func(t *testing.T) {
 		// This test ensures that the new environment variable support
 		// doesn't break existing behavior
-		
+
 		// Test without environment variable
 		parser1, err := GetOpt([]string{"-a", "file", "-b"}, "ab")
 		if err != nil {

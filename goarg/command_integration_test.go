@@ -2,7 +2,7 @@ package goarg
 
 import (
 	"testing"
-	
+
 	"github.com/major0/optargs"
 )
 
@@ -109,7 +109,7 @@ func TestCommandSystemIntegration(t *testing.T) {
 	// This will require the full parsing flow to work correctly
 	t.Run("SubcommandParsingWithInheritance", func(t *testing.T) {
 		t.Skip("Subcommand parsing with inheritance - implementation in progress")
-		
+
 		// This test should verify:
 		// 1. `mycmd server --verbose -p 9000` works
 		// 2. --verbose is handled by root parser

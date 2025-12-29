@@ -12,11 +12,11 @@ import (
 // CoreIntegration provides the translation layer between pflag Flag definitions
 // and OptArgs Core format, handling flag registration and parsing delegation.
 type CoreIntegration struct {
-	flagSet   *FlagSet                  // Parent flag set
-	parser    *optargs.Parser           // OptArgs Core parser
-	flagMap   map[string]*optargs.Flag  // OptArgs flags by name
-	shortOpts map[byte]*optargs.Flag    // Short options mapping
-	longOpts  map[string]*optargs.Flag  // Long options mapping
+	flagSet   *FlagSet                 // Parent flag set
+	parser    *optargs.Parser          // OptArgs Core parser
+	flagMap   map[string]*optargs.Flag // OptArgs flags by name
+	shortOpts map[byte]*optargs.Flag   // Short options mapping
+	longOpts  map[string]*optargs.Flag // Long options mapping
 }
 
 // NewCoreIntegration creates a new CoreIntegration instance for the given FlagSet.
@@ -34,17 +34,17 @@ func NewCoreIntegration(flagSet *FlagSet) *CoreIntegration {
 func (ci *CoreIntegration) RegisterFlag(flag *Flag) error {
 	// Determine argument type based on flag value type
 	argType := ci.mapArgumentType(flag.Value.Type())
-	
+
 	// Create OptArgs Core flag
 	coreFlag := &optargs.Flag{
 		Name:   flag.Name,
 		HasArg: argType,
 	}
-	
+
 	// Store the mapping for later lookup
 	ci.flagMap[flag.Name] = coreFlag
 	ci.longOpts[flag.Name] = coreFlag
-	
+
 	// For boolean flags, also register the negation form --no-<flag>
 	if flag.Value.Type() == "bool" {
 		negationName := "no-" + flag.Name
@@ -55,17 +55,17 @@ func (ci *CoreIntegration) RegisterFlag(flag *Flag) error {
 		ci.flagMap[negationName] = negationFlag
 		ci.longOpts[negationName] = negationFlag
 	}
-	
+
 	// Register shorthand if present
 	if len(flag.Shorthand) > 0 {
 		if len(flag.Shorthand) != 1 {
 			return fmt.Errorf("shorthand must be a single character: %s", flag.Shorthand)
 		}
-		
+
 		shortChar := flag.Shorthand[0]
 		ci.shortOpts[shortChar] = coreFlag
 	}
-	
+
 	return nil
 }
 
@@ -86,10 +86,10 @@ func (ci *CoreIntegration) mapArgumentType(valueType string) optargs.ArgType {
 func (ci *CoreIntegration) InitializeParser(args []string) error {
 	// Build optstring for short options
 	optstring := ci.buildOptString()
-	
+
 	// Build long options slice
 	longOpts := ci.buildLongOpts()
-	
+
 	// Create parser using OptArgs Core
 	// If there are no flags registered, create a minimal parser
 	if len(ci.longOpts) == 0 && len(ci.shortOpts) == 0 {
@@ -100,7 +100,7 @@ func (ci *CoreIntegration) InitializeParser(args []string) error {
 		ci.parser = parser
 		return nil
 	}
-	
+
 	parser, err := optargs.GetOptLong(args, optstring, longOpts)
 	if err != nil {
 		// If OptArgs Core rejects the flag definitions due to validation,
@@ -112,7 +112,7 @@ func (ci *CoreIntegration) InitializeParser(args []string) error {
 		ci.parser = parser
 		return nil
 	}
-	
+
 	ci.parser = parser
 	return nil
 }
@@ -121,10 +121,10 @@ func (ci *CoreIntegration) InitializeParser(args []string) error {
 // Format: "abc:d::" where 'a' takes no arg, 'b' takes no arg, 'c' requires arg, 'd' has optional arg.
 func (ci *CoreIntegration) buildOptString() string {
 	var optstring strings.Builder
-	
+
 	for shortChar, flag := range ci.shortOpts {
 		optstring.WriteByte(shortChar)
-		
+
 		switch flag.HasArg {
 		case optargs.RequiredArgument:
 			optstring.WriteByte(':')
@@ -134,18 +134,18 @@ func (ci *CoreIntegration) buildOptString() string {
 			// No suffix needed
 		}
 	}
-	
+
 	return optstring.String()
 }
 
 // buildLongOpts creates the slice of long options for GetOptLong.
 func (ci *CoreIntegration) buildLongOpts() []optargs.Flag {
 	longOpts := make([]optargs.Flag, 0, len(ci.longOpts))
-	
+
 	for _, flag := range ci.longOpts {
 		longOpts = append(longOpts, *flag)
 	}
-	
+
 	return longOpts
 }
 
@@ -160,9 +160,9 @@ func (ci *CoreIntegration) TranslateError(err error) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	errMsg := err.Error()
-	
+
 	// Handle common OptArgs error patterns and translate to pflag format
 	switch {
 	case strings.Contains(errMsg, "unknown option"):
@@ -180,7 +180,7 @@ func (ci *CoreIntegration) TranslateError(err error) error {
 			}
 		}
 		return fmt.Errorf("unknown flag: %s", errMsg)
-		
+
 	case strings.Contains(errMsg, "option requires an argument"):
 		// Extract option name and format as pflag expects
 		if strings.Contains(errMsg, ": ") {
@@ -195,7 +195,7 @@ func (ci *CoreIntegration) TranslateError(err error) error {
 			}
 		}
 		return fmt.Errorf("flag needs an argument: %s", errMsg)
-		
+
 	default:
 		// Return original error if no specific translation is needed
 		return err
