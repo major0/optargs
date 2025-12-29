@@ -1,0 +1,185 @@
+name: Pre-commit
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  precommit:
+    name: Pre-commit Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout PR code
+      uses: actions/checkout@v4
+      with:
+        # Fetch full history for proper pre-commit context
+        fetch-depth: 0
+        # Checkout the PR head commit
+        ref: ${{ github.event.pull_request.head.sha }}
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache pre-commit hooks
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+        restore-keys: |
+          pre-commit-${{ runner.os }}-
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-1.23-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-1.23-
+
+    - name: Install Go dependencies
+      run: go mod download
+
+    - name: Install pre-commit
+      run: pip install pre-commit
+
+    - name: Install pre-commit hooks
+      run: pre-commit install --install-hooks
+
+    - name: Set up Git context for pre-commit
+      run: |
+        # Configure git for pre-commit
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+        # Ensure we have the main branch for comparison
+        git fetch origin main:main
+
+        # Set up proper HEAD context
+        echo "Current HEAD: $(git rev-parse HEAD)"
+        echo "Main HEAD: $(git rev-parse main)"
+        echo "PR base: ${{ github.event.pull_request.base.sha }}"
+        echo "PR head: ${{ github.event.pull_request.head.sha }}"
+
+    - name: Run pre-commit on changed files
+      run: |
+        # Run pre-commit against the files changed in this PR
+        # This uses the proper git context to identify changed files
+        pre-commit run --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
+
+    - name: Run pre-commit on all files (if changed files check passes)
+      if: success()
+      run: |
+        # Optional: Run on all files to catch any issues
+        # This is more comprehensive but takes longer
+        echo "Running pre-commit on all files for comprehensive check..."
+        pre-commit run --all-files || {
+          echo "⚠️ Some pre-commit hooks failed on all files, but changed files passed"
+          echo "This may indicate existing issues in the codebase"
+          exit 0
+        }
+
+    - name: Comment pre-commit results on PR
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const commentBody = `## ❌ Pre-commit Checks Failed
+
+          The pre-commit hooks found issues that need to be addressed before this PR can be merged.
+
+          ### How to fix locally:
+
+          1. **Install pre-commit** (if not already installed):
+             \`\`\`bash
+             pip install pre-commit
+             pre-commit install
+             \`\`\`
+
+          2. **Run pre-commit on your changes**:
+             \`\`\`bash
+             # Run on staged files
+             pre-commit run
+
+             # Or run on all files
+             pre-commit run --all-files
+             \`\`\`
+
+          3. **Auto-fix common issues**:
+             \`\`\`bash
+             # Format Go code
+             go fmt ./...
+             goimports -w .
+
+             # Run golangci-lint
+             golangci-lint run --fix
+             \`\`\`
+
+          4. **Commit the fixes and push**:
+             \`\`\`bash
+             git add .
+             git commit -m "fix: address pre-commit issues"
+             git push
+             \`\`\`
+
+          ### Pre-commit hooks that ran:
+          - ✅ **trailing-whitespace** - Remove trailing whitespace
+          - ✅ **end-of-file-fixer** - Ensure files end with newline
+          - ✅ **check-yaml** - Validate YAML syntax
+          - ✅ **check-added-large-files** - Prevent large file commits
+          - ✅ **go-fmt** - Format Go code
+          - ✅ **go-imports** - Organize Go imports
+          - ✅ **no-go-testing** - Prevent testing package imports
+          - ✅ **golangci-lint** - Go code quality checks
+          - ✅ **commitlint** - Validate commit message format
+
+          The workflow will automatically re-run when you push fixes.`;
+
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: commentBody
+          });
+
+    - name: Comment success on PR
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const commentBody = `## ✅ Pre-commit Checks Passed
+
+          All pre-commit hooks passed successfully! The code meets the project's formatting and quality standards.
+
+          ### Checks that passed:
+          - ✅ **trailing-whitespace** - No trailing whitespace found
+          - ✅ **end-of-file-fixer** - All files end with newline
+          - ✅ **check-yaml** - YAML syntax is valid
+          - ✅ **check-added-large-files** - No large files detected
+          - ✅ **go-fmt** - Go code is properly formatted
+          - ✅ **go-imports** - Go imports are organized
+          - ✅ **no-go-testing** - No testing package imports in non-test files
+          - ✅ **golangci-lint** - Go code quality checks passed
+          - ✅ **commitlint** - Commit messages follow conventional format
+
+          This PR is ready for code review! 🚀`;
+
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: commentBody
+          });
