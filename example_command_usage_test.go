@@ -62,13 +62,13 @@ func TestRealWorldCommandExample(t *testing.T) {
 	dbParser.AddCmd("migrate", migrateParser)
 
 	// Add aliases
-	rootParser.AddAlias("srv", "server")
-	rootParser.AddAlias("s", "server")
-	rootParser.AddAlias("c", "client")
-	rootParser.AddAlias("db", "database")
+	_ = rootParser.AddAlias("srv", "server")
+	_ = rootParser.AddAlias("s", "server")
+	_ = rootParser.AddAlias("c", "client")
+	_ = rootParser.AddAlias("db", "database")
 
-	dbParser.AddAlias("mig", "migrate")
-	dbParser.AddAlias("m", "migrate")
+	_ = dbParser.AddAlias("mig", "migrate")
+	_ = dbParser.AddAlias("m", "migrate")
 
 	// Test 1: Basic command execution
 	t.Run("basic_server_command", func(t *testing.T) {
@@ -206,7 +206,7 @@ func TestCommandSystemArchitecture(t *testing.T) {
 
 	// Test 2: Multiple keys can point to same parser (aliases)
 	t.Run("multiple_keys_same_parser", func(t *testing.T) {
-		root.AddAlias("s", "sub")
+		_ = root.AddAlias("s", "sub")
 
 		commands := root.ListCommands()
 
