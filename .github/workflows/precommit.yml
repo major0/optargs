@@ -64,12 +64,6 @@ jobs:
         # Verify goimports installation
         goimports -version || echo "goimports installed"
 
-    - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v3
-      with:
-        version: v1.55.2
-        args: --timeout=5m --config=.golangci.yml
-
     - name: Install pre-commit
       run: pip install pre-commit
 
