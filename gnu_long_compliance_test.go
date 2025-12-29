@@ -119,8 +119,8 @@ func TestGNULongOptionPartialMatching(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name: "exact match works",
-			args: []string{"--verbose"},
+			name:      "exact match works",
+			args:      []string{"--verbose"},
 			expectErr: false,
 		},
 	}
@@ -216,32 +216,32 @@ func TestGNULongOnlyMode(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
+		name      string
 		optstring string
-		args     []string
-		expected []Option
+		args      []string
+		expected  []Option
 		expectErr bool
 	}{
 		{
-			name:     "single dash long option",
+			name:      "single dash long option",
 			optstring: "", // Long-only mode requires empty optstring
-			args:     []string{"-verbose"},
+			args:      []string{"-verbose"},
 			expected: []Option{
 				{Name: "verbose", HasArg: false, Arg: ""},
 			},
 		},
 		{
-			name:     "double dash still works",
+			name:      "double dash still works",
 			optstring: "",
-			args:     []string{"--verbose"},
+			args:      []string{"--verbose"},
 			expected: []Option{
 				{Name: "verbose", HasArg: false, Arg: ""},
 			},
 		},
 		{
-			name:     "single dash with argument",
+			name:      "single dash with argument",
 			optstring: "",
-			args:     []string{"-output=file.txt"},
+			args:      []string{"-output=file.txt"},
 			expected: []Option{
 				{Name: "output", HasArg: true, Arg: "=file.txt"},
 			},
@@ -263,7 +263,7 @@ func TestGNULongOnlyMode(t *testing.T) {
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Fatalf("GetOptLongOnly failed: %v", err)
 			}
@@ -381,15 +381,15 @@ func TestGNUMixedShortLongOptions(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
+		name      string
 		optstring string
-		args     []string
-		expected []Option
+		args      []string
+		expected  []Option
 	}{
 		{
-			name:     "mixed short and long options",
+			name:      "mixed short and long options",
 			optstring: "vo:",
-			args:     []string{"-v", "--output=file.txt", "-o", "other.txt"},
+			args:      []string{"-v", "--output=file.txt", "-o", "other.txt"},
 			expected: []Option{
 				{Name: "v", HasArg: false, Arg: ""},
 				{Name: "output", HasArg: true, Arg: "=file.txt"},
@@ -397,9 +397,9 @@ func TestGNUMixedShortLongOptions(t *testing.T) {
 			},
 		},
 		{
-			name:     "compacted short options with long options",
+			name:      "compacted short options with long options",
 			optstring: "abc",
-			args:     []string{"-ab", "--verbose", "-c"},
+			args:      []string{"-ab", "--verbose", "-c"},
 			expected: []Option{
 				{Name: "a", HasArg: false, Arg: ""},
 				{Name: "b", HasArg: false, Arg: ""},

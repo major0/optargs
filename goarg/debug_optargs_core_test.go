@@ -14,7 +14,7 @@ func TestOptArgsCoreCompactedOptions(t *testing.T) {
 		'd': {HasArg: optargs.NoArgument},
 		'p': {HasArg: optargs.RequiredArgument},
 	}
-	
+
 	longOpts := map[string]*optargs.Flag{
 		"verbose": {HasArg: optargs.NoArgument},
 		"debug":   {HasArg: optargs.NoArgument},
@@ -41,7 +41,7 @@ func TestOptArgsCoreCompactedOptions(t *testing.T) {
 		if len(options) != 2 {
 			t.Errorf("Expected 2 options, got %d", len(options))
 		}
-		
+
 		// Check that we got both -v and -d
 		foundV, foundD := false, false
 		for _, opt := range options {
@@ -52,7 +52,7 @@ func TestOptArgsCoreCompactedOptions(t *testing.T) {
 				foundD = true
 			}
 		}
-		
+
 		if !foundV {
 			t.Error("Expected to find -v option")
 		}
@@ -81,7 +81,7 @@ func TestOptArgsCoreCompactedOptions(t *testing.T) {
 		if len(options) != 2 {
 			t.Errorf("Expected 2 options, got %d", len(options))
 		}
-		
+
 		// Check that we got -v and -p with correct argument
 		foundV, foundP := false, false
 		for _, opt := range options {
@@ -92,7 +92,7 @@ func TestOptArgsCoreCompactedOptions(t *testing.T) {
 				foundP = true
 			}
 		}
-		
+
 		if !foundV {
 			t.Error("Expected to find -v option")
 		}
@@ -111,9 +111,9 @@ func TestOptArgsCoreCompactedOptions(t *testing.T) {
 			'p': {HasArg: optargs.OptionalArgument}, // Optional argument
 			'c': {HasArg: optargs.NoArgument},
 		}
-		
+
 		longOpts := map[string]*optargs.Flag{}
-		
+
 		args := []string{"-vpc", "9000"}
 		parser, err := optargs.NewParser(optargs.ParserConfig{}, shortOpts, longOpts, args)
 		if err != nil {
@@ -134,7 +134,7 @@ func TestOptArgsCoreCompactedOptions(t *testing.T) {
 		if len(options) != 2 {
 			t.Errorf("Expected 2 options, got %d", len(options))
 		}
-		
+
 		// Check that we got -v and -p with correct arguments
 		foundV, foundP := false, false
 		for _, opt := range options {
@@ -145,14 +145,14 @@ func TestOptArgsCoreCompactedOptions(t *testing.T) {
 				foundP = true
 			}
 		}
-		
+
 		if !foundV {
 			t.Error("Expected to find -v option with no argument")
 		}
 		if !foundP {
 			t.Error("Expected to find -p option with arg 'c' (consumed from compacted string)")
 		}
-		
+
 		// The "c" should be consumed by -p's optional argument,
 		// so there should be no separate -c option processed
 	})

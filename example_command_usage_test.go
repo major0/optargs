@@ -57,7 +57,7 @@ func TestRealWorldCommandExample(t *testing.T) {
 	rootParser.AddCmd("server", serverParser)
 	rootParser.AddCmd("client", clientParser)
 	rootParser.AddCmd("database", dbParser)
-	
+
 	// Register nested command
 	dbParser.AddCmd("migrate", migrateParser)
 
@@ -66,7 +66,7 @@ func TestRealWorldCommandExample(t *testing.T) {
 	rootParser.AddAlias("s", "server")
 	rootParser.AddAlias("c", "client")
 	rootParser.AddAlias("db", "database")
-	
+
 	dbParser.AddAlias("mig", "migrate")
 	dbParser.AddAlias("m", "migrate")
 
@@ -131,7 +131,7 @@ func TestRealWorldCommandExample(t *testing.T) {
 	// Test 6: Command inspection
 	t.Run("command_inspection", func(t *testing.T) {
 		commands := rootParser.ListCommands()
-		
+
 		// Should have: server, srv, s, client, c, database, db
 		expectedCount := 7
 		if len(commands) != expectedCount {
@@ -163,7 +163,7 @@ func TestRealWorldCommandExample(t *testing.T) {
 	t.Run("get_aliases", func(t *testing.T) {
 		aliases := rootParser.GetAliases(serverParser)
 		expectedAliases := []string{"server", "srv", "s"}
-		
+
 		if len(aliases) != len(expectedAliases) {
 			t.Errorf("Expected %d aliases, got %d", len(expectedAliases), len(aliases))
 		}
@@ -187,17 +187,17 @@ func TestCommandSystemArchitecture(t *testing.T) {
 	root, _ := GetOptLong([]string{}, "v", []Flag{
 		{Name: "verbose", HasArg: NoArgument},
 	})
-	
+
 	sub, _ := GetOptLong([]string{}, "p:", []Flag{
 		{Name: "port", HasArg: RequiredArgument},
 	})
-	
+
 	root.AddCmd("sub", sub)
 
 	// Test 1: Commands are stored as simple key-value pairs
 	t.Run("simple_key_value_storage", func(t *testing.T) {
 		commands := root.ListCommands()
-		
+
 		// Should be a simple map[string]*Parser
 		if parser, exists := commands["sub"]; !exists || parser != sub {
 			t.Error("Commands should be stored as simple key-value pairs")
@@ -207,9 +207,9 @@ func TestCommandSystemArchitecture(t *testing.T) {
 	// Test 2: Multiple keys can point to same parser (aliases)
 	t.Run("multiple_keys_same_parser", func(t *testing.T) {
 		root.AddAlias("s", "sub")
-		
+
 		commands := root.ListCommands()
-		
+
 		if commands["sub"] != commands["s"] {
 			t.Error("Aliases should point to the same parser instance")
 		}
@@ -226,11 +226,11 @@ func TestCommandSystemArchitecture(t *testing.T) {
 	t.Run("inspectable_registry", func(t *testing.T) {
 		// We can iterate over all commands
 		commands := root.ListCommands()
-		
+
 		for name, parser := range commands {
 			t.Logf("Command '%s' -> Parser %p", name, parser)
 		}
-		
+
 		// We can find all aliases for a parser
 		aliases := root.GetAliases(sub)
 		if len(aliases) != 2 { // "sub" and "s"

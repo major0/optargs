@@ -193,7 +193,7 @@ func TestEdgeCaseBoundaryValues(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := GetOpt(nil, tt.optstring)
-			
+
 			if tt.expectErr && err == nil {
 				t.Errorf("%s: Expected error but got none", tt.desc)
 			}
@@ -288,8 +288,8 @@ func TestEdgeCaseLongOptionHandling(t *testing.T) {
 		{Name: "verbose", HasArg: NoArgument},
 		{Name: "output", HasArg: RequiredArgument},
 		{Name: "config", HasArg: OptionalArgument},
-		{Name: "a", HasArg: NoArgument}, // Single character long option
-		{Name: "123", HasArg: NoArgument}, // Numeric long option
+		{Name: "a", HasArg: NoArgument},       // Single character long option
+		{Name: "123", HasArg: NoArgument},     // Numeric long option
 		{Name: "foo-bar", HasArg: NoArgument}, // Hyphenated long option
 		{Name: "foo_bar", HasArg: NoArgument}, // Underscored long option
 		{Name: "foo=bar", HasArg: NoArgument}, // Long option with equals in name
@@ -499,7 +499,7 @@ func TestEdgeCaseMemoryAndPerformance(t *testing.T) {
 		longOpts := make([]Flag, 100)
 		for i := 0; i < 100; i++ {
 			longOpts[i] = Flag{
-				Name:   string(rune('a' + i%26)) + string(rune('a' + (i/26)%26)),
+				Name:   string(rune('a'+i%26)) + string(rune('a'+(i/26)%26)),
 				HasArg: NoArgument,
 			}
 		}

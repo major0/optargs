@@ -443,7 +443,7 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 		// Test with POSIXLY_CORRECT environment variable set
 		os.Setenv("POSIXLY_CORRECT", "1")
 		defer os.Unsetenv("POSIXLY_CORRECT") // Clean up after test
-		
+
 		parser2, err := GetOpt(args, optstring)
 		if err != nil {
 			return false

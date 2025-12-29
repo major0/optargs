@@ -52,17 +52,17 @@ type FlagSet struct {
 
 	name              string
 	parsed            bool
-	args              []string              // arguments after flags
+	args              []string // arguments after flags
 	errorHandling     ErrorHandling
-	output            io.Writer             // nil means stderr; use out() accessor
-	interspersed      bool                  // allow interspersed option/non-option args
+	output            io.Writer // nil means stderr; use out() accessor
+	interspersed      bool      // allow interspersed option/non-option args
 	normalizeNameFunc func(f *FlagSet, name string) NormalizedName
 
 	// Flag storage and management
-	flags     map[string]*Flag   // flags by name
-	shorthand map[string]string  // shorthand to name mapping
-	order     []string           // order of flag definition for help text
-	
+	flags     map[string]*Flag  // flags by name
+	shorthand map[string]string // shorthand to name mapping
+	order     []string          // order of flag definition for help text
+
 	// OptArgs Core integration
 	coreIntegration *CoreIntegration
 }
@@ -147,31 +147,31 @@ func (f *FlagSet) PrintDefaults() {
 		if flag.Hidden {
 			return
 		}
-		
+
 		format := "  -%s"
 		if len(flag.Shorthand) > 0 {
 			format = "  -%s, --%s"
 		} else {
 			format = "      --%s"
 		}
-		
+
 		if len(flag.Shorthand) > 0 {
 			fmt.Fprintf(f.out(), format, flag.Shorthand, flag.Name)
 		} else {
 			fmt.Fprintf(f.out(), format, flag.Name)
 		}
-		
+
 		name, usage := UnquoteUsage(flag)
 		if len(name) > 0 {
 			fmt.Fprintf(f.out(), " %s", name)
 		}
-		
+
 		// Boolean flags of one ASCII letter are so common we
 		// treat them specially, putting their usage on the same line.
 		if len(usage) > 0 {
 			fmt.Fprintf(f.out(), "\t%s", usage)
 		}
-		
+
 		if !isZeroValue(flag, flag.DefValue) {
 			if flag.Value.Type() == "string" {
 				fmt.Fprintf(f.out(), " (default %q)", flag.DefValue)
@@ -308,7 +308,7 @@ func (f *FlagSet) addFlag(flag *Flag) error {
 	if f.flags[normalName] != nil {
 		panic(fmt.Sprintf("flag redefined: %s", flag.Name))
 	}
-	
+
 	// Check for shorthand conflicts
 	if len(flag.Shorthand) > 0 {
 		if existingName, exists := f.shorthand[flag.Shorthand]; exists {
@@ -316,15 +316,15 @@ func (f *FlagSet) addFlag(flag *Flag) error {
 		}
 		f.shorthand[flag.Shorthand] = flag.Name
 	}
-	
+
 	f.flags[normalName] = flag
 	f.order = append(f.order, normalName)
-	
+
 	// Register flag with OptArgs Core integration
 	if err := f.coreIntegration.RegisterFlag(flag); err != nil {
 		return fmt.Errorf("failed to register flag with OptArgs Core: %w", err)
 	}
-	
+
 	return nil
 }
 

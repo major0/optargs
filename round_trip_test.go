@@ -7,34 +7,34 @@ import (
 // TestRoundTripShortOptions tests round-trip parsing for short options
 func TestRoundTripShortOptions(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		optstring string
-		args     []string
+		args      []string
 	}{
 		{
-			name:     "simple short options",
+			name:      "simple short options",
 			optstring: "abc",
-			args:     []string{"-a", "-b", "-c"},
+			args:      []string{"-a", "-b", "-c"},
 		},
 		{
-			name:     "compacted short options",
+			name:      "compacted short options",
 			optstring: "abc",
-			args:     []string{"-abc"},
+			args:      []string{"-abc"},
 		},
 		{
-			name:     "short options with required arguments",
+			name:      "short options with required arguments",
 			optstring: "a:b:c",
-			args:     []string{"-a", "arg1", "-b", "arg2", "-c", "arg3"},
+			args:      []string{"-a", "arg1", "-b", "arg2", "-c", "arg3"},
 		},
 		{
-			name:     "short options with optional arguments",
+			name:      "short options with optional arguments",
 			optstring: "a::b::c::",
-			args:     []string{"-aarg1", "-b", "-carg3"},
+			args:      []string{"-aarg1", "-b", "-carg3"},
 		},
 		{
-			name:     "mixed argument types",
+			name:      "mixed argument types",
 			optstring: "a:b::c",
-			args:     []string{"-a", "required", "-boptional", "-c"},
+			args:      []string{"-a", "required", "-boptional", "-c"},
 		},
 	}
 
@@ -170,19 +170,19 @@ func TestRoundTripMixedOptions(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
+		name      string
 		optstring string
-		args     []string
+		args      []string
 	}{
 		{
-			name:     "mixed short and long options",
+			name:      "mixed short and long options",
 			optstring: "vo:",
-			args:     []string{"-v", "--output", "file.txt", "-o", "other.txt"},
+			args:      []string{"-v", "--output", "file.txt", "-o", "other.txt"},
 		},
 		{
-			name:     "with non-option arguments",
+			name:      "with non-option arguments",
 			optstring: "v",
-			args:     []string{"-v", "file1", "--verbose", "file2"},
+			args:      []string{"-v", "file1", "--verbose", "file2"},
 		},
 	}
 
@@ -238,32 +238,32 @@ func TestRoundTripMixedOptions(t *testing.T) {
 // TestRoundTripOptionCompaction tests round-trip parsing with option compaction
 func TestRoundTripOptionCompaction(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		optstring string
-		original []string
+		original  []string
 		compacted []string
-		desc     string
+		desc      string
 	}{
 		{
-			name:     "basic compaction",
+			name:      "basic compaction",
 			optstring: "abc",
-			original: []string{"-a", "-b", "-c"},
+			original:  []string{"-a", "-b", "-c"},
 			compacted: []string{"-abc"},
-			desc:     "no arguments - should be equivalent",
+			desc:      "no arguments - should be equivalent",
 		},
 		{
-			name:     "compaction behavior with argument",
+			name:      "compaction behavior with argument",
 			optstring: "ab:c",
-			original: []string{"-a", "-barg"},
+			original:  []string{"-a", "-barg"},
 			compacted: []string{"-abarg"},
-			desc:     "compacted form where -b takes 'arg' as argument",
+			desc:      "compacted form where -b takes 'arg' as argument",
 		},
 		{
-			name:     "compaction with optional argument",
+			name:      "compaction with optional argument",
 			optstring: "ab::c",
-			original: []string{"-a", "-barg"},
+			original:  []string{"-a", "-barg"},
 			compacted: []string{"-abarg"},
-			desc:     "compacted form where -b takes 'arg' as optional argument",
+			desc:      "compacted form where -b takes 'arg' as optional argument",
 		},
 	}
 

@@ -160,14 +160,14 @@ func TestTagParser_ParseField(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := parser.ParseField(tt.field)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("ParseField() expected error, got nil")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("ParseField() unexpected error: %v", err)
 				return
@@ -226,9 +226,9 @@ func TestTagParser_ParseStruct(t *testing.T) {
 
 	// Test struct with various field types
 	type TestStruct struct {
-		Verbose bool   `arg:"-v,--verbose" help:"enable verbose output"`
-		Count   int    `arg:"-c,--count" help:"number of items"`
-		Input   string `arg:"--input,required" help:"input file path"`
+		Verbose bool     `arg:"-v,--verbose" help:"enable verbose output"`
+		Count   int      `arg:"-c,--count" help:"number of items"`
+		Input   string   `arg:"--input,required" help:"input file path"`
 		Files   []string `arg:"positional" help:"files to process"`
 	}
 

@@ -27,15 +27,15 @@ type PositionalArg struct {
 // BuildOptString builds the optstring for OptArgs Core
 func (ci *CoreIntegration) BuildOptString() string {
 	var optstring strings.Builder
-	
+
 	for _, field := range ci.metadata.Fields {
 		if field.Positional || field.IsSubcommand {
 			continue
 		}
-		
+
 		if field.Short != "" {
 			optstring.WriteString(field.Short)
-			
+
 			// Add colon for required arguments
 			if field.ArgType == optargs.RequiredArgument {
 				optstring.WriteString(":")
@@ -44,26 +44,26 @@ func (ci *CoreIntegration) BuildOptString() string {
 			}
 		}
 	}
-	
+
 	return optstring.String()
 }
 
 // BuildLongOpts builds the long options for OptArgs Core
 func (ci *CoreIntegration) BuildLongOpts() []optargs.Flag {
 	var longOpts []optargs.Flag
-	
+
 	for _, field := range ci.metadata.Fields {
 		if field.Positional || field.IsSubcommand {
 			continue
 		}
-		
+
 		if field.Long != "" {
 			flag := optargs.Flag{
 				Name:   field.Long,
 				HasArg: field.ArgType,
 			}
 			longOpts = append(longOpts, flag)
-			
+
 			// Store mapping for later processing
 			if field.Short != "" {
 				ci.shortOpts[field.Short[0]] = &flag
@@ -71,7 +71,7 @@ func (ci *CoreIntegration) BuildLongOpts() []optargs.Flag {
 			ci.longOpts[field.Long] = &flag
 		}
 	}
-	
+
 	return longOpts
 }
 
@@ -84,17 +84,17 @@ func (ci *CoreIntegration) CreateParser(args []string) (*optargs.Parser, error) 
 func (ci *CoreIntegration) CreateParserWithParent(args []string, parent *optargs.Parser) (*optargs.Parser, error) {
 	// Build positional arguments
 	ci.buildPositionalArgs()
-	
+
 	// Build option string and long options
 	optstring := ci.BuildOptString()
 	longOpts := ci.BuildLongOpts()
-	
+
 	// Create OptArgs Core parser
 	parser, err := optargs.GetOptLong(args, optstring, longOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OptArgs parser: %w", err)
 	}
-	
+
 	// Register subcommands using OptArgs Core command system
 	if len(ci.metadata.Subcommands) > 0 {
 		for cmdName, subMetadata := range ci.metadata.Subcommands {
@@ -105,18 +105,18 @@ func (ci *CoreIntegration) CreateParserWithParent(args []string, parent *optargs
 				longOpts:    make(map[string]*optargs.Flag),
 				positionals: []PositionalArg{},
 			}
-			
+
 			// Create subcommand parser with parent relationship for option inheritance
 			subParser, err := subIntegration.CreateParserWithParent([]string{}, parser)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create subcommand parser for %s: %w", cmdName, err)
 			}
-			
+
 			// Register subcommand with main parser (this sets parent relationship in OptArgs Core)
 			parser.AddCmd(cmdName, subParser)
 		}
 	}
-	
+
 	return parser, nil
 }
 
@@ -124,13 +124,13 @@ func (ci *CoreIntegration) CreateParserWithParent(args []string, parent *optargs
 func (ci *CoreIntegration) ProcessResults(parser *optargs.Parser, dest interface{}) error {
 	destValue := reflect.ValueOf(dest).Elem()
 	destType := destValue.Type()
-	
+
 	// Process parsed options using the iterator
 	for option, err := range parser.Options() {
 		if err != nil {
 			return fmt.Errorf("parsing error: %w", err)
 		}
-		
+
 		// Find the corresponding field
 		field, err := ci.findFieldForOption(option, destType)
 		if err != nil {
@@ -138,48 +138,49 @@ func (ci *CoreIntegration) ProcessResults(parser *optargs.Parser, dest interface
 			// This is expected behavior with command inheritance
 			continue
 		}
-		
+
 		if field == nil {
 			continue // Skip unknown options
 		}
-		
+
 		// Set the field value
 		fieldValue := destValue.FieldByName(field.Name)
 		if !fieldValue.IsValid() || !fieldValue.CanSet() {
 			return fmt.Errorf("cannot set field %s", field.Name)
 		}
-		
+
 		var arg string
 		if option.HasArg {
 			arg = option.Arg
 		}
-		
+
 		if err := ci.setFieldValue(fieldValue, field, arg); err != nil {
 			return fmt.Errorf("failed to set field %s: %w", field.Name, err)
 		}
 	}
-	
+
 	// Process positional arguments
 	if err := ci.processPositionalArgs(parser, destValue); err != nil {
 		return fmt.Errorf("failed to process positional arguments: %w", err)
 	}
-	
+
 	// Process environment variables
 	if err := ci.processEnvironmentVariables(destValue); err != nil {
 		return fmt.Errorf("failed to process environment variables: %w", err)
 	}
-	
+
 	// Set default values for unset fields
 	if err := ci.setDefaultValues(destValue); err != nil {
 		return fmt.Errorf("failed to set default values: %w", err)
 	}
-	
+
 	return nil
 }
+
 // buildPositionalArgs builds the list of positional arguments
 func (ci *CoreIntegration) buildPositionalArgs() {
 	ci.positionals = []PositionalArg{}
-	
+
 	for _, field := range ci.metadata.Fields {
 		if field.Positional {
 			positional := PositionalArg{
@@ -200,7 +201,7 @@ func (ci *CoreIntegration) findFieldForOption(option optargs.Option, destType re
 			return &field, nil
 		}
 	}
-	
+
 	// Option not found in current metadata - this is expected with command inheritance
 	return nil, nil
 }
@@ -235,11 +236,11 @@ func (ci *CoreIntegration) setFieldValue(fieldValue reflect.Value, field *FieldM
 		// For slices, append to existing values
 		elemType := field.Type.Elem()
 		elemValue := reflect.New(elemType).Elem()
-		
+
 		if err := ci.setScalarValue(elemValue, elemType, arg); err != nil {
 			return err
 		}
-		
+
 		newSlice := reflect.Append(fieldValue, elemValue)
 		fieldValue.Set(newSlice)
 	case reflect.Ptr:
@@ -262,7 +263,7 @@ func (ci *CoreIntegration) setFieldValue(fieldValue reflect.Value, field *FieldM
 		}
 		return fmt.Errorf("unsupported field type: %s", field.Type.Kind())
 	}
-	
+
 	return nil
 }
 
@@ -306,31 +307,31 @@ func (ci *CoreIntegration) processPositionalArgs(parser *optargs.Parser, destVal
 	// Get remaining arguments after option parsing
 	remainingArgs := parser.Args
 	argIndex := 0
-	
+
 	for _, positional := range ci.positionals {
 		field := positional.Field
 		fieldValue := destValue.FieldByName(field.Name)
-		
+
 		if !fieldValue.IsValid() || !fieldValue.CanSet() {
 			return fmt.Errorf("cannot set positional field %s", field.Name)
 		}
-		
+
 		if positional.Multiple {
 			// For slice types, consume all remaining arguments
 			slice := reflect.MakeSlice(field.Type, 0, len(remainingArgs)-argIndex)
-			
+
 			for argIndex < len(remainingArgs) {
 				elemType := field.Type.Elem()
 				elemValue := reflect.New(elemType).Elem()
-				
+
 				if err := ci.setScalarValue(elemValue, elemType, remainingArgs[argIndex]); err != nil {
 					return fmt.Errorf("failed to set positional argument %d: %w", argIndex, err)
 				}
-				
+
 				slice = reflect.Append(slice, elemValue)
 				argIndex++
 			}
-			
+
 			fieldValue.Set(slice)
 		} else {
 			// For single values, consume one argument
@@ -340,15 +341,15 @@ func (ci *CoreIntegration) processPositionalArgs(parser *optargs.Parser, destVal
 				}
 				continue
 			}
-			
+
 			if err := ci.setScalarValue(fieldValue, field.Type, remainingArgs[argIndex]); err != nil {
 				return fmt.Errorf("failed to set positional argument %s: %w", field.Name, err)
 			}
-			
+
 			argIndex++
 		}
 	}
-	
+
 	return nil
 }
 
@@ -358,27 +359,27 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 		if field.Env == "" {
 			continue
 		}
-		
+
 		fieldValue := destValue.FieldByName(field.Name)
 		if !fieldValue.IsValid() || !fieldValue.CanSet() {
 			continue
 		}
-		
+
 		// Only set from environment if field is not already set
 		if ci.isFieldSet(fieldValue, field.Type) {
 			continue
 		}
-		
+
 		envValue, exists := ci.getEnvironmentValue(&field)
 		if !exists {
 			continue
 		}
-		
+
 		if err := ci.setScalarValue(fieldValue, field.Type, envValue); err != nil {
 			return fmt.Errorf("failed to set environment variable %s for field %s: %w", field.Env, field.Name, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -388,17 +389,17 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 		if field.Default == nil {
 			continue
 		}
-		
+
 		fieldValue := destValue.FieldByName(field.Name)
 		if !fieldValue.IsValid() || !fieldValue.CanSet() {
 			continue
 		}
-		
+
 		// Only set default if field is not already set
 		if ci.isFieldSet(fieldValue, field.Type) {
 			continue
 		}
-		
+
 		defaultValue := reflect.ValueOf(field.Default)
 		if defaultValue.Type().ConvertibleTo(field.Type) {
 			fieldValue.Set(defaultValue.Convert(field.Type))
@@ -406,7 +407,7 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 			return fmt.Errorf("default value type mismatch for field %s", field.Name)
 		}
 	}
-	
+
 	return nil
 }
 

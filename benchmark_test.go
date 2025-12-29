@@ -183,7 +183,7 @@ func BenchmarkGetOptLongOnly(b *testing.B) {
 // BenchmarkLargeArgumentLists benchmarks performance with large argument lists
 func BenchmarkLargeArgumentLists(b *testing.B) {
 	sizes := []int{100, 500, 1000, 5000}
-	
+
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("Size%d", size), func(b *testing.B) {
 			// Generate large argument list
@@ -200,7 +200,7 @@ func BenchmarkLargeArgumentLists(b *testing.B) {
 					args = append(args, "arg"+strconv.Itoa(i))
 				}
 			}
-			
+
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				parser, err := GetOpt(args, "ab:c")
@@ -227,7 +227,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 		{Name: "long", HasArg: RequiredArgument},
 		{Name: "verbose", HasArg: NoArgument},
 	}
-	
+
 	b.Run("GetOpt", func(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -244,7 +244,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 			}
 		}
 	})
-	
+
 	b.Run("GetOptLong", func(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -267,7 +267,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 func BenchmarkIteratorEfficiency(b *testing.B) {
 	args := []string{"prog", "-a", "-b", "-c", "-d", "-e", "-f", "-g", "-h"}
 	optstring := "abcdefgh"
-	
+
 	b.Run("IteratorConsumption", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -275,7 +275,7 @@ func BenchmarkIteratorEfficiency(b *testing.B) {
 			if err != nil {
 				b.Fatal(err)
 			}
-			
+
 			count := 0
 			for option, err := range parser.Options() {
 				if err != nil {
@@ -286,7 +286,7 @@ func BenchmarkIteratorEfficiency(b *testing.B) {
 			}
 		}
 	})
-	
+
 	b.Run("IteratorPartialConsumption", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -294,7 +294,7 @@ func BenchmarkIteratorEfficiency(b *testing.B) {
 			if err != nil {
 				b.Fatal(err)
 			}
-			
+
 			// Only consume first 3 options
 			count := 0
 			for option, err := range parser.Options() {
@@ -324,7 +324,7 @@ func BenchmarkComplexScenarios(b *testing.B) {
 		{Name: "input", HasArg: RequiredArgument},
 		{Name: "threads", HasArg: RequiredArgument},
 	}
-	
+
 	testCases := []struct {
 		name string
 		args []string
@@ -346,7 +346,7 @@ func BenchmarkComplexScenarios(b *testing.B) {
 			args: []string{"prog", "-it", "--rm", "--name", "container", "-v", "/host:/container", "image"},
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ResetTimer()
@@ -372,7 +372,7 @@ func BenchmarkGNUExtensions(b *testing.B) {
 		{Name: "word-option", HasArg: RequiredArgument},
 		{Name: "another-word", HasArg: NoArgument},
 	}
-	
+
 	b.Run("GNUWords", func(b *testing.B) {
 		args := []string{"prog", "-W", "word-option=value", "-W", "another-word"}
 		b.ResetTimer()
@@ -389,7 +389,7 @@ func BenchmarkGNUExtensions(b *testing.B) {
 			}
 		}
 	})
-	
+
 	b.Run("CaseInsensitive", func(b *testing.B) {
 		args := []string{"prog", "--WORD-OPTION", "value", "--Another-Word"}
 		b.ResetTimer()
@@ -428,7 +428,7 @@ func BenchmarkErrorHandling(b *testing.B) {
 			}
 		}
 	})
-	
+
 	b.Run("MissingRequiredArg", func(b *testing.B) {
 		args := []string{"prog", "-a"}
 		b.ResetTimer()
@@ -456,12 +456,12 @@ func BenchmarkMemoryUsage(b *testing.B) {
 		{Name: "long", HasArg: RequiredArgument},
 		{Name: "verbose", HasArg: NoArgument},
 	}
-	
+
 	b.Run("MemoryFootprint", func(b *testing.B) {
 		var m1, m2 runtime.MemStats
 		runtime.GC()
 		runtime.ReadMemStats(&m1)
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			parser, err := GetOptLong(args, "a:b:", longOpts)
@@ -475,10 +475,10 @@ func BenchmarkMemoryUsage(b *testing.B) {
 				_ = option
 			}
 		}
-		
+
 		runtime.GC()
 		runtime.ReadMemStats(&m2)
-		
+
 		b.ReportMetric(float64(m2.TotalAlloc-m1.TotalAlloc)/float64(b.N), "bytes/op")
 		b.ReportMetric(float64(m2.Mallocs-m1.Mallocs)/float64(b.N), "allocs/op")
 	})

@@ -2,7 +2,7 @@ package goarg
 
 import (
 	"testing"
-	
+
 	"github.com/major0/optargs"
 )
 
@@ -72,9 +72,9 @@ func TestProjectStructure(t *testing.T) {
 
 	// Test core integration
 	coreIntegration := &CoreIntegration{
-		metadata: metadata,
-		shortOpts: make(map[byte]*optargs.Flag),
-		longOpts: make(map[string]*optargs.Flag),
+		metadata:    metadata,
+		shortOpts:   make(map[byte]*optargs.Flag),
+		longOpts:    make(map[string]*optargs.Flag),
 		positionals: []PositionalArg{},
 	}
 	optString := coreIntegration.BuildOptString()
@@ -88,7 +88,7 @@ func TestProjectStructure(t *testing.T) {
 func TestModuleConfiguration(t *testing.T) {
 	// Test that we can import the parent optargs module
 	// This validates that our go.mod configuration is correct
-	
+
 	// The fact that this test compiles means our module setup is working
 	t.Log("Module configuration test passed - imports are working")
 }
