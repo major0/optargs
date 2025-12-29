@@ -84,11 +84,11 @@ linters:
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
     - unused
     - gofmt
     - goimports
     - misspell
+    # typecheck disabled due to Go 1.23 compatibility issues with standard library
 
 issues:
   exclude-rules:
