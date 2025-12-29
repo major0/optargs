@@ -429,6 +429,12 @@ func (p *Parser) findLongOptWithFallback(name string, args []string) ([]string, 
 		return remainingArgs, option, err
 	}
 	
+	// Only fall back to parent for "unknown option" errors
+	// Other errors like "option requires an argument" should be returned immediately
+	if err != nil && !strings.Contains(err.Error(), "unknown option") {
+		return remainingArgs, option, err
+	}
+	
 	// If not found and we have a parent, try parent
 	if p.parent != nil {
 		return p.parent.findLongOptWithFallback(name, args)
