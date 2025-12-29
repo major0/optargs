@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/major0/optargs/pflags"
 	"strings"
+
+	"github.com/major0/optargs/pflags"
 )
 
 func main() {

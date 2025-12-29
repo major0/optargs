@@ -21,9 +21,9 @@
 //   - short-options of any character that is a valid `isgraph()`
 //     character; with the exception of `-`, `:` and `;`. This means that
 //     the following options are valid: -=, -+, -{, -}, -^, -!, -@, etc.
-//   - short-option compaction: `-abc` is the equivilant of `-a -b -c`
+//   - short-option compaction: `-abc` is the equivalent of `-a -b -c`
 //   - short-option compaction with optional args: `-abarg` is the
-//     equivilant of `-a -b arg`
+//     equivalent of `-a -b arg`
 //   - arguments to short options that begin with `-`: `-a -1` should pass
 //     `-1` as an argument to `-a`
 //   - long-arguments that include any `isgraph()` character in the name,
@@ -47,7 +47,7 @@
 // opinionated rules atop a non-opinionated parser, but it is not possible
 // to write a less opinionated Flag handler atop an opinionated parser.
 // To that end, the [optarg] parsers do not make any judgements outside of
-// strictly adhearing to the POSIX/GNU conventions. Applications are free
+// strictly adhering to the POSIX/GNU conventions. Applications are free
 // to implement their own argument handler to best-fit their application's
 // needs.
 //
@@ -61,7 +61,7 @@
 //   - [spf13/pflag]
 //   - [spf13/cobra]
 //
-// While these packages are quite useful, they have some fundemental
+// While these packages are quite useful, they have some fundamental
 // limitations and quirks that come from their design choices which aim to
 // be overcome by [optargs] and in the case of [spf13/pflag], those quirks
 // ultimately percolate up to the user, such as [spf13/pflag]'s boolean
@@ -155,7 +155,7 @@ func getOpt(args []string, optstring string, longopts []Flag, longOnly bool) (*P
 	// we need to inspect the start of the optstring for _behavior_
 	// flags. These flags must appear before any option characters.
 	// Flags:
-	// - `:` Supress automatic error generation, allow the app to
+	// - `:` Suppress automatic error generation, allow the app to
 	//       handle it.
 	// - `+` Behave as if POSIXLY_CORRECT has been set
 	// - `-` Treat all non-option arguments as an argument to a
