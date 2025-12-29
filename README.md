@@ -1,6 +1,6 @@
 # OptArgs
 
-[![Test Coverage](https://github.com/major0/optargs/actions/workflows/coverage.yml/badge.svg?event=push)](https://github.com/major0/optargs/actions/workflows/coverage.yml)
+[![Test Coverage](https://github.com/major0/optargs/actions/workflows/coverage.yml/badge.svg)](https://github.com/major0/optargs/actions/workflows/coverage.yml)
 
 This is a [Go](https://golang.org/) library for parsing optional arguments from
 the command line.
