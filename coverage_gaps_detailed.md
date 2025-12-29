@@ -15,7 +15,7 @@ This report identifies specific code paths, functions, and scenarios that lack t
 
 #### Functions with 0% Coverage
 
-**GetOpt** in getopt.go:108:
+**NewCommandRegistry** in command.go:12:
 - **Impact**: HIGH - Completely untested function
 - **Required**: Comprehensive test suite covering all code paths
 - **Test scenarios needed**: 
@@ -24,7 +24,115 @@ This report identifies specific code paths, functions, and scenarios that lack t
   - Edge case testing
   - Integration with other components
 
-**GetOptLongOnly** in getopt.go:121:
+**AddCmd** in command.go:18:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**AddAlias** in command.go:24:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**GetCommand** in command.go:34:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**GetCommandCaseInsensitive** in command.go:40:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**ListCommands** in command.go:55:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**ExecuteCommand** in command.go:60:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**ExecuteCommandCaseInsensitive** in command.go:78:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**HasCommands** in command.go:96:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**GetAliases** in command.go:101:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**GetOpt** in getopt.go:109:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**GetOptLong** in getopt.go:113:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**GetOptLongOnly** in getopt.go:122:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**getOpt** in getopt.go:133:
 - **Impact**: HIGH - Completely untested function
 - **Required**: Comprehensive test suite covering all code paths
 - **Test scenarios needed**: 
@@ -60,7 +168,7 @@ This report identifies specific code paths, functions, and scenarios that lack t
   - Edge case testing
   - Integration with other components
 
-**NewParser** in parser.go:40:
+**NewParser** in parser.go:47:
 - **Impact**: HIGH - Completely untested function
 - **Required**: Comprehensive test suite covering all code paths
 - **Test scenarios needed**: 
@@ -69,7 +177,115 @@ This report identifies specific code paths, functions, and scenarios that lack t
   - Edge case testing
   - Integration with other components
 
-**optErrorf** in parser.go:82:
+**NewParserWithCaseInsensitiveCommands** in parser.go:87:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**optError** in parser.go:94:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**optErrorf** in parser.go:101:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**findLongOpt** in parser.go:105:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**AddCmd** in parser.go:370:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**AddAlias** in parser.go:379:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**GetCommand** in parser.go:384:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**ListCommands** in parser.go:389:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**ExecuteCommand** in parser.go:394:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**HasCommands** in parser.go:399:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**GetAliases** in parser.go:404:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**findLongOptWithFallback** in parser.go:409:
+- **Impact**: HIGH - Completely untested function
+- **Required**: Comprehensive test suite covering all code paths
+- **Test scenarios needed**: 
+  - Basic functionality validation
+  - Error condition handling
+  - Edge case testing
+  - Integration with other components
+
+**findShortOptWithFallback** in parser.go:422:
 - **Impact**: HIGH - Completely untested function
 - **Required**: Comprehensive test suite covering all code paths
 - **Test scenarios needed**: 
@@ -82,32 +298,12 @@ This report identifies specific code paths, functions, and scenarios that lack t
 
 Functions with missing code paths that require additional test coverage:
 
-**GetOptLong** in getopt.go:112: (75.0% coverage)
+**findShortOpt** in parser.go:186: (97.4% coverage)
 - **Status**: Partially tested - missing code paths
 - **Priority**: HIGH - Core function requires 100% coverage
 - **Action needed**: Identify and test uncovered branches
 
-**getOpt** in getopt.go:132: (92.5% coverage)
-- **Status**: Partially tested - missing code paths
-- **Priority**: HIGH - Core function requires 100% coverage
-- **Action needed**: Identify and test uncovered branches
-
-**optError** in parser.go:75: (66.7% coverage)
-- **Status**: Partially tested - missing code paths
-- **Priority**: HIGH - Core function requires 100% coverage
-- **Action needed**: Identify and test uncovered branches
-
-**findLongOpt** in parser.go:86: (87.5% coverage)
-- **Status**: Partially tested - missing code paths
-- **Priority**: HIGH - Core function requires 100% coverage
-- **Action needed**: Identify and test uncovered branches
-
-**findShortOpt** in parser.go:167: (86.8% coverage)
-- **Status**: Partially tested - missing code paths
-- **Priority**: HIGH - Core function requires 100% coverage
-- **Action needed**: Identify and test uncovered branches
-
-**Options** in parser.go:239: (77.8% coverage)
+**Options** in parser.go:258: (96.7% coverage)
 - **Status**: Partially tested - missing code paths
 - **Priority**: HIGH - Core function requires 100% coverage
 - **Action needed**: Identify and test uncovered branches

@@ -2,25 +2,45 @@
 
 ## Current Coverage Summary
 
-**Overall Coverage: 86.0% of statements**
+**Overall Coverage: 95.2% of statements**
 
 ### Per-File Coverage Breakdown
 
 | File | Function | Coverage |
 |------|----------|----------|
-| getopt.go:108: | GetOpt | 100.0% |
-| getopt.go:112: | GetOptLong | 75.0% |
-| getopt.go:121: | GetOptLongOnly | 0.0% |
-| getopt.go:132: | getOpt | 92.5% |
+| command.go:12: | NewCommandRegistry | 100.0% |
+| command.go:18: | AddCmd | 100.0% |
+| command.go:24: | AddAlias | 100.0% |
+| command.go:34: | GetCommand | 100.0% |
+| command.go:40: | GetCommandCaseInsensitive | 100.0% |
+| command.go:55: | ListCommands | 100.0% |
+| command.go:60: | ExecuteCommand | 0.0% |
+| command.go:78: | ExecuteCommandCaseInsensitive | 100.0% |
+| command.go:96: | HasCommands | 100.0% |
+| command.go:101: | GetAliases | 100.0% |
+| getopt.go:109: | GetOpt | 100.0% |
+| getopt.go:113: | GetOptLong | 100.0% |
+| getopt.go:122: | GetOptLongOnly | 100.0% |
+| getopt.go:133: | getOpt | 100.0% |
 | misc.go:9: | isGraph | 100.0% |
 | misc.go:15: | hasPrefix | 100.0% |
 | misc.go:25: | trimPrefix | 100.0% |
-| parser.go:40: | NewParser | 100.0% |
-| parser.go:75: | optError | 66.7% |
-| parser.go:82: | optErrorf | 100.0% |
-| parser.go:86: | findLongOpt | 87.5% |
-| parser.go:167: | findShortOpt | 86.8% |
-| parser.go:239: | Options | 77.8% |
+| parser.go:47: | NewParser | 100.0% |
+| parser.go:87: | NewParserWithCaseInsensitiveCommands | 0.0% |
+| parser.go:94: | optError | 100.0% |
+| parser.go:101: | optErrorf | 100.0% |
+| parser.go:105: | findLongOpt | 100.0% |
+| parser.go:186: | findShortOpt | 97.4% |
+| parser.go:258: | Options | 96.7% |
+| parser.go:370: | AddCmd | 100.0% |
+| parser.go:379: | AddAlias | 100.0% |
+| parser.go:384: | GetCommand | 100.0% |
+| parser.go:389: | ListCommands | 100.0% |
+| parser.go:394: | ExecuteCommand | 100.0% |
+| parser.go:399: | HasCommands | 100.0% |
+| parser.go:404: | GetAliases | 100.0% |
+| parser.go:409: | findLongOptWithFallback | 100.0% |
+| parser.go:422: | findShortOptWithFallback | 100.0% |
 
 ## Detailed Coverage Gaps Analysis
 
