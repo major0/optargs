@@ -121,14 +121,14 @@ func TestIntegrationWithExistingCodebase(t *testing.T) {
 		originalEnv := os.Getenv("POSIXLY_CORRECT")
 		defer func() {
 			if originalEnv == "" {
-				os.Unsetenv("POSIXLY_CORRECT")
+				_ = os.Unsetenv("POSIXLY_CORRECT")
 			} else {
-				os.Setenv("POSIXLY_CORRECT", originalEnv)
+				_ = os.Setenv("POSIXLY_CORRECT", originalEnv)
 			}
 		}()
 
 		// Set POSIXLY_CORRECT
-		os.Setenv("POSIXLY_CORRECT", "1")
+		_ = os.Setenv("POSIXLY_CORRECT", "1")
 
 		// This should stop parsing at the first non-option
 		args := []string{"myapp", "-a", "file", "-b"}

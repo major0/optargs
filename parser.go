@@ -72,7 +72,7 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 	isSpace := regexp.MustCompile(`[[:space:]]`)
 	for s := range longOpts {
 		if notGraph.MatchString(s) || isSpace.MatchString(s) {
-			return nil, fmt.Errorf("Invalid long option: %s", s)
+			return nil, fmt.Errorf("invalid long option: %s", s)
 		}
 	}
 	parser.longOpts = longOpts

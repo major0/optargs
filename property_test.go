@@ -328,7 +328,7 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 		}
 
 		// Test without POSIXLY_CORRECT environment variable
-		os.Unsetenv("POSIXLY_CORRECT")
+		_ = os.Unsetenv("POSIXLY_CORRECT")
 		parser1, err := GetOpt(args, optstring)
 		if err != nil {
 			return false
@@ -343,8 +343,8 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 		}
 
 		// Test with POSIXLY_CORRECT environment variable set
-		os.Setenv("POSIXLY_CORRECT", "1")
-		defer os.Unsetenv("POSIXLY_CORRECT") // Clean up after test
+		_ = os.Setenv("POSIXLY_CORRECT", "1")
+		defer func() { _ = os.Unsetenv("POSIXLY_CORRECT") }() // Clean up after test
 
 		parser2, err := GetOpt(args, optstring)
 		if err != nil {
@@ -365,7 +365,7 @@ func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
 		}
 
 		// Also test that + prefix still works and overrides environment variable
-		os.Setenv("POSIXLY_CORRECT", "1")
+		_ = os.Setenv("POSIXLY_CORRECT", "1")
 		posixOptstring := "+" + optstring
 		parser3, err := GetOpt(args, posixOptstring)
 		if err != nil {

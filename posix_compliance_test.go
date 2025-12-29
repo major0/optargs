@@ -573,17 +573,17 @@ func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 			originalValue := os.Getenv("POSIXLY_CORRECT")
 			defer func() {
 				if originalValue == "" {
-					os.Unsetenv("POSIXLY_CORRECT")
+					_ = os.Unsetenv("POSIXLY_CORRECT")
 				} else {
-					os.Setenv("POSIXLY_CORRECT", originalValue)
+					_ = os.Setenv("POSIXLY_CORRECT", originalValue)
 				}
 			}()
 
 			// Set test environment variable
 			if tt.envValue == "" {
-				os.Unsetenv("POSIXLY_CORRECT")
+				_ = os.Unsetenv("POSIXLY_CORRECT")
 			} else {
-				os.Setenv("POSIXLY_CORRECT", tt.envValue)
+				_ = os.Setenv("POSIXLY_CORRECT", tt.envValue)
 			}
 
 			parser, err := GetOpt(tt.args, tt.optstring)
