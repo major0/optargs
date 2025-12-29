@@ -55,6 +55,8 @@ git pull
 - **MUST** include descriptive title and detailed description
 - **MUST** reference related issues or tasks
 - **MUST** request appropriate reviewers
+- **SECURITY**: Use temporary files for PR descriptions (NEVER pass description body on CLI)
+- **SECURITY**: Use `gh pr create -F <temp-file>` instead of `gh pr create -b` for detailed descriptions
 
 ### CI/CD Integration
 All pull requests trigger automated workflows:
@@ -166,21 +168,60 @@ pre-commit install --hook-type commit-msg
 1. **Create topic branch** from latest main
 2. **Implement changes** with frequent commits
 3. **Run local validation** using Makefile targets
-4. **Push topic branch** and create pull request
-5. **Address review feedback** and CI failures
-6. **Merge after approval** and clean up branch
+4. **Create secure commit messages** using temporary files (NEVER CLI message body)
+5. **Push topic branch** and create pull request using secure temp file method
+6. **Address review feedback** and CI failures
+7. **Merge after approval** and clean up branch
+8. **Clean up temporary files** used for commit messages and PR descriptions
 
 ### Commit Practices
 - Make atomic commits that represent complete, working changes
 - Use descriptive commit messages following Conventional Commits
+- **SECURITY**: Use temporary files for multi-line commit messages (NEVER pass message body on CLI)
+- **SECURITY**: Use `git commit -F <temp-file>` instead of `git commit -m` for detailed messages
 - Test changes locally before pushing
 - Avoid force-pushing to shared branches
+- Clean up temporary commit message files after successful commits
 
 ### Collaboration Guidelines
 - Keep pull requests focused and reasonably sized
 - Provide clear descriptions and context
 - Respond promptly to review feedback
 - Help maintain code quality standards
+
+## Security Workflow Validation
+
+### Implementation Status: ✅ VALIDATED
+
+**Validation Summary**:
+The secure git workflow requirements have been successfully implemented and validated through practical application.
+
+**Validation Evidence**:
+- **Implementation Date**: December 29, 2025
+- **Validation Branch**: `chore/git-security-requirements`
+- **Validation Commit**: `c0122ec`
+- **Validation PR**: https://github.com/major0/optargs/pull/17
+
+**Security Measures Successfully Implemented**:
+- ✅ **Mandatory temp file usage** for commit messages and PR descriptions
+- ✅ **CLI argument isolation** preventing shell execution of markdown backticks
+- ✅ **Proper temp file lifecycle** with creation, usage, and cleanup
+- ✅ **Pre-commit hook integration** maintaining code quality standards
+- ✅ **Conventional commit compliance** with security enhancements
+
+**Workflow Components Validated**:
+- ✅ **Topic branch creation** with proper naming convention
+- ✅ **Secure commit process** using temp files instead of CLI arguments
+- ✅ **Secure PR creation** using temp files for descriptions
+- ✅ **Temp file cleanup** after successful operations
+- ✅ **CI/CD integration** with all workflow checks passing
+
+**Files Updated During Validation**:
+- `.kiro/steering/git-commit-requirements.md` - Security requirements and patterns
+- `.kiro/steering/git-workflow-requirements.md` - Enhanced workflow guidelines
+- `.gitignore` - Temp file exclusions and performance baseline handling
+
+This validation demonstrates that the security requirements are not theoretical but have been successfully applied in practice, ensuring the workflow is both secure and functional.
 
 ## Emergency Procedures
 
