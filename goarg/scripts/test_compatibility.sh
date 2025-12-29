@@ -46,14 +46,14 @@ func main() {
     // Check that our Parser has the expected methods
     parserType := reflect.TypeOf(&goarg.Parser{})
     methods := []string{\"Parse\", \"WriteHelp\", \"WriteUsage\", \"Fail\"}
-    
+
     for _, method := range methods {
         if _, found := parserType.MethodByName(method); !found {
             fmt.Printf(\"Missing method: %s\n\", method)
             return
         }
     }
-    
+
     fmt.Println(\"API compatibility validation passed\")
 }
 "

@@ -37,7 +37,7 @@ check_baseline_file() {
 establish_baselines() {
     print_status $BLUE "Establishing performance baselines..."
     cd "$PROJECT_ROOT"
-    
+
     # Run baseline establishment test
     if go test -v -run=TestPerformanceBaselines_Establish; then
         print_status $GREEN "✓ Performance baselines established successfully"
@@ -52,7 +52,7 @@ establish_baselines() {
 run_regression_tests() {
     print_status $BLUE "Running performance regression tests..."
     cd "$PROJECT_ROOT"
-    
+
     # Run regression tests
     if go test -v -run=TestPerformanceRegression; then
         print_status $GREEN "✓ All performance regression tests passed"
@@ -67,7 +67,7 @@ run_regression_tests() {
 run_memory_leak_tests() {
     print_status $BLUE "Running memory leak detection tests..."
     cd "$PROJECT_ROOT"
-    
+
     if go test -v -run=TestMemoryLeakDetection; then
         print_status $GREEN "✓ No memory leaks detected"
         return 0
@@ -81,7 +81,7 @@ run_memory_leak_tests() {
 run_iterator_tests() {
     print_status $BLUE "Running iterator efficiency tests..."
     cd "$PROJECT_ROOT"
-    
+
     if go test -v -run=TestIteratorEfficiencyRegression; then
         print_status $GREEN "✓ Iterator efficiency tests passed"
         return 0
@@ -95,18 +95,18 @@ run_iterator_tests() {
 run_benchmarks() {
     print_status $BLUE "Running full benchmark suite..."
     cd "$PROJECT_ROOT"
-    
+
     # Run benchmarks and save results
     local benchmark_output="benchmark_results_$(date +%Y%m%d_%H%M%S).txt"
-    
+
     if go test -bench=. -benchmem -run=^$ > "$benchmark_output" 2>&1; then
         print_status $GREEN "✓ Benchmark suite completed successfully"
         print_status $BLUE "Results saved to: $benchmark_output"
-        
+
         # Show summary of key benchmarks
         print_status $BLUE "Key benchmark results:"
         grep -E "BenchmarkGetOpt|BenchmarkGetOptLong|BenchmarkMemoryAllocation" "$benchmark_output" | head -10
-        
+
         return 0
     else
         print_status $RED "✗ Benchmark suite failed"
@@ -119,9 +119,9 @@ run_benchmarks() {
 generate_report() {
     print_status $BLUE "Generating performance report..."
     cd "$PROJECT_ROOT"
-    
+
     local report_file="performance_report_$(date +%Y%m%d_%H%M%S).md"
-    
+
     cat > "$report_file" << EOF
 # OptArgs Performance Report
 
@@ -132,13 +132,13 @@ System: $(uname -a)
 ## Performance Baselines
 
 EOF
-    
+
     if [[ -f "$BASELINE_FILE" ]]; then
         echo "Baseline file exists with $(jq '.baselines | length' "$BASELINE_FILE" 2>/dev/null || echo "unknown") test cases" >> "$report_file"
         echo "" >> "$report_file"
         echo "### Latest Baselines" >> "$report_file"
         echo "" >> "$report_file"
-        
+
         # Extract key metrics if jq is available
         if command -v jq >/dev/null 2>&1; then
             jq -r '.baselines[] | "- \(.test_name): \(.ns_per_op) ns/op, \(.allocs_per_op) allocs/op, \(.bytes_per_op) bytes/op"' "$BASELINE_FILE" >> "$report_file"
@@ -149,11 +149,11 @@ EOF
     else
         echo "No baseline file found" >> "$report_file"
     fi
-    
+
     echo "" >> "$report_file"
     echo "## Test Results" >> "$report_file"
     echo "" >> "$report_file"
-    
+
     # Add test results if available
     if [[ -f "benchmark_results_"*".txt" ]]; then
         local latest_results=$(ls -t benchmark_results_*.txt | head -1)
@@ -163,14 +163,14 @@ EOF
         cat "$latest_results" >> "$report_file"
         echo '```' >> "$report_file"
     fi
-    
+
     print_status $GREEN "✓ Performance report generated: $report_file"
 }
 
 # Function to validate performance thresholds
 validate_thresholds() {
     print_status $BLUE "Validating performance thresholds..."
-    
+
     # This would typically compare against CI/CD performance requirements
     # For now, we'll just run the regression tests which have built-in thresholds
     if run_regression_tests; then
@@ -186,10 +186,10 @@ validate_thresholds() {
 main() {
     print_status $BLUE "OptArgs Performance Validation"
     print_status $BLUE "=============================="
-    
+
     local command=${1:-"all"}
     local exit_code=0
-    
+
     case "$command" in
         "baseline"|"baselines")
             establish_baselines || exit_code=1
@@ -220,23 +220,23 @@ main() {
             if ! check_baseline_file; then
                 establish_baselines || exit_code=1
             fi
-            
+
             if [[ $exit_code -eq 0 ]]; then
                 run_regression_tests || exit_code=1
             fi
-            
+
             if [[ $exit_code -eq 0 ]]; then
                 run_memory_leak_tests || exit_code=1
             fi
-            
+
             if [[ $exit_code -eq 0 ]]; then
                 run_iterator_tests || exit_code=1
             fi
-            
+
             if [[ $exit_code -eq 0 ]]; then
                 run_benchmarks || exit_code=1
             fi
-            
+
             generate_report
             ;;
         "help"|"-h"|"--help")
@@ -267,13 +267,13 @@ EOF
             exit_code=1
             ;;
     esac
-    
+
     if [[ $exit_code -eq 0 ]]; then
         print_status $GREEN "✓ Performance validation completed successfully"
     else
         print_status $RED "✗ Performance validation failed"
     fi
-    
+
     exit $exit_code
 }
 

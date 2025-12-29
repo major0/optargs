@@ -61,7 +61,7 @@ The following core parsing functions must achieve 100% line and branch coverage:
 
 #### Public API Functions
 - **GetOpt**: POSIX getopt(3) implementation
-- **GetOptLong**: GNU getopt_long(3) implementation  
+- **GetOptLong**: GNU getopt_long(3) implementation
 - **GetOptLongOnly**: GNU getopt_long_only(3) implementation
 
 #### Core Parsing Functions
@@ -176,7 +176,7 @@ echo "$FUNC_COVERAGE" | grep "0.0%" | while read -r line; do
 **$FUNC** in $FILE
 - **Impact**: HIGH - Completely untested function
 - **Required**: Comprehensive test suite covering all code paths
-- **Test scenarios needed**: 
+- **Test scenarios needed**:
   - Basic functionality validation
   - Error condition handling
   - Edge case testing

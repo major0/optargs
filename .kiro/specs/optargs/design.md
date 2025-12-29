@@ -116,7 +116,7 @@ The core parsing algorithms are already implemented with sophisticated logic:
 - **Argument Assignment**: Assigns arguments to the last option that accepts them
 - **Character Validation**: Supports all printable ASCII except `:`, `;`, `-`
 
-#### Long Option Processing  
+#### Long Option Processing
 - **Flexible Matching**: Supports partial matches when unambiguous
 - **Equals Syntax**: Handles both `--option=value` and `--option value`
 - **Complex Names**: Allows `=` in option names for advanced patterns
