@@ -397,14 +397,14 @@ func TestGNUMixedShortLongOptions(t *testing.T) {
 			},
 		},
 		{
-			name:     "compacted short options with long options (current limitation)",
+			name:     "compacted short options with long options",
 			optstring: "abc",
 			args:     []string{"-ab", "--verbose", "-c"},
 			expected: []Option{
 				{Name: "a", HasArg: false, Arg: ""},
 				{Name: "b", HasArg: false, Arg: ""},
+				{Name: "verbose", HasArg: false, Arg: ""},
 				{Name: "c", HasArg: false, Arg: ""},
-				// Note: --verbose is not parsed due to current implementation limitation
 			},
 		},
 	}
