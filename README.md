@@ -1,7 +1,7 @@
 # OptArgs
 
 [![Build](https://github.com/major0/optargs/actions/workflows/build.yml/badge.svg)](https://github.com/major0/optargs/actions/workflows/build.yml)
-[![Test Coverage](https://github.com/major0/optargs/actions/workflows/coverage.yml/badge.svg)](https://github.com/major0/optargs/actions/workflows/coverage.yml)
+[![Coverage](https://github.com/major0/optargs/actions/workflows/coverage.yml/badge.svg)](https://github.com/major0/optargs/actions/workflows/coverage.yml)
 
 This is a [Go](https://golang.org/) library for parsing optional arguments from
 the command line.
@@ -49,6 +49,11 @@ options:
 _Note: The `POSIXLY_CORRECT` environment variable will influence this behavior,
 as is required by the POSIX standard._
 
+### Allowed Patterns
+- `--[[:alnum:]_-]+`: E.g. `--1`, `--two`, `--a`, `--bee`
+- `--[[:alnum:]_-]+=<arg>`: E.g. `--foo=bar`, `--2fa=1234`
+- `--[[:alnum:]_-]+ <arg>`: E.g. `--bar boo`, `--data '{"key": "value"}'`
+
 ### Short Options
 - All short options start with a single hyphen. (`-`)
 - All short options are case-sensitive _by default_.
@@ -59,12 +64,6 @@ as is required by the POSIX standard._
 - An optional argument may be passed to _compacted_ options. In doing so the
   optional argument is assumed to belong to the last option in the compacted
   list _which accepts an optional argument_.
-
-##*# Allowed Patterns
-- `-[:alnum:]`: E.g. `-1`, `-2`, `-3`, `-a`, `-b`, `-c`, ...
-- `-[:alnum:] <arg>`: E.g. `-f ARG`
-- `-[:alnum:]+`: E.g. `-abc123`
-- `-[:alnum:]+ <arg>`: E.g. `-abc123 ARG`
 
 During argument compaction, any optional argument does not need to
 belong to the _**last**_ option, but rather the _**last option which supports
@@ -82,11 +81,6 @@ Example from tar: `tar -tfv file.tar`, where the `-f` option is passed
 - Long arguments may comprise of a single character, e.g. `--f`. Such arguments
   are still parsed according to the long-option syntax.
 - Long arguments do not support argument compaction.
-
-### Allowed Patterns
-- `--[[:alnum:]_-]+`: E.g. `--1`, `--two`, `--a`, `--bee`
-- `--[[:alnum:]_-]+=<arg>`: E.g. `--foo=bar`, `--2fa=1234`
-- `--[[:alnum:]_-]+ <arg>`: E.g. `--bar boo`, `--data '{"key": "value"}'`
 
 ## Design
 The fundemental design of the library is fairly straight forward and
