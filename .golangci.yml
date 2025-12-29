@@ -77,9 +77,9 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - goimports
     - misspell
     # Temporarily disabled to fix CI workflow
+    # - goimports  # Removed: goimports is a formatter, not a linter in newer versions
     # - gofmt
     # - errcheck
     # - gosimple
