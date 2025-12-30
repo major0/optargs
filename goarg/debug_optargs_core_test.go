@@ -23,7 +23,7 @@ func TestOptArgsCoreCompactedOptions(t *testing.T) {
 
 	t.Run("CompactedNoArgs", func(t *testing.T) {
 		args := []string{"-vd"}
-		parser, err := optargs.NewParser(optargs.ParserConfig{}, shortOpts, longOpts, args)
+		parser, err := optargs.NewParser(optargs.ParserConfig{}, shortOpts, longOpts, args, nil)
 		if err != nil {
 			t.Fatalf("NewParser failed: %v", err)
 		}
@@ -63,7 +63,7 @@ func TestOptArgsCoreCompactedOptions(t *testing.T) {
 
 	t.Run("CompactedWithArg", func(t *testing.T) {
 		args := []string{"-vp", "9000"}
-		parser, err := optargs.NewParser(optargs.ParserConfig{}, shortOpts, longOpts, args)
+		parser, err := optargs.NewParser(optargs.ParserConfig{}, shortOpts, longOpts, args, nil)
 		if err != nil {
 			t.Fatalf("NewParser failed: %v", err)
 		}
@@ -115,7 +115,7 @@ func TestOptArgsCoreCompactedOptions(t *testing.T) {
 		longOpts := map[string]*optargs.Flag{}
 
 		args := []string{"-vpc", "9000"}
-		parser, err := optargs.NewParser(optargs.ParserConfig{}, shortOpts, longOpts, args)
+		parser, err := optargs.NewParser(optargs.ParserConfig{}, shortOpts, longOpts, args, nil)
 		if err != nil {
 			t.Fatalf("NewParser failed: %v", err)
 		}

@@ -106,7 +106,7 @@ func TestFindShortOptOptionalArgumentNoArgs(t *testing.T) {
 // TestOptionsCommandExecutionWithError tests command execution that returns an error
 func TestOptionsCommandExecutionWithError(t *testing.T) {
 	// Create a parser with a nil command to trigger the error path
-	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"subcmd"})
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"subcmd"}, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestOptionsCommandExecutionWithError(t *testing.T) {
 // TestOptionsCommandExecutionDirectError tests direct command execution error
 func TestOptionsCommandExecutionDirectError(t *testing.T) {
 	// Create a parser and manually trigger ExecuteCommand with error
-	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"testcmd"})
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"testcmd"}, nil), nil
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
@@ -165,13 +165,13 @@ func TestOptionsCommandExecutionDirectError(t *testing.T) {
 // TestOptionsCommandExecutionUnknownCommand tests command execution with unknown command
 func TestOptionsCommandExecutionUnknownCommand(t *testing.T) {
 	// Create a parser with commands but try to execute a non-existent one
-	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"nonexistent"})
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"nonexistent"}, nil), nil
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
 
 	// Add a different command so HasCommands() returns true
-	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil, nil)
 	parser.AddCmd("existing", subParser)
 
 	// Since the command doesn't exist, it should be treated as a non-option
@@ -314,7 +314,7 @@ func containsAt(s, substr string, start int) bool {
 
 // TestOptionsCleanupDeferredExecution tests the deferred cleanup logic
 func TestOptionsCleanupDeferredExecution(t *testing.T) {
-	parser, err := NewParser(ParserConfig{parseMode: ParseDefault}, map[byte]*Flag{}, map[string]*Flag{}, []string{"non-option1", "non-option2"})
+	parser, err := NewParser(ParserConfig{parseMode: ParseDefault}, map[byte]*Flag{}, map[string]*Flag{}, []string{"non-option1", "non-option2"}, nil)
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
@@ -348,7 +348,7 @@ func TestOptionsCommandExecutionPath(t *testing.T) {
 	}
 
 	// Create main parser with command and remaining args
-	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"subcmd", "remaining"})
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"subcmd", "remaining"}, nil), nil
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
@@ -633,7 +633,7 @@ func TestOptionsNonOptInDefaultMode(t *testing.T) {
 // TestOptionsCommandWithoutHasCommands tests command lookup when HasCommands returns false
 func TestOptionsCommandWithoutHasCommands(t *testing.T) {
 	// Create parser without any commands registered
-	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"potential-command"})
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"potential-command"}, nil), nil
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
@@ -655,7 +655,7 @@ func TestOptionsCommandWithoutHasCommands(t *testing.T) {
 
 // TestOptionsCleanupDoneTrue tests the cleanupDone flag being set to true
 func TestOptionsCleanupDoneTrue(t *testing.T) {
-	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"--", "arg1", "arg2"})
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"--", "arg1", "arg2"}, nil), nil
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
@@ -682,7 +682,7 @@ func TestOptionsCleanupDoneTrue(t *testing.T) {
 // TestOptionsComprehensiveCoverage tests all paths through Options function
 func TestOptionsComprehensiveCoverage(t *testing.T) {
 	// Test case 1: Empty args
-	parser1, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	parser1, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil, nil)
 	count := 0
 	for _, err := range parser1.Options() {
 		if err != nil {
@@ -695,7 +695,7 @@ func TestOptionsComprehensiveCoverage(t *testing.T) {
 	}
 
 	// Test case 2: Only non-options in ParsePosixlyCorrect mode
-	parser2, _ := NewParser(ParserConfig{parseMode: ParsePosixlyCorrect}, map[byte]*Flag{}, map[string]*Flag{}, []string{"non-opt"})
+	parser2, _ := NewParser(ParserConfig{parseMode: ParsePosixlyCorrect}, map[byte]*Flag{}, map[string]*Flag{}, []string{"non-opt"}, nil)
 	count = 0
 	for _, err := range parser2.Options() {
 		if err != nil {
@@ -709,8 +709,8 @@ func TestOptionsComprehensiveCoverage(t *testing.T) {
 	}
 
 	// Test case 3: Command execution with empty remaining args
-	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
-	parser3, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"cmd"})
+	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil, nil)
+	parser3, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"cmd"}, nil), nil
 	parser3.AddCmd("cmd", subParser)
 	count = 0
 	for _, err := range parser3.Options() {
@@ -815,7 +815,7 @@ func TestExecuteCommandDirect(t *testing.T) {
 	registry := NewCommandRegistry()
 
 	// Test with valid command
-	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil, nil)
 	registry.AddCmd("test", subParser)
 
 	parser, err := registry.ExecuteCommand("test", []string{"arg1", "arg2"})
@@ -872,7 +872,7 @@ func TestNewParserWithCaseInsensitiveCommands(t *testing.T) {
 	}
 
 	// Test case insensitive command matching
-	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil, nil)
 	parser.AddCmd("Test", subParser)
 
 	// Should find command with different case

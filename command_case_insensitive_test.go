@@ -10,14 +10,14 @@ func TestCommandCaseInsensitive(t *testing.T) {
 		commandCaseIgnore: true,
 	}
 
-	parser, err := NewParser(config, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	parser, err := NewParser(config, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil)
 	if err != nil {
 		t.Fatalf("NewParser() unexpected error: %v", err)
 	}
 
 	// Create a subcommand parser
 	subConfig := ParserConfig{}
-	subParser, err := NewParser(subConfig, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	subParser, err := NewParser(subConfig, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil)
 	if err != nil {
 		t.Fatalf("NewParser() for subcommand unexpected error: %v", err)
 	}
@@ -79,14 +79,14 @@ func TestCommandCaseSensitive(t *testing.T) {
 		commandCaseIgnore: false,
 	}
 
-	parser, err := NewParser(config, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	parser, err := NewParser(config, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil)
 	if err != nil {
 		t.Fatalf("NewParser() unexpected error: %v", err)
 	}
 
 	// Create a subcommand parser
 	subConfig := ParserConfig{}
-	subParser, err := NewParser(subConfig, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	subParser, err := NewParser(subConfig, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil)
 	if err != nil {
 		t.Fatalf("NewParser() for subcommand unexpected error: %v", err)
 	}
