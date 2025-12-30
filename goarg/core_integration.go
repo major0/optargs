@@ -95,6 +95,12 @@ func (ci *CoreIntegration) CreateParserWithParent(args []string, parent *optargs
 		return nil, fmt.Errorf("failed to create OptArgs parser: %w", err)
 	}
 
+	// Set up parent relationship for option inheritance
+	if parent != nil {
+		// The parent relationship is set automatically by OptArgs Core's AddCmd method
+		// We don't need to set it manually here
+	}
+
 	// Register subcommands using OptArgs Core command system
 	if len(ci.metadata.Subcommands) > 0 {
 		for cmdName, subMetadata := range ci.metadata.Subcommands {
