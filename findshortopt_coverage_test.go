@@ -12,7 +12,7 @@ func TestFindShortOptParentFallbackPath(t *testing.T) {
 	// Create parent parser with an option
 	parentParser, err := NewParser(ParserConfig{}, map[byte]*Flag{
 		'p': {Name: "parent", HasArg: NoArgument},
-	}, map[string]*Flag{}, []string{})
+	}, map[string]*Flag{}, []string{}, nil)
 	if err != nil {
 		t.Fatalf("Failed to create parent parser: %v", err)
 	}
@@ -20,7 +20,7 @@ func TestFindShortOptParentFallbackPath(t *testing.T) {
 	// Create child parser without the option
 	childParser, err := NewParser(ParserConfig{}, map[byte]*Flag{
 		'c': {Name: "child", HasArg: NoArgument},
-	}, map[string]*Flag{}, []string{})
+	}, map[string]*Flag{}, []string{}, parentParser)
 	if err != nil {
 		t.Fatalf("Failed to create child parser: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestFindShortOptParentFallbackPath(t *testing.T) {
 // TestFindShortOptAllErrorPaths ensures all error paths in findShortOpt are covered
 func TestFindShortOptAllErrorPaths(t *testing.T) {
 	// Test the dash character error path
-	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil)
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
