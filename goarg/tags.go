@@ -142,7 +142,8 @@ func (tp *TagParser) ParseField(field reflect.StructField) (*FieldMetadata, erro
 
 	// Parse the 'default' tag
 	defaultTag := field.Tag.Get("default")
-	if defaultTag != "" {
+	if field.Tag.Get("default") != "" || strings.Contains(string(field.Tag), `default:"`) {
+		// Call parseDefaultValue even for empty default values (default:"")
 		defaultValue, err := tp.parseDefaultValue(defaultTag, field.Type)
 		if err != nil {
 			return nil, fmt.Errorf("invalid default value for field %s: %w", field.Name, err)
@@ -267,7 +268,19 @@ func (tp *TagParser) parseDefaultValue(defaultStr string, fieldType reflect.Type
 			if err != nil {
 				return nil, fmt.Errorf("invalid slice element default value: %s", part)
 			}
-			slice.Index(i).Set(reflect.ValueOf(elemVal))
+
+			// Convert the value to the correct type for assignment
+			elemReflectVal := reflect.ValueOf(elemVal)
+			if elemReflectVal.Type() != elemType {
+				// Handle type conversion for numeric types
+				if elemReflectVal.CanConvert(elemType) {
+					elemReflectVal = elemReflectVal.Convert(elemType)
+				} else {
+					return nil, fmt.Errorf("cannot convert %v to %v", elemReflectVal.Type(), elemType)
+				}
+			}
+
+			slice.Index(i).Set(elemReflectVal)
 		}
 		return slice.Interface(), nil
 	default:
