@@ -229,7 +229,7 @@ func TestNewParser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser, err := NewParser(tt.config, tt.shortOpts, tt.longOpts, tt.args)
+			parser, err := NewParser(tt.config, tt.shortOpts, tt.longOpts, tt.args, nil)
 
 			if tt.expectErr {
 				if err == nil {

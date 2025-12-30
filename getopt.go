@@ -229,5 +229,5 @@ opt_prefix:
 		}
 	}
 
-	return NewParser(config, shortOpts, longOpts, args)
+	return NewParser(config, shortOpts, longOpts, args, nil)
 }

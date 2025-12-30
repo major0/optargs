@@ -44,13 +44,13 @@ type Parser struct {
 	parent   *Parser
 }
 
-func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string) (*Parser, error) {
+func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string, parent *Parser) (*Parser, error) {
 	parser := Parser{
 		Args:       args,
 		config:     config,
 		longOpts:   longOpts,
 		lockConfig: false,
-		parent:     nil,
+		parent:     parent,
 	}
 
 	for c := range shortOpts {
@@ -84,11 +84,11 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 }
 
 // NewParserWithCaseInsensitiveCommands creates a new parser with case insensitive command matching enabled
-func NewParserWithCaseInsensitiveCommands(shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string) (*Parser, error) {
+func NewParserWithCaseInsensitiveCommands(shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string, parent *Parser) (*Parser, error) {
 	config := ParserConfig{
 		commandCaseIgnore: true,
 	}
-	return NewParser(config, shortOpts, longOpts, args)
+	return NewParser(config, shortOpts, longOpts, args, parent)
 }
 
 func (p *Parser) optError(msg string) error {
@@ -420,7 +420,7 @@ func (p *Parser) GetAliases(targetParser *Parser) []string {
 	return p.Commands.GetAliases(targetParser)
 }
 
-// findLongOptWithFallback finds a long option, falling back to parent if not found
+// findLongOptWithFallback finds a long option, falling back through the entire parent chain
 func (p *Parser) findLongOptWithFallback(name string, args []string) ([]string, Option, error) {
 	// Try to find in current parser first
 	remainingArgs, option, err := p.findLongOpt(name, args)
@@ -436,7 +436,7 @@ func (p *Parser) findLongOptWithFallback(name string, args []string) ([]string, 
 		return remainingArgs, option, err
 	}
 
-	// If not found and we have a parent, try parent
+	// If not found and we have a parent, try the entire parent chain
 	if p.parent != nil {
 		return p.parent.findLongOptWithFallback(name, args)
 	}
@@ -445,7 +445,7 @@ func (p *Parser) findLongOptWithFallback(name string, args []string) ([]string, 
 	return remainingArgs, option, p.optError("unknown option: " + name)
 }
 
-// findShortOptWithFallback finds a short option, falling back to parent if not found
+// findShortOptWithFallback finds a short option, falling back through the entire parent chain
 func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([]string, string, Option, error) {
 	// Try to find in current parser first
 	remainingArgs, remainingWord, option, err := p.findShortOpt(c, word, args)
@@ -455,12 +455,24 @@ func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([
 		return remainingArgs, remainingWord, option, err
 	}
 
-	// If not found and we have a parent, try parent
+	// If not found and we have a parent, try the entire parent chain
 	if p.parent != nil {
-		// Check if parent has this option by looking up the flag definition
-		if parentFlag, exists := p.parent.shortOpts[c]; exists {
-			// Parent has the option, now we need to handle argument assignment
-			// based on the parent's flag requirements but using the child's context
+		// Check if any parent in the chain has this option
+		return p.findShortOptInParentChain(c, word, args)
+	}
+
+	// If we get here and there's an error, return the original error from findShortOpt
+	return remainingArgs, remainingWord, option, err
+}
+
+// findShortOptInParentChain searches for a short option through the entire parent chain
+func (p *Parser) findShortOptInParentChain(c byte, word string, args []string) ([]string, string, Option, error) {
+	currentParser := p.parent
+
+	for currentParser != nil {
+		// Check if this parent has the option
+		if parentFlag, exists := currentParser.shortOpts[c]; exists {
+			// Parent has the option, handle argument assignment based on parent's flag requirements
 			parentOption := Option{
 				Name:   string(c),
 				HasArg: false,
@@ -482,7 +494,7 @@ func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([
 				} else {
 					// Take argument from next arg
 					if len(args) == 0 {
-						return args, word, parentOption, p.optError("option requires an argument: " + string(c))
+						return args, word, parentOption, currentParser.optError("option requires an argument: " + string(c))
 					}
 					arg = args[0]
 					args = args[1:]
@@ -509,14 +521,14 @@ func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([
 				return args, word, parentOption, nil
 
 			default:
-				return args, word, parentOption, p.optErrorf("unknown argument type: %d", parentFlag.HasArg)
+				return args, word, parentOption, currentParser.optErrorf("unknown argument type: %d", parentFlag.HasArg)
 			}
 		}
 
-		// Parent doesn't have it either, continue with fallback chain
-		return p.parent.findShortOptWithFallback(c, word, args)
+		// Move to next parent in the chain
+		currentParser = currentParser.parent
 	}
 
-	// If we get here and there's an error, return the original error from findShortOpt
-	return remainingArgs, remainingWord, option, err
+	// Option not found in any parent
+	return args, word, Option{}, p.optError("unknown option: " + string(c))
 }

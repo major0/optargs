@@ -35,13 +35,13 @@ func TestOptionsCommandExecution(t *testing.T) {
 		's': {Name: "s", HasArg: NoArgument},
 	}, map[string]*Flag{
 		"sub-flag": {Name: "sub-flag", HasArg: NoArgument},
-	}, []string{})
+	}, []string{}, nil)
 	if err != nil {
 		t.Fatalf("Failed to create subparser: %v", err)
 	}
 
 	// Create main parser with command
-	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"subcmd", "--sub-flag"})
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"subcmd", "--sub-flag"}, nil)
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestOptionsCommandExecution(t *testing.T) {
 // TestOptionsParseNonOptsMode tests ParseNonOpts mode in Options iterator
 // This covers the ParseNonOpts branch that was missing coverage
 func TestOptionsParseNonOptsMode(t *testing.T) {
-	parser, err := NewParser(ParserConfig{parseMode: ParseNonOpts}, map[byte]*Flag{}, map[string]*Flag{}, []string{"non-option-arg"})
+	parser, err := NewParser(ParserConfig{parseMode: ParseNonOpts}, map[byte]*Flag{}, map[string]*Flag{}, []string{"non-option-arg"}, nil)
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestOptionsYieldFalseEarlyReturn(t *testing.T) {
 func TestFindShortOptCaseInsensitiveMatch(t *testing.T) {
 	parser, err := NewParser(ParserConfig{shortCaseIgnore: true}, map[byte]*Flag{
 		'a': {Name: "a", HasArg: NoArgument},
-	}, map[string]*Flag{}, []string{})
+	}, map[string]*Flag{}, []string{}, nil)
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
@@ -262,13 +262,13 @@ func TestOptionsIteratorEarlyBreak(t *testing.T) {
 
 // TestOptionsCommandNotFound tests command lookup failure path
 func TestOptionsCommandNotFound(t *testing.T) {
-	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"unknown-command"})
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"unknown-command"}, nil)
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
 
 	// Add a command registry but not the command we're looking for
-	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	subParser, _ := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil)
 	parser.AddCmd("known-command", subParser)
 
 	// This should not execute a command, should treat as non-option
@@ -288,7 +288,7 @@ func TestOptionsCommandNotFound(t *testing.T) {
 
 // TestFindShortOptDashError tests the specific error case for '-' character
 func TestFindShortOptDashError(t *testing.T) {
-	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil)
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
@@ -306,7 +306,7 @@ func TestFindShortOptDashError(t *testing.T) {
 
 // TestOptionsDefaultCaseWithoutCommands tests the default case when no commands are registered
 func TestOptionsDefaultCaseWithoutCommands(t *testing.T) {
-	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"plain-arg"})
+	parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"plain-arg"}, nil)
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
@@ -331,7 +331,7 @@ func TestFindShortOptAllBranches(t *testing.T) {
 	// Test OptionalArgument with args available
 	parser1, _ := NewParser(ParserConfig{}, map[byte]*Flag{
 		'o': {Name: "o", HasArg: OptionalArgument},
-	}, map[string]*Flag{}, []string{})
+	}, map[string]*Flag{}, []string{}, nil)
 
 	// Test optional argument taken from args (not word)
 	_, _, option, err := parser1.findShortOpt('o', "", []string{"value", "extra"})
@@ -346,7 +346,7 @@ func TestFindShortOptAllBranches(t *testing.T) {
 	parser2, _ := NewParser(ParserConfig{shortCaseIgnore: false}, map[byte]*Flag{
 		'a': {Name: "a", HasArg: NoArgument},
 		'b': {Name: "b", HasArg: NoArgument},
-	}, map[string]*Flag{}, []string{})
+	}, map[string]*Flag{}, []string{}, nil)
 
 	// This should continue through the loop and not find 'A' (case sensitive)
 	_, _, _, err = parser2.findShortOpt('A', "", []string{})

@@ -109,14 +109,14 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
     - Test integration between go-arg struct tags and OptArgs Core command dispatch
     - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 5. Implement enhanced OptArgs Core features integration
-  - [ ] 5.1 Implement option inheritance system
+- [x] 5. Implement enhanced OptArgs Core features integration
+  - [x] 5.1 Implement option inheritance system
     - Support parent-to-child option inheritance (mycmd subcmd --verbose where --verbose is in parent)
     - Implement proper option fallback resolution through parser hierarchy
     - Test complex inheritance scenarios with multiple command levels
     - _Requirements: 2.1, 2.2_
 
-  - [ ] 5.2 Add configuration options for enhanced features
+  - [x] 5.2 Add configuration options for enhanced features
     - Expose OptArgs Core's case insensitive options support through go-arg Config
     - Add configuration for POSIX vs GNU parsing modes
     - Support enabling/disabling enhanced POSIX compliance features
