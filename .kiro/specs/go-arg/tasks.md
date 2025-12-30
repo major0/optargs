@@ -48,7 +48,7 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
     - Support all alexflint/go-arg tag formats and options exactly
     - _Requirements: 1.2, 4.1_
 
-  - [ ]* 3.2 Write property test for struct tag format support
+  - [x] 3.2 Write property test for struct tag format support
     - **Property 2: Struct Tag Format Support**
     - **Validates: Requirements 1.2, 4.1**
 
@@ -58,7 +58,7 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
     - Support environment variable fallbacks
     - _Requirements: 1.4, 4.4_
 
-  - [ ]* 3.4 Write unit tests for struct tag processing
+  - [x] 3.4 Write unit tests for struct tag processing
     - Test all alexflint/go-arg tag formats
     - Test subcommand processing
     - Test positional argument handling
@@ -75,7 +75,7 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
     - Enhanced with case insensitive command support
     - _Requirements: 2.1, 2.2, 2.3_
 
-  - [ ]* 4.2 Write property test for OptArgs Core integration
+  - [x] 4.2 Write property test for OptArgs Core integration
     - **Property 3: OptArgs Core Integration**
     - **Validates: Requirements 2.2**
 
@@ -94,7 +94,7 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
     - Handle command dispatch and argument processing through OptArgs Core
     - _Requirements: 2.1, 2.2, 2.3_
 
-  - [ ]* 4.5 Write unit tests for OptArgs Core integration
+  - [x] 4.5 Write unit tests for OptArgs Core integration
     - Test direct OptArgs Core flag creation
     - Test result processing and struct field mapping
     - Test OptArgs Core error handling integration
