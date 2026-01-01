@@ -3,7 +3,6 @@ package goarg
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/major0/optargs"
@@ -214,98 +213,48 @@ func (ci *CoreIntegration) findFieldForOption(option optargs.Option, destType re
 
 // setFieldValue sets a field value based on the parsed argument
 func (ci *CoreIntegration) setFieldValue(fieldValue reflect.Value, field *FieldMetadata, arg string) error {
-	switch field.Type.Kind() {
-	case reflect.Bool:
-		// Boolean flags are set to true when present
+	typeConverter := &TypeConverter{}
+
+	// Handle boolean flags specially - they are set to true when present without argument
+	if field.Type.Kind() == reflect.Bool && arg == "" {
 		fieldValue.SetBool(true)
-	case reflect.String:
-		fieldValue.SetString(arg)
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		val, err := strconv.ParseInt(arg, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid integer value: %s", arg)
-		}
-		fieldValue.SetInt(val)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		val, err := strconv.ParseUint(arg, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid unsigned integer value: %s", arg)
-		}
-		fieldValue.SetUint(val)
-	case reflect.Float32, reflect.Float64:
-		val, err := strconv.ParseFloat(arg, 64)
-		if err != nil {
-			return fmt.Errorf("invalid float value: %s", arg)
-		}
-		fieldValue.SetFloat(val)
-	case reflect.Slice:
-		// For slices, append to existing values
-		elemType := field.Type.Elem()
-		elemValue := reflect.New(elemType).Elem()
-
-		if err := ci.setScalarValue(elemValue, elemType, arg); err != nil {
-			return err
-		}
-
-		newSlice := reflect.Append(fieldValue, elemValue)
-		fieldValue.Set(newSlice)
-	case reflect.Ptr:
-		// For pointer types, create new instance and set value
-		if fieldValue.IsNil() {
-			fieldValue.Set(reflect.New(field.Type.Elem()))
-		}
-		return ci.setScalarValue(fieldValue.Elem(), field.Type.Elem(), arg)
-	default:
-		// For custom types, try to use TextUnmarshaler interface
-		if fieldValue.CanAddr() && fieldValue.Addr().Type().Implements(reflect.TypeOf((*interface{ UnmarshalText([]byte) error })(nil)).Elem()) {
-			method := fieldValue.Addr().MethodByName("UnmarshalText")
-			if method.IsValid() {
-				results := method.Call([]reflect.Value{reflect.ValueOf([]byte(arg))})
-				if len(results) > 0 && !results[0].IsNil() {
-					return results[0].Interface().(error)
-				}
-				return nil
-			}
-		}
-		return fmt.Errorf("unsupported field type: %s", field.Type.Kind())
+		return nil
 	}
 
-	return nil
+	// Handle slice types - append to existing values
+	if field.Type.Kind() == reflect.Slice {
+		// Convert the argument to the element type
+		elemType := field.Type.Elem()
+		converted, err := typeConverter.ConvertValue(arg, elemType)
+		if err != nil {
+			return fmt.Errorf("failed to convert slice element: %w", err)
+		}
+
+		// Append to existing slice
+		newSlice := reflect.Append(fieldValue, reflect.ValueOf(converted))
+		fieldValue.Set(newSlice)
+		return nil
+	}
+
+	// For all other types, use the type converter
+	converted, err := typeConverter.ConvertValue(arg, field.Type)
+	if err != nil {
+		return fmt.Errorf("failed to convert value '%s' for field %s: %w", arg, field.Name, err)
+	}
+
+	return typeConverter.SetField(fieldValue, converted)
 }
 
 // setScalarValue sets a scalar value (helper for slice and pointer handling)
 func (ci *CoreIntegration) setScalarValue(fieldValue reflect.Value, fieldType reflect.Type, arg string) error {
-	switch fieldType.Kind() {
-	case reflect.String:
-		fieldValue.SetString(arg)
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		val, err := strconv.ParseInt(arg, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid integer value: %s", arg)
-		}
-		fieldValue.SetInt(val)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		val, err := strconv.ParseUint(arg, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid unsigned integer value: %s", arg)
-		}
-		fieldValue.SetUint(val)
-	case reflect.Float32, reflect.Float64:
-		val, err := strconv.ParseFloat(arg, 64)
-		if err != nil {
-			return fmt.Errorf("invalid float value: %s", arg)
-		}
-		fieldValue.SetFloat(val)
-	case reflect.Bool:
-		val, err := strconv.ParseBool(arg)
-		if err != nil {
-			return fmt.Errorf("invalid boolean value: %s", arg)
-		}
-		fieldValue.SetBool(val)
-	default:
-		return fmt.Errorf("unsupported scalar type: %s", fieldType.Kind())
+	typeConverter := &TypeConverter{}
+
+	converted, err := typeConverter.ConvertValue(arg, fieldType)
+	if err != nil {
+		return fmt.Errorf("failed to convert scalar value: %w", err)
 	}
-	return nil
+
+	return typeConverter.SetField(fieldValue, converted)
 }
 
 // processPositionalArgs processes positional arguments from remaining args
@@ -391,11 +340,9 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 
 // setDefaultValues sets default values for unset fields
 func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
-	for _, field := range ci.metadata.Fields {
-		if field.Default == nil {
-			continue
-		}
+	typeConverter := &TypeConverter{}
 
+	for _, field := range ci.metadata.Fields {
 		fieldValue := destValue.FieldByName(field.Name)
 		if !fieldValue.IsValid() || !fieldValue.CanSet() {
 			continue
@@ -406,11 +353,17 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 			continue
 		}
 
-		defaultValue := reflect.ValueOf(field.Default)
-		if defaultValue.Type().ConvertibleTo(field.Type) {
-			fieldValue.Set(defaultValue.Convert(field.Type))
-		} else {
-			return fmt.Errorf("default value type mismatch for field %s", field.Name)
+		// Get default value from struct tag
+		defaultValue := typeConverter.GetDefault(reflect.StructField{
+			Name: field.Name,
+			Type: field.Type,
+			Tag:  reflect.StructTag(field.Tag),
+		})
+
+		if defaultValue != nil {
+			if err := typeConverter.SetField(fieldValue, defaultValue); err != nil {
+				return fmt.Errorf("failed to set default value for field %s: %w", field.Name, err)
+			}
 		}
 	}
 
