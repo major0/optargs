@@ -128,7 +128,7 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
     - **Validates: Requirements 2.1, 2.2**
 
 - [x] 6. Implement type conversion system
-  - [ ] 6.1 Create type converter with alexflint/go-arg compatibility
+  - [x] 6.1 Create type converter with alexflint/go-arg compatibility
     - Support all basic Go types (string, int, bool, float64, etc.)
     - Support slice types for multiple values
     - Support custom types implementing encoding.TextUnmarshaler
@@ -136,7 +136,7 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
     - Match alexflint/go-arg type conversion behavior exactly
     - _Requirements: 4.2, 4.4_
 
-  - [ ] 6.2 Write property test for type conversion compatibility
+  - [x] 6.2 Write property test for type conversion compatibility
     - **Property 5: Type Conversion Compatibility**
     - **Validates: Requirements 4.2**
 
