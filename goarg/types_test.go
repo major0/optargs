@@ -779,3 +779,322 @@ func TestProperty5_TypeConversionCompatibility(t *testing.T) {
 		t.Errorf("Property 5 (Type Conversion Compatibility) failed: %v", err)
 	}
 }
+
+func TestTypeConverter_ValidateRequired(t *testing.T) {
+	tc := &TypeConverter{}
+
+	type TestStruct struct {
+		RequiredString string `arg:"--required-string,required"`
+		OptionalString string `arg:"--optional-string"`
+		RequiredInt    int    `arg:"--required-int,required"`
+		OptionalInt    int    `arg:"--optional-int"`
+	}
+
+	tests := []struct {
+		name      string
+		setup     func(*TestStruct)
+		wantError bool
+		errorMsg  string
+	}{
+		{
+			name: "all_required_fields_set",
+			setup: func(ts *TestStruct) {
+				ts.RequiredString = "test"
+				ts.RequiredInt = 42
+			},
+			wantError: false,
+		},
+		{
+			name: "missing_required_string",
+			setup: func(ts *TestStruct) {
+				ts.RequiredInt = 42
+			},
+			wantError: true,
+			errorMsg:  "--required-string is required",
+		},
+		{
+			name: "missing_required_int",
+			setup: func(ts *TestStruct) {
+				ts.RequiredString = "test"
+			},
+			wantError: true,
+			errorMsg:  "--required-int is required",
+		},
+		{
+			name:      "missing_all_required",
+			setup:     func(ts *TestStruct) {},
+			wantError: true,
+			errorMsg:  "--required-string is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testStruct := &TestStruct{}
+			tt.setup(testStruct)
+
+			// Create metadata for the struct
+			metadata := &StructMetadata{
+				Fields: []FieldMetadata{
+					{Name: "RequiredString", Required: true, Long: "required-string"},
+					{Name: "OptionalString", Required: false, Long: "optional-string"},
+					{Name: "RequiredInt", Required: true, Long: "required-int"},
+					{Name: "OptionalInt", Required: false, Long: "optional-int"},
+				},
+			}
+
+			err := tc.ValidateRequired(testStruct, metadata)
+
+			if tt.wantError {
+				if err == nil {
+					t.Errorf("ValidateRequired() expected error, got nil")
+					return
+				}
+				if err.Error() != tt.errorMsg {
+					t.Errorf("ValidateRequired() error = %v, want %v", err.Error(), tt.errorMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("ValidateRequired() unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestTypeConverter_ApplyDefaults(t *testing.T) {
+	tc := &TypeConverter{}
+
+	type TestStruct struct {
+		StringField    string   `default:"hello"`
+		IntField       int      `default:"42"`
+		BoolField      bool     `default:"true"`
+		SliceField     []string `default:"a,b,c"`
+		NoDefaultField string
+	}
+
+	tests := []struct {
+		name     string
+		setup    func(*TestStruct)
+		expected TestStruct
+	}{
+		{
+			name:  "apply_all_defaults",
+			setup: func(ts *TestStruct) {},
+			expected: TestStruct{
+				StringField: "hello",
+				IntField:    42,
+				BoolField:   true,
+				SliceField:  []string{"a", "b", "c"},
+			},
+		},
+		{
+			name: "preserve_existing_values",
+			setup: func(ts *TestStruct) {
+				ts.StringField = "existing"
+				ts.IntField = 100
+			},
+			expected: TestStruct{
+				StringField: "existing",
+				IntField:    100,
+				BoolField:   true,
+				SliceField:  []string{"a", "b", "c"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testStruct := &TestStruct{}
+			tt.setup(testStruct)
+
+			// Create metadata with default values
+			metadata := &StructMetadata{
+				Fields: []FieldMetadata{
+					{Name: "StringField", Default: "hello"},
+					{Name: "IntField", Default: 42},
+					{Name: "BoolField", Default: true},
+					{Name: "SliceField", Default: []string{"a", "b", "c"}},
+					{Name: "NoDefaultField", Default: nil},
+				},
+			}
+
+			err := tc.ApplyDefaults(testStruct, metadata)
+			if err != nil {
+				t.Errorf("ApplyDefaults() unexpected error: %v", err)
+				return
+			}
+
+			if !reflect.DeepEqual(*testStruct, tt.expected) {
+				t.Errorf("ApplyDefaults() result = %+v, want %+v", *testStruct, tt.expected)
+			}
+		})
+	}
+}
+
+func TestTypeConverter_ValidateCustom(t *testing.T) {
+	tc := &TypeConverter{}
+
+	type TestStruct struct {
+		MinMaxInt    int      `min:"10" max:"100"`
+		MinLenString string   `minlen:"3"`
+		MaxLenString string   `maxlen:"10"`
+		MinLenSlice  []string `minlen:"2"`
+		MaxLenSlice  []string `maxlen:"5"`
+	}
+
+	tests := []struct {
+		name      string
+		setup     func(*TestStruct)
+		wantError bool
+		errorMsg  string
+	}{
+		{
+			name: "all_constraints_satisfied",
+			setup: func(ts *TestStruct) {
+				ts.MinMaxInt = 50
+				ts.MinLenString = "hello"
+				ts.MaxLenString = "short"
+				ts.MinLenSlice = []string{"a", "b"}
+				ts.MaxLenSlice = []string{"1", "2", "3"}
+			},
+			wantError: false,
+		},
+		{
+			name: "int_below_min",
+			setup: func(ts *TestStruct) {
+				ts.MinMaxInt = 5
+			},
+			wantError: true,
+			errorMsg:  "field MinMaxInt value 5 is less than minimum 10",
+		},
+		{
+			name: "int_above_max",
+			setup: func(ts *TestStruct) {
+				ts.MinMaxInt = 150
+			},
+			wantError: true,
+			errorMsg:  "field MinMaxInt value 150 is greater than maximum 100",
+		},
+		{
+			name: "string_below_minlen",
+			setup: func(ts *TestStruct) {
+				ts.MinMaxInt = 50
+				ts.MinLenString = "hi"
+			},
+			wantError: true,
+			errorMsg:  "field MinLenString length 2 is less than minimum 3",
+		},
+		{
+			name: "string_above_maxlen",
+			setup: func(ts *TestStruct) {
+				ts.MinMaxInt = 50
+				ts.MinLenString = "hello"
+				ts.MaxLenString = "this is too long"
+			},
+			wantError: true,
+			errorMsg:  "field MaxLenString length 16 is greater than maximum 10",
+		},
+		{
+			name: "slice_below_minlen",
+			setup: func(ts *TestStruct) {
+				ts.MinMaxInt = 50
+				ts.MinLenString = "hello"
+				ts.MaxLenString = "short"
+				ts.MinLenSlice = []string{"a"}
+			},
+			wantError: true,
+			errorMsg:  "field MinLenSlice length 1 is less than minimum 2",
+		},
+		{
+			name: "slice_above_maxlen",
+			setup: func(ts *TestStruct) {
+				ts.MinMaxInt = 50
+				ts.MinLenString = "hello"
+				ts.MaxLenString = "short"
+				ts.MinLenSlice = []string{"a", "b"}
+				ts.MaxLenSlice = []string{"1", "2", "3", "4", "5", "6"}
+			},
+			wantError: true,
+			errorMsg:  "field MaxLenSlice length 6 is greater than maximum 5",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testStruct := &TestStruct{}
+			tt.setup(testStruct)
+
+			// Create metadata (constraints are read from struct tags)
+			metadata := &StructMetadata{
+				Fields: []FieldMetadata{
+					{Name: "MinMaxInt"},
+					{Name: "MinLenString"},
+					{Name: "MaxLenString"},
+					{Name: "MinLenSlice"},
+					{Name: "MaxLenSlice"},
+				},
+			}
+
+			err := tc.ValidateCustom(testStruct, metadata)
+
+			if tt.wantError {
+				if err == nil {
+					t.Errorf("ValidateCustom() expected error, got nil")
+					return
+				}
+				if err.Error() != tt.errorMsg {
+					t.Errorf("ValidateCustom() error = %v, want %v", err.Error(), tt.errorMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("ValidateCustom() unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestTypeConverter_isZeroValue(t *testing.T) {
+	tc := &TypeConverter{}
+
+	tests := []struct {
+		name     string
+		value    interface{}
+		expected bool
+	}{
+		// Basic types
+		{"zero_string", "", true},
+		{"non_zero_string", "hello", false},
+		{"zero_int", 0, true},
+		{"non_zero_int", 42, false},
+		{"zero_bool", false, true},
+		{"non_zero_bool", true, false},
+		{"zero_float", 0.0, true},
+		{"non_zero_float", 3.14, false},
+
+		// Pointer types
+		{"nil_pointer", (*string)(nil), true},
+		{"non_nil_pointer", func() *string { s := "test"; return &s }(), false},
+
+		// Slice types
+		{"nil_slice", ([]string)(nil), true},
+		{"empty_slice", []string{}, true},
+		{"non_empty_slice", []string{"a"}, false},
+
+		// Struct types
+		{"zero_struct", struct{ A int }{}, true},
+		{"non_zero_struct", struct{ A int }{A: 1}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			value := reflect.ValueOf(tt.value)
+			result := tc.isZeroValue(value)
+
+			if result != tt.expected {
+				t.Errorf("isZeroValue(%v) = %v, want %v", tt.value, result, tt.expected)
+			}
+		})
+	}
+}
