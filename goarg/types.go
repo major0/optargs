@@ -172,6 +172,294 @@ func (tc *TypeConverter) GetDefault(field reflect.StructField) interface{} {
 	return converted
 }
 
+// ValidateRequired validates that all required fields have been set
+func (tc *TypeConverter) ValidateRequired(dest interface{}, metadata *StructMetadata) error {
+	destValue := reflect.ValueOf(dest)
+	if destValue.Kind() != reflect.Ptr {
+		return fmt.Errorf("destination must be a pointer")
+	}
+
+	destElem := destValue.Elem()
+	if destElem.Kind() != reflect.Struct {
+		return fmt.Errorf("destination must be a pointer to a struct")
+	}
+
+	for _, field := range metadata.Fields {
+		if !field.Required {
+			continue
+		}
+
+		fieldValue := destElem.FieldByName(field.Name)
+		if !fieldValue.IsValid() {
+			continue
+		}
+
+		// Check if the field is zero value (not set)
+		if tc.isZeroValue(fieldValue) {
+			// Generate error message identical to alexflint/go-arg
+			if field.Long != "" {
+				return fmt.Errorf("--" + field.Long + " is required")
+			} else if field.Short != "" {
+				return fmt.Errorf("-" + field.Short + " is required")
+			} else if field.Positional {
+				return fmt.Errorf(field.Name + " is required")
+			} else {
+				return fmt.Errorf(field.Name + " is required")
+			}
+		}
+	}
+
+	return nil
+}
+
+// isZeroValue checks if a reflect.Value is the zero value for its type
+func (tc *TypeConverter) isZeroValue(v reflect.Value) bool {
+	if !v.IsValid() {
+		return true
+	}
+
+	switch v.Kind() {
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.String:
+		return v.String() == ""
+	case reflect.Ptr, reflect.Interface:
+		return v.IsNil()
+	case reflect.Slice, reflect.Map, reflect.Chan:
+		return v.IsNil() || v.Len() == 0
+	case reflect.Array:
+		// For arrays, check if all elements are zero
+		for i := 0; i < v.Len(); i++ {
+			if !tc.isZeroValue(v.Index(i)) {
+				return false
+			}
+		}
+		return true
+	case reflect.Struct:
+		// For structs, check if all fields are zero
+		for i := 0; i < v.NumField(); i++ {
+			if !tc.isZeroValue(v.Field(i)) {
+				return false
+			}
+		}
+		return true
+	default:
+		// For other types, use reflect.Zero comparison
+		return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
+	}
+}
+
+// ApplyDefaults applies default values to struct fields that haven't been set
+func (tc *TypeConverter) ApplyDefaults(dest interface{}, metadata *StructMetadata) error {
+	destValue := reflect.ValueOf(dest)
+	if destValue.Kind() != reflect.Ptr {
+		return fmt.Errorf("destination must be a pointer")
+	}
+
+	destElem := destValue.Elem()
+	if destElem.Kind() != reflect.Struct {
+		return fmt.Errorf("destination must be a pointer to a struct")
+	}
+
+	for _, field := range metadata.Fields {
+		if field.Default == nil {
+			continue
+		}
+
+		fieldValue := destElem.FieldByName(field.Name)
+		if !fieldValue.IsValid() || !fieldValue.CanSet() {
+			continue
+		}
+
+		// Only apply default if field is currently zero value
+		if tc.isZeroValue(fieldValue) {
+			err := tc.SetField(fieldValue, field.Default)
+			if err != nil {
+				return fmt.Errorf("failed to set default value for field %s: %w", field.Name, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// ValidateCustom performs custom validation based on struct tags
+func (tc *TypeConverter) ValidateCustom(dest interface{}, metadata *StructMetadata) error {
+	destValue := reflect.ValueOf(dest)
+	if destValue.Kind() != reflect.Ptr {
+		return fmt.Errorf("destination must be a pointer")
+	}
+
+	destElem := destValue.Elem()
+	if destElem.Kind() != reflect.Struct {
+		return fmt.Errorf("destination must be a pointer to a struct")
+	}
+
+	structType := destElem.Type()
+
+	for i, field := range metadata.Fields {
+		fieldValue := destElem.FieldByName(field.Name)
+		if !fieldValue.IsValid() {
+			continue
+		}
+
+		// Get the struct field for tag access
+		structField := structType.Field(i)
+
+		// Check for custom validation tags
+		if err := tc.validateFieldConstraints(fieldValue, structField, field.Name); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateFieldConstraints validates field constraints from struct tags
+func (tc *TypeConverter) validateFieldConstraints(fieldValue reflect.Value, structField reflect.StructField, fieldName string) error {
+	// Check for min/max constraints on numeric types
+	if minTag := structField.Tag.Get("min"); minTag != "" {
+		if err := tc.validateMin(fieldValue, minTag, fieldName); err != nil {
+			return err
+		}
+	}
+
+	if maxTag := structField.Tag.Get("max"); maxTag != "" {
+		if err := tc.validateMax(fieldValue, maxTag, fieldName); err != nil {
+			return err
+		}
+	}
+
+	// Check for length constraints on strings and slices
+	if minLenTag := structField.Tag.Get("minlen"); minLenTag != "" {
+		if err := tc.validateMinLen(fieldValue, minLenTag, fieldName); err != nil {
+			return err
+		}
+	}
+
+	if maxLenTag := structField.Tag.Get("maxlen"); maxLenTag != "" {
+		if err := tc.validateMaxLen(fieldValue, maxLenTag, fieldName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateMin validates minimum value constraints
+func (tc *TypeConverter) validateMin(fieldValue reflect.Value, minTag, fieldName string) error {
+	switch fieldValue.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		min, err := strconv.ParseInt(minTag, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid min constraint for field %s: %s", fieldName, minTag)
+		}
+		if fieldValue.Int() < min {
+			return fmt.Errorf("field %s value %d is less than minimum %d", fieldName, fieldValue.Int(), min)
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		min, err := strconv.ParseUint(minTag, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid min constraint for field %s: %s", fieldName, minTag)
+		}
+		if fieldValue.Uint() < min {
+			return fmt.Errorf("field %s value %d is less than minimum %d", fieldName, fieldValue.Uint(), min)
+		}
+	case reflect.Float32, reflect.Float64:
+		min, err := strconv.ParseFloat(minTag, 64)
+		if err != nil {
+			return fmt.Errorf("invalid min constraint for field %s: %s", fieldName, minTag)
+		}
+		if fieldValue.Float() < min {
+			return fmt.Errorf("field %s value %f is less than minimum %f", fieldName, fieldValue.Float(), min)
+		}
+	}
+	return nil
+}
+
+// validateMax validates maximum value constraints
+func (tc *TypeConverter) validateMax(fieldValue reflect.Value, maxTag, fieldName string) error {
+	switch fieldValue.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		max, err := strconv.ParseInt(maxTag, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid max constraint for field %s: %s", fieldName, maxTag)
+		}
+		if fieldValue.Int() > max {
+			return fmt.Errorf("field %s value %d is greater than maximum %d", fieldName, fieldValue.Int(), max)
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		max, err := strconv.ParseUint(maxTag, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid max constraint for field %s: %s", fieldName, maxTag)
+		}
+		if fieldValue.Uint() > max {
+			return fmt.Errorf("field %s value %d is greater than maximum %d", fieldName, fieldValue.Uint(), max)
+		}
+	case reflect.Float32, reflect.Float64:
+		max, err := strconv.ParseFloat(maxTag, 64)
+		if err != nil {
+			return fmt.Errorf("invalid max constraint for field %s: %s", fieldName, maxTag)
+		}
+		if fieldValue.Float() > max {
+			return fmt.Errorf("field %s value %f is greater than maximum %f", fieldName, fieldValue.Float(), max)
+		}
+	}
+	return nil
+}
+
+// validateMinLen validates minimum length constraints
+func (tc *TypeConverter) validateMinLen(fieldValue reflect.Value, minLenTag, fieldName string) error {
+	minLen, err := strconv.Atoi(minLenTag)
+	if err != nil {
+		return fmt.Errorf("invalid minlen constraint for field %s: %s", fieldName, minLenTag)
+	}
+
+	var length int
+	switch fieldValue.Kind() {
+	case reflect.String:
+		length = len(fieldValue.String())
+	case reflect.Slice, reflect.Array:
+		length = fieldValue.Len()
+	default:
+		return nil // Skip validation for unsupported types
+	}
+
+	if length < minLen {
+		return fmt.Errorf("field %s length %d is less than minimum %d", fieldName, length, minLen)
+	}
+	return nil
+}
+
+// validateMaxLen validates maximum length constraints
+func (tc *TypeConverter) validateMaxLen(fieldValue reflect.Value, maxLenTag, fieldName string) error {
+	maxLen, err := strconv.Atoi(maxLenTag)
+	if err != nil {
+		return fmt.Errorf("invalid maxlen constraint for field %s: %s", fieldName, maxLenTag)
+	}
+
+	var length int
+	switch fieldValue.Kind() {
+	case reflect.String:
+		length = len(fieldValue.String())
+	case reflect.Slice, reflect.Array:
+		length = fieldValue.Len()
+	default:
+		return nil // Skip validation for unsupported types
+	}
+
+	if length > maxLen {
+		return fmt.Errorf("field %s length %d is greater than maximum %d", fieldName, length, maxLen)
+	}
+	return nil
+}
+
 // ConvertString converts a string value
 func (tc *TypeConverter) ConvertString(value string) string {
 	return value
