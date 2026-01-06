@@ -20,6 +20,9 @@ type Parser struct {
 	coreParser *optargs.Parser
 	shortOpts  map[byte]*optargs.Flag
 	longOpts   map[string]*optargs.Flag
+
+	// Error translation
+	errorTranslator *ErrorTranslator
 }
 
 // Config matches alexflint/go-arg configuration options exactly
@@ -89,11 +92,12 @@ func NewParser(config Config, dest interface{}) (*Parser, error) {
 	}
 
 	return &Parser{
-		config:    config,
-		dest:      dest,
-		metadata:  metadata,
-		shortOpts: make(map[byte]*optargs.Flag),
-		longOpts:  make(map[string]*optargs.Flag),
+		config:          config,
+		dest:            dest,
+		metadata:        metadata,
+		shortOpts:       make(map[byte]*optargs.Flag),
+		longOpts:        make(map[string]*optargs.Flag),
+		errorTranslator: &ErrorTranslator{},
 	}, nil
 }
 
@@ -114,7 +118,7 @@ func (p *Parser) Parse(args []string) error {
 	// Build OptArgs Core parser with command support
 	coreParser, err := coreIntegration.CreateParser(args)
 	if err != nil {
-		return err
+		return p.translateError(err, "")
 	}
 
 	p.coreParser = coreParser
@@ -129,7 +133,7 @@ func (p *Parser) Parse(args []string) error {
 				// Found subcommand, dispatch to it
 				subParser, err := coreParser.Commands.ExecuteCommandCaseInsensitive(subcommandName, args[i+1:], true) // Always use case insensitive for go-arg
 				if err != nil {
-					return fmt.Errorf("failed to execute subcommand %s: %w", arg, err)
+					return p.translateError(err, arg)
 				}
 
 				// Get the subcommand field from the destination struct
@@ -145,7 +149,7 @@ func (p *Parser) Parse(args []string) error {
 				}
 
 				if !subcommandField.IsValid() {
-					return fmt.Errorf("subcommand field not found for %s", arg)
+					return p.translateError(fmt.Errorf("subcommand field not found for %s", arg), arg)
 				}
 
 				// Ensure subcommand field is initialized
@@ -155,13 +159,13 @@ func (p *Parser) Parse(args []string) error {
 
 				// Process all options from the subcommand parser in a single pass
 				// This handles both inherited options (set on parent) and subcommand options (set on subcommand)
-				return p.processOptionsWithInheritance(subParser, coreIntegration, subMetadata, subcommandField.Interface())
+				return p.translateError(p.processOptionsWithInheritance(subParser, coreIntegration, subMetadata, subcommandField.Interface()), "")
 			}
 		}
 	}
 
 	// No subcommand found, process as regular parsing
-	return coreIntegration.ProcessResults(coreParser, p.dest)
+	return p.translateError(coreIntegration.ProcessResults(coreParser, p.dest), "")
 }
 
 // processOptionsWithInheritance processes options from subcommand parser, handling inheritance in a single pass
@@ -183,7 +187,7 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 	// Process all options from the subcommand parser in a single pass
 	for option, err := range subParser.Options() {
 		if err != nil {
-			return fmt.Errorf("parsing error: %w", err)
+			return p.translateError(err, "")
 		}
 
 		// First, try to find the option in the subcommand metadata
@@ -198,7 +202,7 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 				}
 
 				if err := subIntegration.setFieldValue(fieldValue, subField, arg); err != nil {
-					return fmt.Errorf("failed to set subcommand field %s: %w", subField.Name, err)
+					return p.translateError(err, subField.Name)
 				}
 			}
 		} else {
@@ -214,7 +218,7 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 					}
 
 					if err := parentIntegration.setFieldValue(fieldValue, parentField, arg); err != nil {
-						return fmt.Errorf("failed to set inherited field %s: %w", parentField.Name, err)
+						return p.translateError(err, parentField.Name)
 					}
 				}
 			}
@@ -224,26 +228,32 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 
 	// Process positional arguments for subcommand
 	if err := subIntegration.processPositionalArgs(subParser, subDestValue); err != nil {
-		return fmt.Errorf("failed to process subcommand positional arguments: %w", err)
+		return p.translateError(err, "")
 	}
 
 	// Process environment variables for subcommand
 	if err := subIntegration.processEnvironmentVariables(subDestValue); err != nil {
-		return fmt.Errorf("failed to process subcommand environment variables: %w", err)
+		return p.translateError(err, "")
 	}
 
 	// Set default values for subcommand
 	if err := subIntegration.setDefaultValues(subDestValue); err != nil {
-		return fmt.Errorf("failed to set subcommand default values: %w", err)
+		return p.translateError(err, "")
+	}
+
+	// Validate required fields for subcommand
+	typeConverter := &TypeConverter{}
+	if err := typeConverter.ValidateRequired(subcommandDest, subMetadata); err != nil {
+		return p.translateError(err, "")
 	}
 
 	// Process environment variables and defaults for parent as well
 	if err := parentIntegration.processEnvironmentVariables(destValue); err != nil {
-		return fmt.Errorf("failed to process parent environment variables: %w", err)
+		return p.translateError(err, "")
 	}
 
 	if err := parentIntegration.setDefaultValues(destValue); err != nil {
-		return fmt.Errorf("failed to set parent default values: %w", err)
+		return p.translateError(err, "")
 	}
 
 	return nil
@@ -271,92 +281,14 @@ func (p *Parser) findParentFieldForOption(optionName string) *FieldMetadata {
 
 // WriteHelp writes help text to the provided writer
 func (p *Parser) WriteHelp(w io.Writer) {
-	if p.metadata == nil {
-		fmt.Fprintln(w, "No help available")
-		return
-	}
-
-	// Generate help text compatible with alexflint/go-arg format
-	program := p.config.Program
-	if program == "" {
-		program = os.Args[0]
-	}
-
-	fmt.Fprintf(w, "Usage: %s", program)
-
-	// Add options placeholder
-	if len(p.metadata.Fields) > 0 {
-		fmt.Fprint(w, " [OPTIONS]")
-	}
-
-	fmt.Fprintln(w)
-
-	// Add description if available
-	if p.config.Description != "" {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, p.config.Description)
-	}
-
-	// Add options section
-	if len(p.metadata.Fields) > 0 {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "Options:")
-
-		for _, field := range p.metadata.Fields {
-			if field.Positional {
-				continue
-			}
-
-			var optStr string
-			if field.Short != "" && field.Long != "" {
-				optStr = fmt.Sprintf("  -%s, --%s", field.Short, field.Long)
-			} else if field.Short != "" {
-				optStr = fmt.Sprintf("  -%s", field.Short)
-			} else if field.Long != "" {
-				optStr = fmt.Sprintf("  --%s", field.Long)
-			}
-
-			if field.Help != "" {
-				fmt.Fprintf(w, "%-20s %s\n", optStr, field.Help)
-			} else {
-				fmt.Fprintln(w, optStr)
-			}
-		}
-	}
-
-	// Add version if available
-	if p.config.Version != "" {
-		fmt.Fprintln(w)
-		fmt.Fprintf(w, "Version: %s\n", p.config.Version)
-	}
+	helpGenerator := NewHelpGenerator(p.metadata, p.config)
+	helpGenerator.WriteHelp(w)
 }
 
 // WriteUsage writes usage text to the provided writer
 func (p *Parser) WriteUsage(w io.Writer) {
-	program := p.config.Program
-	if program == "" {
-		program = os.Args[0]
-	}
-
-	fmt.Fprintf(w, "Usage: %s", program)
-
-	// Add options placeholder
-	if p.metadata != nil && len(p.metadata.Fields) > 0 {
-		fmt.Fprint(w, " [OPTIONS]")
-
-		// Add positional arguments
-		for _, field := range p.metadata.Fields {
-			if field.Positional {
-				if field.Required {
-					fmt.Fprintf(w, " %s", field.Name)
-				} else {
-					fmt.Fprintf(w, " [%s]", field.Name)
-				}
-			}
-		}
-	}
-
-	fmt.Fprintln(w)
+	helpGenerator := NewHelpGenerator(p.metadata, p.config)
+	helpGenerator.WriteUsage(w)
 }
 
 // Fail prints an error message and exits
@@ -364,6 +296,20 @@ func (p *Parser) Fail(msg string) {
 	fmt.Fprintln(os.Stderr, msg)
 	p.WriteUsage(os.Stderr)
 	p.config.Exit(1)
+}
+
+// translateError translates an error using the error translator with context
+func (p *Parser) translateError(err error, fieldName string) error {
+	if err == nil {
+		return nil
+	}
+
+	context := ParseContext{
+		StructType: reflect.TypeOf(p.dest).Elem(),
+		FieldName:  fieldName,
+	}
+
+	return p.errorTranslator.TranslateError(err, context)
 }
 
 // findSubcommand performs case insensitive lookup for subcommands
