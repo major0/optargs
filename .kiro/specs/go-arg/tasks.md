@@ -122,7 +122,7 @@ Extensions are handled architecturally through `-ext.go` files that can be inclu
     - Support enabling/disabling enhanced POSIX compliance features
     - _Requirements: 2.2, 6.2_
 
-  - [ ] 5.3 Write property tests for enhanced features
+  - [x] 5.3 Write property tests for enhanced features
     - **Property 9: Option Inheritance Correctness**
     - **Property 10: Case Insensitive Command Matching**
     - **Validates: Requirements 2.1, 2.2**
