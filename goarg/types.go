@@ -303,14 +303,17 @@ func (tc *TypeConverter) ValidateCustom(dest interface{}, metadata *StructMetada
 
 	structType := destElem.Type()
 
-	for i, field := range metadata.Fields {
+	for _, field := range metadata.Fields {
 		fieldValue := destElem.FieldByName(field.Name)
 		if !fieldValue.IsValid() {
 			continue
 		}
 
-		// Get the struct field for tag access
-		structField := structType.Field(i)
+		// Get the struct field for tag access by name
+		structField, found := structType.FieldByName(field.Name)
+		if !found {
+			continue
+		}
 
 		// Check for custom validation tags
 		if err := tc.validateFieldConstraints(fieldValue, structField, field.Name); err != nil {
