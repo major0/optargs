@@ -110,6 +110,9 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 				// If the field was originally nil, keep it nil (don't persist the temp instance)
 				// The subcommand will only be initialized when actually invoked
 			}
+
+			// Also add the subcommand field to Fields so we can access its help text
+			metadata.Fields = append(metadata.Fields, *fieldMetadata)
 		} else {
 			metadata.Fields = append(metadata.Fields, *fieldMetadata)
 		}

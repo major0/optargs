@@ -179,6 +179,12 @@ func (ci *CoreIntegration) ProcessResults(parser *optargs.Parser, dest interface
 		return fmt.Errorf("failed to set default values: %w", err)
 	}
 
+	// Validate required fields
+	typeConverter := &TypeConverter{}
+	if err := typeConverter.ValidateRequired(dest, ci.metadata); err != nil {
+		return err
+	}
+
 	return nil
 }
 
