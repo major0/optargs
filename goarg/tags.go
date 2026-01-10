@@ -12,11 +12,12 @@ import (
 
 // StructMetadata represents parsed struct information
 type StructMetadata struct {
-	Fields      []FieldMetadata
-	Subcommands map[string]*StructMetadata
-	Program     string
-	Description string
-	Version     string
+	Fields         []FieldMetadata
+	Subcommands    map[string]*StructMetadata
+	SubcommandHelp map[string]string // Maps subcommand name to help text
+	Program        string
+	Description    string
+	Version        string
 }
 
 // FieldMetadata represents a single struct field's CLI mapping
@@ -62,8 +63,9 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 
 	structType := destElem.Type()
 	metadata := &StructMetadata{
-		Fields:      []FieldMetadata{},
-		Subcommands: make(map[string]*StructMetadata),
+		Fields:         []FieldMetadata{},
+		Subcommands:    make(map[string]*StructMetadata),
+		SubcommandHelp: make(map[string]string),
 	}
 
 	// Parse each field in the struct
@@ -107,12 +109,15 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 				}
 				metadata.Subcommands[subcommandName] = subMetadata
 
+				// Store the help text for this subcommand
+				metadata.SubcommandHelp[subcommandName] = fieldMetadata.Help
+
 				// If the field was originally nil, keep it nil (don't persist the temp instance)
 				// The subcommand will only be initialized when actually invoked
 			}
 
 			// Also add the subcommand field to Fields so we can access its help text
-			metadata.Fields = append(metadata.Fields, *fieldMetadata)
+			// metadata.Fields = append(metadata.Fields, *fieldMetadata)
 		} else {
 			metadata.Fields = append(metadata.Fields, *fieldMetadata)
 		}

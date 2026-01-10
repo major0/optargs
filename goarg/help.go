@@ -150,12 +150,9 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 		fmt.Fprintln(w, "Commands:")
 		for cmdName := range hg.metadata.Subcommands {
 			help := ""
-			// Try to find help text for the subcommand from the parent struct field
-			for _, field := range hg.metadata.Fields {
-				if field.IsSubcommand && field.SubcommandName == cmdName {
-					help = field.Help
-					break
-				}
+			// Get help text from the SubcommandHelp map
+			if hg.metadata.SubcommandHelp != nil {
+				help = hg.metadata.SubcommandHelp[cmdName]
 			}
 			if help != "" {
 				fmt.Fprintf(w, "  %-20s %s\n", cmdName, help)
@@ -245,6 +242,15 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 		}
 	}
 
+	// Handle wrapped positional argument errors
+	if strings.Contains(errMsg, "failed to process positional arguments: missing required positional argument: ") {
+		parts := strings.Split(errMsg, "failed to process positional arguments: missing required positional argument: ")
+		if len(parts) > 1 {
+			fieldName := strings.TrimSpace(parts[1])
+			return fmt.Errorf("%s is required", fieldName)
+		}
+	}
+
 	// Translate common OptArgs Core errors to alexflint/go-arg format
 	switch {
 	case strings.Contains(originalMsg, "unknown option") || strings.Contains(errMsg, "unknown option"):
@@ -266,6 +272,17 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 
 	case strings.Contains(errMsg, "missing required") || strings.Contains(errMsg, "is required"):
 		// Handle missing required arguments
+		if strings.Contains(errMsg, " is required") {
+			// Extract field name and convert to alexflint/go-arg format
+			parts := strings.Split(errMsg, " is required")
+			if len(parts) > 0 {
+				fieldName := strings.TrimSpace(parts[0])
+				// Remove leading dashes if present
+				fieldName = strings.TrimPrefix(fieldName, "--")
+				fieldName = strings.TrimPrefix(fieldName, "-")
+				return fmt.Errorf("required argument missing: %s", fieldName)
+			}
+		}
 		if context.FieldName != "" {
 			return fmt.Errorf("required argument missing: %s", context.FieldName)
 		}
@@ -327,9 +344,13 @@ func extractOptionFromError(errMsg string) string {
 		parts := strings.Split(errMsg, "unknown option: ")
 		if len(parts) > 1 {
 			optName := strings.TrimSpace(parts[1])
-			// Add -- prefix if not present
+			// For single character options, use single dash; for longer options, use double dash
 			if !strings.HasPrefix(optName, "-") {
-				return "--" + optName
+				if len(optName) == 1 {
+					return "-" + optName
+				} else {
+					return "--" + optName
+				}
 			}
 			return optName
 		}
@@ -340,9 +361,13 @@ func extractOptionFromError(errMsg string) string {
 		parts := strings.Split(errMsg, "option requires an argument: ")
 		if len(parts) > 1 {
 			optName := strings.TrimSpace(parts[1])
-			// Add -- prefix if not present
+			// For single character options, use single dash; for longer options, use double dash
 			if !strings.HasPrefix(optName, "-") {
-				return "--" + optName
+				if len(optName) == 1 {
+					return "-" + optName
+				} else {
+					return "--" + optName
+				}
 			}
 			return optName
 		}
