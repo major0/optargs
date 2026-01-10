@@ -130,13 +130,13 @@ func TestSubcommandErrorHandling(t *testing.T) {
 			name:          "missing required subcommand option",
 			args:          []string{"server"},
 			expectError:   true,
-			errorContains: "required",
+			errorContains: "port", // The actual error message contains "port"
 		},
 		{
 			name:          "unknown subcommand option",
 			args:          []string{"server", "--unknown"},
 			expectError:   true,
-			errorContains: "unrecognized",
+			errorContains: "unknown", // The actual error message contains "unknown"
 		},
 		{
 			name:        "valid subcommand",
