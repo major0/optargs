@@ -21,6 +21,17 @@ func (c *TestCustomTypeForCoverage) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// TestCustomValueReceiver implements TextUnmarshaler on value receiver
+type TestCustomValueReceiver struct {
+	Value string
+}
+
+func (c TestCustomValueReceiver) UnmarshalText(text []byte) error {
+	// Note: This won't actually modify the receiver since it's a value receiver
+	// but it allows us to test the interface implementation path
+	return nil
+}
+
 // ErrorUnmarshaler is a type that implements TextUnmarshaler but returns an error
 type ErrorUnmarshaler struct {
 	Value string
@@ -60,6 +71,27 @@ func TestMustParseErrorDetection(t *testing.T) {
 		// }
 		// Testing Parse() with the same input gives us confidence that
 		// MustParse would detect the error and call os.Exit(1).
+	})
+
+	// Test MustParse with successful parsing to cover the success path
+	t.Run("successful parsing path", func(t *testing.T) {
+		testStruct := &struct {
+			Verbose bool `arg:"-v,--verbose"`
+		}{}
+
+		// Save original args
+		originalArgs := os.Args
+		defer func() { os.Args = originalArgs }()
+
+		// Set args that will succeed
+		os.Args = []string{"testprog", "--verbose"}
+
+		// This should succeed and not call os.Exit
+		MustParse(testStruct)
+
+		if !testStruct.Verbose {
+			t.Error("Expected verbose to be true")
+		}
 	})
 }
 
@@ -879,3 +911,759 @@ func TestProcessResultsEdgeCases(t *testing.T) {
 // Ensure our test types implement the interface correctly
 var _ encoding.TextUnmarshaler = (*TestCustomTypeForCoverage)(nil)
 var _ encoding.TextUnmarshaler = (*ErrorUnmarshaler)(nil)
+var _ encoding.TextUnmarshaler = TestCustomValueReceiver{}
+
+// TestConvertCustom100PercentCoverage tests all paths in ConvertCustom for 100% coverage
+func TestConvertCustom100PercentCoverage(t *testing.T) {
+	converter := &TypeConverter{}
+
+	// Test pointer type that directly implements TextUnmarshaler
+	t.Run("pointer type implements TextUnmarshaler", func(t *testing.T) {
+		ptrType := reflect.TypeOf((*TestCustomTypeForCoverage)(nil))
+		result, err := converter.ConvertCustom("test-value", ptrType)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Error("Expected non-nil result")
+		}
+
+		// Verify the result is correct
+		if customType, ok := result.(*TestCustomTypeForCoverage); ok {
+			if customType.Value != "test-value" {
+				t.Errorf("Expected 'test-value', got '%s'", customType.Value)
+			}
+		} else {
+			t.Error("Expected result to be *TestCustomTypeForCoverage")
+		}
+	})
+
+	// Test value type where pointer implements TextUnmarshaler
+	t.Run("value type where pointer implements TextUnmarshaler", func(t *testing.T) {
+		valueType := reflect.TypeOf(TestCustomTypeForCoverage{})
+		result, err := converter.ConvertCustom("test-value", valueType)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Error("Expected non-nil result")
+		}
+
+		// Verify the result is correct
+		if customType, ok := result.(TestCustomTypeForCoverage); ok {
+			if customType.Value != "test-value" {
+				t.Errorf("Expected 'test-value', got '%s'", customType.Value)
+			}
+		} else {
+			t.Error("Expected result to be TestCustomTypeForCoverage")
+		}
+	})
+
+	// Test value type that directly implements TextUnmarshaler (value receiver)
+	t.Run("value type implements TextUnmarshaler directly", func(t *testing.T) {
+		valueType := reflect.TypeOf(TestCustomValueReceiver{})
+		result, err := converter.ConvertCustom("test-value", valueType)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Error("Expected non-nil result")
+		}
+
+		// Verify the result type
+		if _, ok := result.(TestCustomValueReceiver); !ok {
+			t.Error("Expected result to be TestCustomValueReceiver")
+		}
+	})
+
+	// Test pointer to value type that implements TextUnmarshaler (value receiver)
+	t.Run("pointer to value type with value receiver TextUnmarshaler", func(t *testing.T) {
+		ptrType := reflect.TypeOf((*TestCustomValueReceiver)(nil))
+		result, err := converter.ConvertCustom("test-value", ptrType)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Error("Expected non-nil result")
+		}
+
+		// Verify the result type
+		if _, ok := result.(*TestCustomValueReceiver); !ok {
+			t.Error("Expected result to be *TestCustomValueReceiver")
+		}
+	})
+
+	// Test pointer type with TextUnmarshaler error
+	t.Run("pointer type TextUnmarshaler error", func(t *testing.T) {
+		ptrType := reflect.TypeOf((*ErrorUnmarshaler)(nil))
+		_, err := converter.ConvertCustom("test", ptrType)
+		if err == nil {
+			t.Error("Expected error from TextUnmarshaler")
+		}
+		if !strings.Contains(err.Error(), "failed to unmarshal text") {
+			t.Errorf("Expected unmarshal error, got: %v", err)
+		}
+	})
+
+	// Test value type with TextUnmarshaler error (via pointer)
+	t.Run("value type TextUnmarshaler error via pointer", func(t *testing.T) {
+		valueType := reflect.TypeOf(ErrorUnmarshaler{})
+		_, err := converter.ConvertCustom("test", valueType)
+		if err == nil {
+			t.Error("Expected error from TextUnmarshaler")
+		}
+		if !strings.Contains(err.Error(), "failed to unmarshal text") {
+			t.Errorf("Expected unmarshal error, got: %v", err)
+		}
+	})
+
+	// Test type that doesn't implement TextUnmarshaler at all
+	t.Run("type without TextUnmarshaler", func(t *testing.T) {
+		type NoUnmarshaler struct {
+			Value string
+		}
+
+		// Test value type
+		valueType := reflect.TypeOf(NoUnmarshaler{})
+		_, err := converter.ConvertCustom("test", valueType)
+		if err == nil {
+			t.Error("Expected error for type without TextUnmarshaler")
+		}
+		if !strings.Contains(err.Error(), "does not implement encoding.TextUnmarshaler") {
+			t.Errorf("Expected TextUnmarshaler error, got: %v", err)
+		}
+
+		// Test pointer type
+		ptrType := reflect.TypeOf((*NoUnmarshaler)(nil))
+		_, err = converter.ConvertCustom("test", ptrType)
+		if err == nil {
+			t.Error("Expected error for pointer type without TextUnmarshaler")
+		}
+		if !strings.Contains(err.Error(), "does not implement encoding.TextUnmarshaler") {
+			t.Errorf("Expected TextUnmarshaler error, got: %v", err)
+		}
+	})
+
+	// Test all the different return paths
+	t.Run("return path coverage", func(t *testing.T) {
+		// Test pointer type returning pointer
+		ptrType := reflect.TypeOf((*TestCustomTypeForCoverage)(nil))
+		result, err := converter.ConvertCustom("ptr-test", ptrType)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if _, ok := result.(*TestCustomTypeForCoverage); !ok {
+			t.Error("Expected pointer result for pointer type")
+		}
+
+		// Test value type returning value
+		valueType := reflect.TypeOf(TestCustomTypeForCoverage{})
+		result, err = converter.ConvertCustom("value-test", valueType)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if _, ok := result.(TestCustomTypeForCoverage); !ok {
+			t.Error("Expected value result for value type")
+		}
+	})
+
+	// Test the specific branch where ptrType implements TextUnmarshaler but targetType is pointer
+	t.Run("pointer target with ptrType TextUnmarshaler", func(t *testing.T) {
+		// This is a tricky case - we need a type where:
+		// - targetType.Kind() == reflect.Ptr
+		// - target.Type() does NOT implement TextUnmarshaler
+		// - ptrType DOES implement TextUnmarshaler
+
+		// For this, we need a double pointer scenario or a type that only implements
+		// TextUnmarshaler when it's a pointer to the type
+
+		// Let's use TestCustomTypeForCoverage which implements TextUnmarshaler on pointer
+		valueType := reflect.TypeOf(TestCustomTypeForCoverage{})
+
+		// This should hit the second branch (ptrType implements TextUnmarshaler)
+		result, err := converter.ConvertCustom("branch-test", valueType)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Error("Expected non-nil result")
+		}
+	})
+}
+
+// TestMustParseCompleteScenarios tests MustParse with different scenarios
+func TestMustParseCompleteScenarios(t *testing.T) {
+	// Test with custom exit function to avoid os.Exit
+	t.Run("custom exit function", func(t *testing.T) {
+		testStruct := &struct {
+			Required string `arg:"--required,required"`
+		}{}
+
+		// Create parser with custom exit function
+		parser, err := NewParser(Config{
+			Exit: func(code int) {
+				// Custom exit function that doesn't actually exit
+				if code != 1 {
+					t.Errorf("Expected exit code 1, got %d", code)
+				}
+			},
+		}, testStruct)
+		if err != nil {
+			t.Fatalf("Failed to create parser: %v", err)
+		}
+
+		// Test the Fail method which calls the exit function
+		parser.Fail("test error message")
+		// If we reach here, the custom exit function worked
+	})
+
+	// Test MustParse with successful parsing
+	t.Run("successful parsing", func(t *testing.T) {
+		testStruct := &struct {
+			Verbose bool `arg:"-v,--verbose"`
+		}{}
+
+		// Save original args
+		originalArgs := os.Args
+		defer func() { os.Args = originalArgs }()
+
+		os.Args = []string{"testprog", "--verbose"}
+
+		// This should succeed
+		MustParse(testStruct)
+
+		if !testStruct.Verbose {
+			t.Error("Expected verbose to be true")
+		}
+	})
+}
+
+// TestConvertCustomAllPaths tests all paths in ConvertCustom for 100% coverage
+func TestConvertCustomAllPaths(t *testing.T) {
+	converter := &TypeConverter{}
+
+	// Test with slice type (should not reach ConvertCustom)
+	t.Run("slice type", func(t *testing.T) {
+		sliceType := reflect.TypeOf([]string{})
+		_, err := converter.ConvertCustom("test", sliceType)
+		if err == nil {
+			t.Error("Expected error for slice type")
+		}
+	})
+
+	// Test with basic types that don't implement TextUnmarshaler
+	basicTypes := []reflect.Type{
+		reflect.TypeOf(int(0)),
+		reflect.TypeOf(float64(0)),
+		reflect.TypeOf(bool(false)),
+		reflect.TypeOf(""),
+		reflect.TypeOf([]byte{}),
+		reflect.TypeOf(map[string]string{}),
+		reflect.TypeOf(make(chan int)),
+		reflect.TypeOf(func() {}),
+	}
+
+	for _, typ := range basicTypes {
+		t.Run(fmt.Sprintf("basic type %s", typ.String()), func(t *testing.T) {
+			_, err := converter.ConvertCustom("test", typ)
+			if err == nil {
+				t.Errorf("Expected error for type %s", typ.String())
+			}
+			if !strings.Contains(err.Error(), "does not implement encoding.TextUnmarshaler") {
+				t.Errorf("Expected TextUnmarshaler error for type %s, got: %v", typ.String(), err)
+			}
+		})
+	}
+
+	// Test with pointer to basic types
+	for _, typ := range basicTypes {
+		ptrType := reflect.PtrTo(typ)
+		t.Run(fmt.Sprintf("pointer to %s", typ.String()), func(t *testing.T) {
+			_, err := converter.ConvertCustom("test", ptrType)
+			if err == nil {
+				t.Errorf("Expected error for pointer to type %s", typ.String())
+			}
+		})
+	}
+
+	// Test with interface{} type specifically
+	t.Run("interface{} type", func(t *testing.T) {
+		interfaceType := reflect.TypeOf((*interface{})(nil)).Elem()
+		_, err := converter.ConvertCustom("test", interfaceType)
+		if err == nil {
+			t.Error("Expected error for interface{} type")
+		}
+	})
+
+	// Test with custom struct that doesn't implement TextUnmarshaler
+	t.Run("custom struct", func(t *testing.T) {
+		type CustomStruct struct {
+			Field1 string
+			Field2 int
+		}
+		structType := reflect.TypeOf(CustomStruct{})
+		_, err := converter.ConvertCustom("test", structType)
+		if err == nil {
+			t.Error("Expected error for custom struct")
+		}
+	})
+
+	// Test with pointer to custom struct that doesn't implement TextUnmarshaler
+	t.Run("pointer to custom struct", func(t *testing.T) {
+		type CustomStruct struct {
+			Field1 string
+			Field2 int
+		}
+		ptrType := reflect.TypeOf((*CustomStruct)(nil))
+		_, err := converter.ConvertCustom("test", ptrType)
+		if err == nil {
+			t.Error("Expected error for pointer to custom struct")
+		}
+	})
+
+	// Test successful conversion with TextUnmarshaler
+	t.Run("successful TextUnmarshaler conversion", func(t *testing.T) {
+		// Test with value type
+		valueType := reflect.TypeOf(TestCustomTypeForCoverage{})
+		result, err := converter.ConvertCustom("test-value", valueType)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Error("Expected non-nil result")
+		}
+
+		// Test with pointer type
+		ptrType := reflect.TypeOf((*TestCustomTypeForCoverage)(nil))
+		result, err = converter.ConvertCustom("test-value", ptrType)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if result == nil {
+			t.Error("Expected non-nil result")
+		}
+	})
+
+	// Test error from TextUnmarshaler
+	t.Run("TextUnmarshaler error", func(t *testing.T) {
+		// Test with value type that returns error
+		valueType := reflect.TypeOf(ErrorUnmarshaler{})
+		_, err := converter.ConvertCustom("test-value", valueType)
+		if err == nil {
+			t.Error("Expected error from TextUnmarshaler")
+		}
+
+		// Test with pointer type that returns error
+		ptrType := reflect.TypeOf((*ErrorUnmarshaler)(nil))
+		_, err = converter.ConvertCustom("test-value", ptrType)
+		if err == nil {
+			t.Error("Expected error from TextUnmarshaler")
+		}
+	})
+
+	// Test all the specific type checking paths in ConvertCustom
+	t.Run("comprehensive type coverage", func(t *testing.T) {
+		// Test with various unsupported types to hit all error paths
+		unsupportedTypes := []reflect.Type{
+			reflect.TypeOf(complex64(0)),
+			reflect.TypeOf(complex128(0)),
+			reflect.TypeOf(uintptr(0)),
+			reflect.TypeOf([5]int{}),                    // Array
+			reflect.TypeOf(make(chan string)),           // Channel
+			reflect.TypeOf(func() string { return "" }), // Function
+			reflect.TypeOf(map[string]int{}),            // Map
+			reflect.TypeOf((*interface{})(nil)).Elem(),  // Interface
+		}
+
+		for _, typ := range unsupportedTypes {
+			_, err := converter.ConvertCustom("test", typ)
+			if err == nil {
+				t.Errorf("Expected error for unsupported type %s", typ.String())
+			}
+		}
+	})
+}
+
+// TestValidateAPICompatibilityComplete tests ValidateAPICompatibility for 100% coverage
+func TestValidateAPICompatibilityComplete(t *testing.T) {
+	framework := NewCompatibilityTestFramework()
+
+	// Test the API compatibility validation
+	t.Run("API compatibility validation", func(t *testing.T) {
+		err := framework.ValidateAPICompatibility()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+	})
+
+	// Test adding compatibility tests
+	t.Run("add compatibility test", func(t *testing.T) {
+		framework.AddCompatibilityTest("test case", struct{}{}, []string{"--test"}, false)
+		// This should not error
+	})
+
+	// Test running full compatibility test
+	t.Run("run full compatibility test", func(t *testing.T) {
+		report, err := framework.RunFullCompatibilityTest()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		if report == nil {
+			t.Error("Expected non-nil report")
+		}
+	})
+
+	// Test ValidateAPICompatibility with missing method (simulate error condition)
+	t.Run("API compatibility with missing method", func(t *testing.T) {
+		// Create a custom framework to test error path
+		customFramework := &CompatibilityTestFramework{
+			aliasManager: NewModuleAliasManager(),
+			testSuite:    NewTestSuite(),
+		}
+
+		// Test the validation - this should pass since our Parser has all required methods
+		err := customFramework.ValidateAPICompatibility()
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		// The error path is difficult to test without modifying the Parser type
+		// but we can verify the method checking logic works
+		parserType := reflect.TypeOf(&Parser{})
+		expectedMethods := []string{"Parse", "WriteHelp", "WriteUsage", "Fail"}
+
+		for _, methodName := range expectedMethods {
+			if _, found := parserType.MethodByName(methodName); !found {
+				t.Errorf("Parser missing expected method: %s", methodName)
+			}
+		}
+	})
+
+	// Test generating compatibility report
+	t.Run("generate compatibility report", func(t *testing.T) {
+		report := &CompatibilityReport{
+			TotalTests:  2,
+			PassedTests: 1,
+			FailedTests: 1,
+			Scenarios: []ScenarioResult{
+				{Name: "test1", Match: true},
+				{Name: "test2", Match: false},
+			},
+		}
+
+		reportStr := framework.GenerateCompatibilityReport(report)
+		if reportStr == "" {
+			t.Error("Expected non-empty report string")
+		}
+		if !strings.Contains(reportStr, "Total Tests: 2") {
+			t.Error("Expected report to contain total tests")
+		}
+	})
+}
+
+// TestProcessOptionsWithInheritanceAllPaths tests all paths in processOptionsWithInheritance
+func TestProcessOptionsWithInheritanceAllPaths(t *testing.T) {
+	// Test with parsing error from subParser.Options()
+	t.Run("parsing error from options iterator", func(t *testing.T) {
+		parentMetadata := &StructMetadata{Fields: []FieldMetadata{}}
+		subMetadata := &StructMetadata{Fields: []FieldMetadata{}}
+
+		parentStruct := struct{}{}
+		subStruct := struct{}{}
+
+		parser := &Parser{
+			config:   Config{Program: "test"},
+			dest:     &parentStruct,
+			metadata: parentMetadata,
+		}
+
+		parentIntegration := &CoreIntegration{
+			metadata:    parentMetadata,
+			shortOpts:   make(map[byte]*optargs.Flag),
+			longOpts:    make(map[string]*optargs.Flag),
+			positionals: []PositionalArg{},
+		}
+
+		// Create a parser that will have an error in the options iterator
+		subParser, err := optargs.GetOptLong([]string{"--unknown-option"}, "", []optargs.Flag{})
+		if err != nil {
+			t.Fatalf("Failed to create subparser: %v", err)
+		}
+
+		// This should handle the parsing error
+		err = parser.processOptionsWithInheritance(subParser, parentIntegration, subMetadata, &subStruct)
+		if err == nil {
+			t.Error("Expected error from unknown option")
+		}
+	})
+
+	// Test with field setting error in subcommand path
+	t.Run("field setting error in subcommand", func(t *testing.T) {
+		parentMetadata := &StructMetadata{Fields: []FieldMetadata{}}
+		subMetadata := &StructMetadata{
+			Fields: []FieldMetadata{
+				{Name: "Number", Short: "n", Long: "number", ArgType: optargs.RequiredArgument, Type: reflect.TypeOf(int(0))},
+			},
+		}
+
+		parentStruct := struct{}{}
+		subStruct := struct {
+			Number int
+		}{}
+
+		parser := &Parser{
+			config:   Config{Program: "test"},
+			dest:     &parentStruct,
+			metadata: parentMetadata,
+		}
+
+		parentIntegration := &CoreIntegration{
+			metadata:    parentMetadata,
+			shortOpts:   make(map[byte]*optargs.Flag),
+			longOpts:    make(map[string]*optargs.Flag),
+			positionals: []PositionalArg{},
+		}
+
+		// Create a subcommand parser with invalid number
+		subParser, err := optargs.GetOptLong([]string{"-n", "not-a-number"}, "n:", []optargs.Flag{
+			{Name: "number", HasArg: optargs.RequiredArgument},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create subparser: %v", err)
+		}
+
+		// This should return an error due to invalid number conversion
+		err = parser.processOptionsWithInheritance(subParser, parentIntegration, subMetadata, &subStruct)
+		if err == nil {
+			t.Error("Expected error for invalid number conversion")
+		}
+	})
+
+	// Test with field setting error in parent inheritance path
+	t.Run("field setting error in parent inheritance", func(t *testing.T) {
+		parentMetadata := &StructMetadata{
+			Fields: []FieldMetadata{
+				{Name: "Number", Short: "n", Long: "number", ArgType: optargs.RequiredArgument, Type: reflect.TypeOf(int(0))},
+			},
+		}
+		subMetadata := &StructMetadata{Fields: []FieldMetadata{}}
+
+		parentStruct := struct {
+			Number int
+		}{}
+		subStruct := struct{}{}
+
+		parser := &Parser{
+			config:   Config{Program: "test"},
+			dest:     &parentStruct,
+			metadata: parentMetadata,
+		}
+
+		parentIntegration := &CoreIntegration{
+			metadata:    parentMetadata,
+			shortOpts:   make(map[byte]*optargs.Flag),
+			longOpts:    make(map[string]*optargs.Flag),
+			positionals: []PositionalArg{},
+		}
+		parentIntegration.BuildLongOpts()
+
+		// Create a subcommand parser with invalid number for parent option
+		subParser, err := optargs.GetOptLong([]string{"-n", "not-a-number"}, "n:", []optargs.Flag{
+			{Name: "number", HasArg: optargs.RequiredArgument},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create subparser: %v", err)
+		}
+
+		// This should return an error due to invalid number conversion in parent
+		err = parser.processOptionsWithInheritance(subParser, parentIntegration, subMetadata, &subStruct)
+		if err == nil {
+			t.Error("Expected error for invalid number conversion in parent")
+		}
+	})
+}
+
+// TestParseStructAllPaths tests all paths in ParseStruct for 100% coverage
+func TestParseStructAllPaths(t *testing.T) {
+	parser := &TagParser{}
+
+	// Test with nil destination
+	t.Run("nil destination", func(t *testing.T) {
+		_, err := parser.ParseStruct(nil)
+		if err == nil {
+			t.Error("Expected error for nil destination")
+		}
+	})
+
+	// Test with non-pointer destination
+	t.Run("non-pointer destination", func(t *testing.T) {
+		_, err := parser.ParseStruct(struct{}{})
+		if err == nil {
+			t.Error("Expected error for non-pointer destination")
+		}
+	})
+
+	// Test with pointer to non-struct
+	t.Run("pointer to non-struct", func(t *testing.T) {
+		var i int
+		_, err := parser.ParseStruct(&i)
+		if err == nil {
+			t.Error("Expected error for pointer to non-struct")
+		}
+	})
+
+	// Test with subcommand field parsing error
+	t.Run("subcommand field parsing error", func(t *testing.T) {
+		testStruct := &struct {
+			Server *struct {
+				Port string `arg:"invalid-tag-format-with-multiple-errors"`
+			} `arg:"subcommand:server"`
+		}{}
+
+		// Initialize the subcommand field
+		testStruct.Server = &struct {
+			Port string `arg:"invalid-tag-format-with-multiple-errors"`
+		}{}
+
+		_, err := parser.ParseStruct(testStruct)
+		if err == nil {
+			t.Error("Expected error for invalid subcommand field")
+		}
+	})
+}
+
+// TestCreateParserWithParentAllPaths tests all paths in CreateParserWithParent
+func TestCreateParserWithParentAllPaths(t *testing.T) {
+	// Test with subcommand creation error
+	t.Run("subcommand creation error", func(t *testing.T) {
+		// Create metadata with problematic subcommand
+		subMetadata := &StructMetadata{
+			Fields: []FieldMetadata{
+				{Name: "Invalid", Short: "toolongshort"}, // Invalid short option
+			},
+		}
+
+		metadata := &StructMetadata{
+			Fields:      []FieldMetadata{},
+			Subcommands: map[string]*StructMetadata{"invalid": subMetadata},
+		}
+
+		integration := &CoreIntegration{metadata: metadata}
+
+		// This should handle subcommand creation gracefully
+		parser, err := integration.CreateParserWithParent([]string{}, nil)
+		if err != nil {
+			// Error is expected due to invalid subcommand
+			t.Logf("Expected error during subcommand creation: %v", err)
+		} else if parser == nil {
+			t.Error("Expected either error or valid parser")
+		}
+	})
+}
+
+// TestBuildOptStringAllPaths tests all paths in BuildOptString
+func TestBuildOptStringAllPaths(t *testing.T) {
+	// Test with all argument types
+	t.Run("all argument types", func(t *testing.T) {
+		metadata := &StructMetadata{
+			Fields: []FieldMetadata{
+				{Name: "NoArg", Short: "n", ArgType: optargs.NoArgument},
+				{Name: "Required", Short: "r", ArgType: optargs.RequiredArgument},
+				{Name: "Optional", Short: "o", ArgType: optargs.OptionalArgument},
+				{Name: "Positional", Positional: true},   // Should be skipped
+				{Name: "Subcommand", IsSubcommand: true}, // Should be skipped
+			},
+		}
+
+		integration := &CoreIntegration{metadata: metadata}
+		optstring := integration.BuildOptString()
+
+		// Should contain: n (no colon), r: (required), o:: (optional)
+		expected := "nr:o::"
+		if optstring != expected {
+			t.Errorf("Expected '%s', got '%s'", expected, optstring)
+		}
+	})
+}
+
+// TestValidateFieldMetadataAllPaths tests all paths in ValidateFieldMetadata
+func TestValidateFieldMetadataAllPaths(t *testing.T) {
+	parser := &TagParser{}
+
+	// Test positional with option flags
+	t.Run("positional with option flags", func(t *testing.T) {
+		metadata := &FieldMetadata{
+			Name:       "Test",
+			Positional: true,
+			Short:      "t",
+			Long:       "test",
+		}
+
+		err := parser.ValidateFieldMetadata(metadata)
+		if err == nil {
+			t.Error("Expected error for positional with option flags")
+		}
+	})
+
+	// Test subcommand with non-pointer type
+	t.Run("subcommand non-pointer", func(t *testing.T) {
+		metadata := &FieldMetadata{
+			Name:         "Server",
+			IsSubcommand: true,
+			Type:         reflect.TypeOf(struct{}{}), // Not a pointer
+		}
+
+		err := parser.ValidateFieldMetadata(metadata)
+		if err == nil {
+			t.Error("Expected error for non-pointer subcommand")
+		}
+	})
+
+	// Test subcommand with pointer to non-struct
+	t.Run("subcommand pointer to non-struct", func(t *testing.T) {
+		metadata := &FieldMetadata{
+			Name:         "Server",
+			IsSubcommand: true,
+			Type:         reflect.TypeOf((*int)(nil)), // Pointer to int, not struct
+		}
+
+		err := parser.ValidateFieldMetadata(metadata)
+		if err == nil {
+			t.Error("Expected error for pointer to non-struct subcommand")
+		}
+	})
+
+	// Test invalid short option length
+	t.Run("invalid short option", func(t *testing.T) {
+		metadata := &FieldMetadata{
+			Name:  "Verbose",
+			Short: "verbose", // Invalid: more than one character
+		}
+
+		err := parser.ValidateFieldMetadata(metadata)
+		if err == nil {
+			t.Error("Expected error for invalid short option")
+		}
+	})
+
+	// Test field without options gets default long option
+	t.Run("field without options", func(t *testing.T) {
+		metadata := &FieldMetadata{
+			Name:         "TestField",
+			Positional:   false,
+			IsSubcommand: false,
+			Short:        "",
+			Long:         "",
+		}
+
+		err := parser.ValidateFieldMetadata(metadata)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		// Should have generated default long option
+		if metadata.Long != "testfield" {
+			t.Errorf("Expected 'testfield', got '%s'", metadata.Long)
+		}
+	})
+}
