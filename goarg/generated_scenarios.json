@@ -1,0 +1,133 @@
+[
+  {
+    "name": "basic_bool_flag",
+    "description": "Basic boolean flag",
+    "struct_definition": "type Args struct {\n\t\t\t\tVerbose bool `arg:\"-v,--verbose\"`\n\t\t\t}",
+    "arguments": [
+      "-v"
+    ],
+    "expected_success": true,
+    "test_type": "parsing"
+  },
+  {
+    "name": "string_flag_with_value",
+    "description": "String flag with value",
+    "struct_definition": "type Args struct {\n\t\t\t\tOutput string `arg:\"-o,--output\"`\n\t\t\t}",
+    "arguments": [
+      "--output",
+      "file.txt"
+    ],
+    "expected_success": true,
+    "test_type": "parsing"
+  },
+  {
+    "name": "integer_flag",
+    "description": "Integer flag",
+    "struct_definition": "type Args struct {\n\t\t\t\tCount int `arg:\"-c,--count\"`\n\t\t\t}",
+    "arguments": [
+      "-c",
+      "42"
+    ],
+    "expected_success": true,
+    "test_type": "parsing"
+  },
+  {
+    "name": "float_flag",
+    "description": "Float flag",
+    "struct_definition": "type Args struct {\n\t\t\t\tRate float64 `arg:\"-r,--rate\"`\n\t\t\t}",
+    "arguments": [
+      "--rate",
+      "3.14"
+    ],
+    "expected_success": true,
+    "test_type": "parsing"
+  },
+  {
+    "name": "slice_flag",
+    "description": "Slice flag with multiple values",
+    "struct_definition": "type Args struct {\n\t\t\t\tTags []string `arg:\"-t,--tag\"`\n\t\t\t}",
+    "arguments": [
+      "-t",
+      "tag1",
+      "-t",
+      "tag2",
+      "--tag",
+      "tag3"
+    ],
+    "expected_success": true,
+    "test_type": "parsing"
+  },
+  {
+    "name": "positional_args",
+    "description": "Positional arguments",
+    "struct_definition": "type Args struct {\n\t\t\t\tFiles []string `arg:\"positional\"`\n\t\t\t}",
+    "arguments": [
+      "file1.txt",
+      "file2.txt"
+    ],
+    "expected_success": true,
+    "test_type": "parsing"
+  },
+  {
+    "name": "required_flag_missing",
+    "description": "Required flag missing (should error)",
+    "struct_definition": "type Args struct {\n\t\t\t\tInput string `arg:\"--input,required\"`\n\t\t\t}",
+    "arguments": [],
+    "expected_success": false,
+    "test_type": "error"
+  },
+  {
+    "name": "default_values",
+    "description": "Default values",
+    "struct_definition": "type Args struct {\n\t\t\t\tPort int    `arg:\"--port\" default:\"8080\"`\n\t\t\t\tHost string `arg:\"--host\" default:\"localhost\"`\n\t\t\t}",
+    "arguments": [],
+    "expected_success": true,
+    "test_type": "parsing"
+  },
+  {
+    "name": "help_flag",
+    "description": "Help flag",
+    "struct_definition": "type Args struct {\n\t\t\t\tVerbose bool `arg:\"-v,--verbose\" help:\"enable verbose output\"`\n\t\t\t}",
+    "arguments": [
+      "--help"
+    ],
+    "expected_success": false,
+    "test_type": "help"
+  },
+  {
+    "name": "unknown_flag_error",
+    "description": "Unknown flag error",
+    "struct_definition": "type Args struct {\n\t\t\t\tVerbose bool `arg:\"-v,--verbose\"`\n\t\t\t}",
+    "arguments": [
+      "--unknown"
+    ],
+    "expected_success": false,
+    "test_type": "error"
+  },
+  {
+    "name": "simple_subcommand",
+    "description": "Simple subcommand",
+    "struct_definition": "type Args struct {\n\t\t\t\tServer *ServerCmd `arg:\"subcommand:server\"`\n\t\t\t}\n\t\t\t\n\t\t\ttype ServerCmd struct {\n\t\t\t\tPort int `arg:\"-p,--port\" default:\"8080\"`\n\t\t\t}",
+    "arguments": [
+      "server",
+      "--port",
+      "9000"
+    ],
+    "expected_success": true,
+    "test_type": "parsing"
+  },
+  {
+    "name": "nested_subcommands",
+    "description": "Nested subcommands",
+    "struct_definition": "type Args struct {\n\t\t\t\tGit *GitCmd `arg:\"subcommand:git\"`\n\t\t\t}\n\t\t\t\n\t\t\ttype GitCmd struct {\n\t\t\t\tRemote *RemoteCmd `arg:\"subcommand:remote\"`\n\t\t\t}\n\t\t\t\n\t\t\ttype RemoteCmd struct {\n\t\t\t\tAdd *RemoteAddCmd `arg:\"subcommand:add\"`\n\t\t\t}\n\t\t\t\n\t\t\ttype RemoteAddCmd struct {\n\t\t\t\tName string `arg:\"positional,required\"`\n\t\t\t\tURL  string `arg:\"positional,required\"`\n\t\t\t}",
+    "arguments": [
+      "git",
+      "remote",
+      "add",
+      "origin",
+      "https://github.com/user/repo.git"
+    ],
+    "expected_success": true,
+    "test_type": "parsing"
+  }
+]

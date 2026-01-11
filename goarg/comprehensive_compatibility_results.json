@@ -1,0 +1,685 @@
+[
+  {
+    "test_name": "bool_flags",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 31347051,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 25012448,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 565053650
+  },
+  {
+    "test_name": "string_flags",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 29191933,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 19896551,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 553420839
+  },
+  {
+    "test_name": "numeric_flags",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 30885520,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 20636313,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 555932528
+  },
+  {
+    "test_name": "slice_flags",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 30223377,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 26219663,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 561585318
+  },
+  {
+    "test_name": "positional_single",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 28515871,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21387156,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 554878815
+  },
+  {
+    "test_name": "positional_multiple",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 32158593,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21213336,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 549416505
+  },
+  {
+    "test_name": "positional_slice",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 29319604,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21489736,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 556858012
+  },
+  {
+    "test_name": "mixed_positional_flags",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 30938519,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21207365,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 552440916
+  },
+  {
+    "test_name": "default_values",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 30402558,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21657966,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 548346571
+  },
+  {
+    "test_name": "partial_defaults",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 30157517,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 20643593,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 568339522
+  },
+  {
+    "test_name": "required_fields_present",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 29577705,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21298215,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 551712973
+  },
+  {
+    "test_name": "required_fields_missing",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 31141070,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 22541929,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 554758535
+  },
+  {
+    "test_name": "env_var_fallback",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 30250218,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21600837,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 547196458,
+    "metadata": {
+      "env_vars": {
+        "API_TOKEN": "test-token-123",
+        "DEBUG": "true"
+      }
+    }
+  },
+  {
+    "test_name": "env_var_override",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 29476645,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 22648180,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 592739659,
+    "metadata": {
+      "env_vars": {
+        "API_TOKEN": "env-token-123"
+      }
+    }
+  },
+  {
+    "test_name": "simple_subcommand",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 26985946,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21695727,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 542592801
+  },
+  {
+    "test_name": "nested_subcommands",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 29005793,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 19426359,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 542566372
+  },
+  {
+    "test_name": "subcommand_with_global_flags",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 26969826,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 23490824,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 555492787
+  },
+  {
+    "test_name": "help_main",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 32352705,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 20454672,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 559984924
+  },
+  {
+    "test_name": "help_subcommand",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 28588181,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 19746230,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 550812111
+  },
+  {
+    "test_name": "help_with_defaults",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 29478724,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 20170442,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 559541971
+  },
+  {
+    "test_name": "unknown_flag",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 29107003,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 22008438,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 559562882
+  },
+  {
+    "test_name": "invalid_type_conversion",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 29571555,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 22797531,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 562754483
+  },
+  {
+    "test_name": "missing_argument_value",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 30585458,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 20630903,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 565794034
+  },
+  {
+    "test_name": "unknown_subcommand",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 28263990,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21774907,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 545665864
+  },
+  {
+    "test_name": "empty_arguments",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 30849780,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 23476704,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 559554212
+  },
+  {
+    "test_name": "flag_equals_syntax",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 31474921,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21892127,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 568240123
+  },
+  {
+    "test_name": "short_flag_combining",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 33419799,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 23904434,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 582251723
+  },
+  {
+    "test_name": "double_dash_separator",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 32567075,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21791217,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 556252160
+  },
+  {
+    "test_name": "special_characters_in_values",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 34324491,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 21673176,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 574711596
+  },
+  {
+    "test_name": "unicode_in_values",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 28870962,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 23100362,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 564080569
+  },
+  {
+    "test_name": "docker_run_simulation",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 31305951,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 18764816,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 536004259
+  },
+  {
+    "test_name": "kubectl_get_simulation",
+    "our_result": {
+      "error_message": "Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n",
+      "exit_code": 1,
+      "execution_time": 32224104,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n",
+      "exit_code": 1,
+      "execution_time": 20594233,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ",
+      "Our error: Build failed: ../core_integration.go:8:2: no required module provides package github.com/major0/optargs; to add it:\n\tgo get github.com/major0/optargs\n\nUpstream error: Build failed: main.go:7:2: missing go.sum entry for module providing package github.com/alexflint/go-arg (imported by testprogram); to add:\n\tgo get testprogram\n"
+    ],
+    "execution_time": 552962260
+  }
+]
