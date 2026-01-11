@@ -123,44 +123,51 @@ func (p *Parser) Parse(args []string) error {
 
 	p.coreParser = coreParser
 
-	// Check if we have subcommands and if a subcommand was invoked
-	if len(p.metadata.Subcommands) > 0 && len(args) > 0 {
-		// Look for subcommand in arguments
-		for i, arg := range args {
-			// Try case insensitive lookup for subcommands
-			subMetadata, subcommandName := p.findSubcommand(arg)
-			if subMetadata != nil {
-				// Found subcommand, dispatch to it
-				subParser, err := coreParser.Commands.ExecuteCommandCaseInsensitive(subcommandName, args[i+1:], true) // Always use case insensitive for go-arg
-				if err != nil {
-					return p.translateError(err, arg)
-				}
-
-				// Get the subcommand field from the destination struct
-				destValue := reflect.ValueOf(p.dest).Elem()
-				var subcommandField reflect.Value
-				for j := 0; j < destValue.NumField(); j++ {
-					field := destValue.Type().Field(j)
-					fieldMeta, _ := (&TagParser{}).ParseField(field)
-					if fieldMeta.IsSubcommand && strings.EqualFold(fieldMeta.SubcommandName, arg) {
-						subcommandField = destValue.Field(j)
-						break
-					}
-				}
-
-				if !subcommandField.IsValid() {
-					return p.translateError(fmt.Errorf("subcommand field not found for %s", arg), arg)
-				}
-
-				// Ensure subcommand field is initialized
-				if subcommandField.IsNil() {
-					subcommandField.Set(reflect.New(subcommandField.Type().Elem()))
-				}
-
-				// Process all options from the subcommand parser in a single pass
-				// This handles both inherited options (set on parent) and subcommand options (set on subcommand)
-				return p.translateError(p.processOptionsWithInheritance(subParser, coreIntegration, subMetadata, subcommandField.Interface()), "")
+	// Check if we have subcommands - let OptArgs Core handle the full parsing including global flags
+	if len(p.metadata.Subcommands) > 0 {
+		// Look for subcommand in arguments to see if one was invoked
+		var subcommandFound string
+		var subMetadata *StructMetadata
+		for _, arg := range args {
+			if metadata, cmdName := p.findSubcommand(arg); metadata != nil {
+				subcommandFound = cmdName
+				subMetadata = metadata
+				break
 			}
+		}
+
+		if subcommandFound != "" {
+			// Found subcommand, let OptArgs Core parse the entire argument list
+			// This allows global flags before the subcommand to be parsed correctly
+			subParser, err := coreParser.Commands.ExecuteCommandCaseInsensitive(subcommandFound, args, true) // Pass full args, not just subcommand args
+			if err != nil {
+				return p.translateError(err, subcommandFound)
+			}
+
+			// Get the subcommand field from the destination struct
+			destValue := reflect.ValueOf(p.dest).Elem()
+			var subcommandField reflect.Value
+			for j := 0; j < destValue.NumField(); j++ {
+				field := destValue.Type().Field(j)
+				fieldMeta, _ := (&TagParser{}).ParseField(field)
+				if fieldMeta.IsSubcommand && strings.EqualFold(fieldMeta.SubcommandName, subcommandFound) {
+					subcommandField = destValue.Field(j)
+					break
+				}
+			}
+
+			if !subcommandField.IsValid() {
+				return p.translateError(fmt.Errorf("subcommand field not found for %s", subcommandFound), subcommandFound)
+			}
+
+			// Ensure subcommand field is initialized
+			if subcommandField.IsNil() {
+				subcommandField.Set(reflect.New(subcommandField.Type().Elem()))
+			}
+
+			// Process all options from the subcommand parser in a single pass
+			// This handles both inherited options (set on parent) and subcommand options (set on subcommand)
+			return p.translateError(p.processOptionsWithInheritance(subParser, coreIntegration, subMetadata, subcommandField.Interface()), "")
 		}
 	}
 
@@ -178,8 +185,9 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 		positionals: []PositionalArg{},
 	}
 
-	// Build subcommand option mappings
+	// Build subcommand option mappings and positional arguments
 	subIntegration.BuildLongOpts()
+	subIntegration.buildPositionalArgs() // This was missing!
 
 	destValue := reflect.ValueOf(p.dest).Elem()
 	subDestValue := reflect.ValueOf(subcommandDest).Elem()
@@ -245,6 +253,42 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 	typeConverter := &TypeConverter{}
 	if err := typeConverter.ValidateRequired(subcommandDest, subMetadata); err != nil {
 		return p.translateError(err, "")
+	}
+
+	// Process nested subcommands if any were invoked
+	if len(subMetadata.Subcommands) > 0 {
+		// Check if a nested subcommand was invoked by looking at the subcommand parser's commands
+		if subParser.Commands != nil {
+			// Look for executed subcommands in the subcommand parser
+			for nestedCmdName, nestedMetadata := range subMetadata.Subcommands {
+				// Check if this nested command exists
+				if nestedParser, exists := subParser.Commands.GetCommand(nestedCmdName); exists && nestedParser != nil {
+					// Check if this nested command should be processed by looking at its arguments
+					// If the nested parser has arguments, it means this command was invoked
+					if len(nestedParser.Args) > 0 {
+						// Find the corresponding field in the subcommand struct
+						for i := 0; i < subDestValue.NumField(); i++ {
+							field := subDestValue.Type().Field(i)
+							fieldMeta, _ := (&TagParser{}).ParseField(field)
+							if fieldMeta.IsSubcommand && strings.EqualFold(fieldMeta.SubcommandName, nestedCmdName) {
+								nestedField := subDestValue.Field(i)
+
+								// Initialize the nested subcommand field if it's nil
+								if nestedField.IsNil() {
+									nestedField.Set(reflect.New(nestedField.Type().Elem()))
+								}
+
+								// Recursively process the nested subcommand
+								if err := p.processOptionsWithInheritance(nestedParser, subIntegration, nestedMetadata, nestedField.Interface()); err != nil {
+									return p.translateError(err, nestedCmdName)
+								}
+								break
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	// Process environment variables and defaults for parent as well

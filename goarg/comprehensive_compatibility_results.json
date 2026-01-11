@@ -8,7 +8,7 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 634706165,
+      "execution_time": 661149383,
       "success": true
     },
     "upstream_result": {
@@ -18,11 +18,11 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 411494346,
+      "execution_time": 327788713,
       "success": true
     },
     "match": true,
-    "execution_time": 2153221449
+    "execution_time": 1527590644
   },
   {
     "test_name": "string_flags",
@@ -33,7 +33,7 @@
         "Output": "output.txt"
       },
       "exit_code": 0,
-      "execution_time": 672050247,
+      "execution_time": 678066946,
       "success": true
     },
     "upstream_result": {
@@ -43,11 +43,11 @@
         "Output": "output.txt"
       },
       "exit_code": 0,
-      "execution_time": 312877678,
+      "execution_time": 360258106,
       "success": true
     },
     "match": true,
-    "execution_time": 1515670570
+    "execution_time": 1558988130
   },
   {
     "test_name": "numeric_flags",
@@ -60,7 +60,7 @@
         "Timeout": 30.5
       },
       "exit_code": 0,
-      "execution_time": 702898923,
+      "execution_time": 626624864,
       "success": true
     },
     "upstream_result": {
@@ -72,11 +72,11 @@
         "Timeout": 30.5
       },
       "exit_code": 0,
-      "execution_time": 335034952,
+      "execution_time": 330285659,
       "success": true
     },
     "match": true,
-    "execution_time": 1550256107
+    "execution_time": 1478485744
   },
   {
     "test_name": "slice_flags",
@@ -93,7 +93,7 @@
         ]
       },
       "exit_code": 0,
-      "execution_time": 641510425,
+      "execution_time": 693793611,
       "success": true
     },
     "upstream_result": {
@@ -109,11 +109,11 @@
         ]
       },
       "exit_code": 0,
-      "execution_time": 319341775,
+      "execution_time": 296137076,
       "success": true
     },
     "match": true,
-    "execution_time": 1484246769
+    "execution_time": 1564401878
   },
   {
     "test_name": "positional_single",
@@ -122,7 +122,7 @@
         "File": "input.txt"
       },
       "exit_code": 0,
-      "execution_time": 664241872,
+      "execution_time": 659252480,
       "success": true
     },
     "upstream_result": {
@@ -130,11 +130,11 @@
         "File": "input.txt"
       },
       "exit_code": 0,
-      "execution_time": 315788076,
+      "execution_time": 337646172,
       "success": true
     },
     "match": true,
-    "execution_time": 1503467929
+    "execution_time": 1498093620
   },
   {
     "test_name": "positional_multiple",
@@ -144,7 +144,7 @@
         "Source": "source.txt"
       },
       "exit_code": 0,
-      "execution_time": 672563563,
+      "execution_time": 691511713,
       "success": true
     },
     "upstream_result": {
@@ -153,11 +153,11 @@
         "Source": "source.txt"
       },
       "exit_code": 0,
-      "execution_time": 294369855,
+      "execution_time": 328907131,
       "success": true
     },
     "match": true,
-    "execution_time": 1513612676
+    "execution_time": 1526567012
   },
   {
     "test_name": "positional_slice",
@@ -170,7 +170,7 @@
         ]
       },
       "exit_code": 0,
-      "execution_time": 655317603,
+      "execution_time": 647266530,
       "success": true
     },
     "upstream_result": {
@@ -182,11 +182,11 @@
         ]
       },
       "exit_code": 0,
-      "execution_time": 327612537,
+      "execution_time": 296327960,
       "success": true
     },
     "match": true,
-    "execution_time": 1497674610
+    "execution_time": 1456143757
   },
   {
     "test_name": "mixed_positional_flags",
@@ -201,7 +201,7 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 736224871,
+      "execution_time": 667121257,
       "success": true
     },
     "upstream_result": {
@@ -215,11 +215,11 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 396566685,
+      "execution_time": 323723007,
       "success": true
     },
     "match": true,
-    "execution_time": 1673404861
+    "execution_time": 1516625479
   },
   {
     "test_name": "default_values",
@@ -235,13 +235,13 @@
         ]
       },
       "exit_code": 0,
-      "execution_time": 717493536,
+      "execution_time": 641220966,
       "success": true
     },
     "upstream_result": {
       "error_message": "Parser creation failed: Args.Tags: default values are not supported for slice or map fields\n",
       "exit_code": 1,
-      "execution_time": 303549639,
+      "execution_time": 327336032,
       "success": false
     },
     "match": false,
@@ -252,7 +252,7 @@
       "Error messages differ",
       "Our error: \nUpstream error: Parser creation failed: Args.Tags: default values are not supported for slice or map fields\n"
     ],
-    "execution_time": 1540735221
+    "execution_time": 1484218274
   },
   {
     "test_name": "partial_defaults",
@@ -262,7 +262,7 @@
         "Port": 9000
       },
       "exit_code": 0,
-      "execution_time": 666756204,
+      "execution_time": 638657936,
       "success": true
     },
     "upstream_result": {
@@ -271,11 +271,11 @@
         "Port": 9000
       },
       "exit_code": 0,
-      "execution_time": 311991961,
+      "execution_time": 317538371,
       "success": true
     },
     "match": true,
-    "execution_time": 1495182643
+    "execution_time": 1447126270
   },
   {
     "test_name": "required_fields_present",
@@ -285,7 +285,7 @@
         "Output": "out.txt"
       },
       "exit_code": 0,
-      "execution_time": 649181672,
+      "execution_time": 674956076,
       "success": true
     },
     "upstream_result": {
@@ -294,24 +294,24 @@
         "Output": "out.txt"
       },
       "exit_code": 0,
-      "execution_time": 336228330,
+      "execution_time": 311405434,
       "success": true
     },
     "match": true,
-    "execution_time": 1490005202
+    "execution_time": 1485965647
   },
   {
     "test_name": "required_fields_missing",
     "our_result": {
       "error_message": "Parse error: required argument missing: output\n",
       "exit_code": 1,
-      "execution_time": 634142677,
+      "execution_time": 643079785,
       "success": false
     },
     "upstream_result": {
       "error_message": "Parse error: --output is required\n",
       "exit_code": 1,
-      "execution_time": 328332162,
+      "execution_time": 317421283,
       "success": false
     },
     "match": false,
@@ -319,7 +319,7 @@
       "Error messages differ",
       "Our error: Parse error: required argument missing: output\n\nUpstream error: Parse error: --output is required\n"
     ],
-    "execution_time": 1444653355
+    "execution_time": 1482459796
   },
   {
     "test_name": "env_var_fallback",
@@ -329,7 +329,7 @@
         "Token": ""
       },
       "exit_code": 0,
-      "execution_time": 661695426,
+      "execution_time": 653906362,
       "success": true
     },
     "upstream_result": {
@@ -338,11 +338,11 @@
         "Token": ""
       },
       "exit_code": 0,
-      "execution_time": 331869350,
+      "execution_time": 312082748,
       "success": true
     },
     "match": true,
-    "execution_time": 1531300599,
+    "execution_time": 1485084146,
     "metadata": {
       "env_vars": {
         "API_TOKEN": "test-token-123",
@@ -357,7 +357,7 @@
         "Token": "cli-token-456"
       },
       "exit_code": 0,
-      "execution_time": 709410934,
+      "execution_time": 627327099,
       "success": true
     },
     "upstream_result": {
@@ -365,11 +365,11 @@
         "Token": "cli-token-456"
       },
       "exit_code": 0,
-      "execution_time": 340792413,
+      "execution_time": 343149258,
       "success": true
     },
     "match": true,
-    "execution_time": 1570909219,
+    "execution_time": 1499083299,
     "metadata": {
       "env_vars": {
         "API_TOKEN": "env-token-123"
@@ -387,7 +387,7 @@
         }
       },
       "exit_code": 0,
-      "execution_time": 696413993,
+      "execution_time": 659571514,
       "success": true
     },
     "upstream_result": {
@@ -399,11 +399,11 @@
         }
       },
       "exit_code": 0,
-      "execution_time": 342548988,
+      "execution_time": 316679875,
       "success": true
     },
     "match": true,
-    "execution_time": 1553300368
+    "execution_time": 1500966177
   },
   {
     "test_name": "nested_subcommands",
@@ -411,11 +411,17 @@
       "parsed_struct": {
         "Git": {
           "Branch": null,
-          "Remote": null
+          "Remote": {
+            "Add": {
+              "Name": "origin",
+              "URL": "https://github.com/user/repo.git"
+            },
+            "Remove": null
+          }
         }
       },
       "exit_code": 0,
-      "execution_time": 636912808,
+      "execution_time": 691506708,
       "success": true
     },
     "upstream_result": {
@@ -432,15 +438,11 @@
         }
       },
       "exit_code": 0,
-      "execution_time": 310068290,
+      "execution_time": 328167751,
       "success": true
     },
-    "match": false,
-    "differences": [
-      "Parsed structures differ",
-      "Our result:\n{\n  \"Git\": {\n    \"Branch\": null,\n    \"Remote\": null\n  }\n}\nUpstream result:\n{\n  \"Git\": {\n    \"Branch\": null,\n    \"Remote\": {\n      \"Add\": {\n        \"Name\": \"origin\",\n        \"URL\": \"https://github.com/user/repo.git\"\n      },\n      \"Remove\": null\n    }\n  }\n}"
-    ],
-    "execution_time": 1480037612
+    "match": true,
+    "execution_time": 1563957194
   },
   {
     "test_name": "subcommand_with_global_flags",
@@ -450,12 +452,12 @@
           "Debug": true,
           "Output": "app"
         },
-        "Config": "",
+        "Config": "config.yaml",
         "Test": null,
-        "Verbose": false
+        "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 632492249,
+      "execution_time": 623461681,
       "success": true
     },
     "upstream_result": {
@@ -469,94 +471,90 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 316841626,
+      "execution_time": 307541706,
       "success": true
     },
-    "match": false,
-    "differences": [
-      "Parsed structures differ",
-      "Our result:\n{\n  \"Build\": {\n    \"Debug\": true,\n    \"Output\": \"app\"\n  },\n  \"Config\": \"\",\n  \"Test\": null,\n  \"Verbose\": false\n}\nUpstream result:\n{\n  \"Build\": {\n    \"Debug\": true,\n    \"Output\": \"app\"\n  },\n  \"Config\": \"config.yaml\",\n  \"Test\": null,\n  \"Verbose\": true\n}"
-    ],
-    "execution_time": 1487559113
+    "match": true,
+    "execution_time": 1433420099
   },
   {
     "test_name": "help_main",
     "our_result": {
       "exit_code": 1,
-      "execution_time": 667376455,
+      "execution_time": 666876150,
       "success": false
     },
     "upstream_result": {
       "exit_code": 1,
-      "execution_time": 301797960,
+      "execution_time": 334284052,
       "success": false
     },
     "match": true,
-    "execution_time": 1485404671
+    "execution_time": 1524023873
   },
   {
     "test_name": "help_subcommand",
     "our_result": {
       "exit_code": 1,
-      "execution_time": 664888431,
+      "execution_time": 672076690,
       "success": false
     },
     "upstream_result": {
       "exit_code": 1,
-      "execution_time": 312105056,
+      "execution_time": 320052715,
       "success": false
     },
     "match": true,
-    "execution_time": 1494281434
+    "execution_time": 1495531341
   },
   {
     "test_name": "help_with_defaults",
     "our_result": {
       "exit_code": 1,
-      "execution_time": 647477859,
+      "execution_time": 721346247,
       "success": false
     },
     "upstream_result": {
       "exit_code": 1,
-      "execution_time": 312772868,
+      "execution_time": 319754705,
       "success": false
     },
     "match": true,
-    "execution_time": 1456547835
+    "execution_time": 1553809493
   },
   {
     "test_name": "unknown_flag",
     "our_result": {
-      "error_message": "2026/01/11 09:50:44 ERROR unknown option: unknown-flag\n2026/01/11 09:50:44 ERROR unknown option: unknown-flag\nParse error: unrecognized argument: -flag\n",
+      "error_message": "2026/01/11 10:18:13 ERROR unknown option: unknown-flag\n2026/01/11 10:18:13 ERROR unknown option: unknown-flag\nParse error: unrecognized argument: -flag\n",
       "exit_code": 1,
-      "execution_time": 622934120,
+      "execution_time": 635644476,
       "success": false
     },
     "upstream_result": {
       "error_message": "Parse error: unknown argument --unknown-flag\n",
       "exit_code": 1,
-      "execution_time": 336952918,
+      "execution_time": 326993336,
       "success": false
     },
     "match": false,
     "differences": [
       "Error messages differ",
-      "Our error: 2026/01/11 09:50:44 ERROR unknown option: unknown-flag\n2026/01/11 09:50:44 ERROR unknown option: unknown-flag\nParse error: unrecognized argument: -flag\n\nUpstream error: Parse error: unknown argument --unknown-flag\n"
+      "Our error: 2026/01/11 10:18:13 ERROR unknown option: unknown-flag\n2026/01/11 10:18:13 ERROR unknown option: unknown-flag\nParse error: unrecognized argument: -flag\n\nUpstream error: Parse error: unknown argument --unknown-flag\n"
     ],
-    "execution_time": 1499170502
+    "execution_time": 1471467949
   },
   {
     "test_name": "invalid_type_conversion",
     "our_result": {
       "error_message": "Parse error: invalid argument for --Count\n",
       "exit_code": 1,
-      "execution_time": 677039014,
+      "execution_time": 697803591,
       "success": false
     },
     "upstream_result": {
       "error_message": "Parse error: error processing -c: strconv.ParseInt: parsing \"not_a_number\": invalid syntax\n",
       "exit_code": 1,
-      "execution_time": 316969509,
+      "execution_time": 366855030,
       "success": false
     },
     "match": false,
@@ -564,40 +562,40 @@
       "Error messages differ",
       "Our error: Parse error: invalid argument for --Count\n\nUpstream error: Parse error: error processing -c: strconv.ParseInt: parsing \"not_a_number\": invalid syntax\n"
     ],
-    "execution_time": 1517965621
+    "execution_time": 1599998196
   },
   {
     "test_name": "missing_argument_value",
     "our_result": {
-      "error_message": "2026/01/11 09:50:47 ERROR option requires an argument: o\nParse error: option requires an argument: -o\n",
+      "error_message": "2026/01/11 10:18:16 ERROR option requires an argument: o\nParse error: option requires an argument: -o\n",
       "exit_code": 1,
-      "execution_time": 624475616,
+      "execution_time": 722578877,
       "success": false
     },
     "upstream_result": {
       "error_message": "Parse error: missing value for -o\n",
       "exit_code": 1,
-      "execution_time": 310559774,
+      "execution_time": 326477608,
       "success": false
     },
     "match": false,
     "differences": [
       "Error messages differ",
-      "Our error: 2026/01/11 09:50:47 ERROR option requires an argument: o\nParse error: option requires an argument: -o\n\nUpstream error: Parse error: missing value for -o\n"
+      "Our error: 2026/01/11 10:18:16 ERROR option requires an argument: o\nParse error: option requires an argument: -o\n\nUpstream error: Parse error: missing value for -o\n"
     ],
-    "execution_time": 1458194316
+    "execution_time": 1605366809
   },
   {
     "test_name": "unknown_subcommand",
     "our_result": {
       "exit_code": 0,
-      "execution_time": 662386240,
+      "execution_time": 682982017,
       "success": true
     },
     "upstream_result": {
       "error_message": "Parse error: invalid subcommand: unknown_command\n",
       "exit_code": 1,
-      "execution_time": 332564889,
+      "execution_time": 300356203,
       "success": false
     },
     "match": false,
@@ -607,7 +605,7 @@
       "Error messages differ",
       "Our error: \nUpstream error: Parse error: invalid subcommand: unknown_command\n"
     ],
-    "execution_time": 1526979988
+    "execution_time": 1499787333
   },
   {
     "test_name": "empty_arguments",
@@ -617,7 +615,7 @@
         "Verbose": false
       },
       "exit_code": 0,
-      "execution_time": 713598008,
+      "execution_time": 646736520,
       "success": true
     },
     "upstream_result": {
@@ -626,18 +624,18 @@
         "Verbose": false
       },
       "exit_code": 0,
-      "execution_time": 330897415,
+      "execution_time": 302673358,
       "success": true
     },
     "match": true,
-    "execution_time": 1565143075
+    "execution_time": 1489111124
   },
   {
     "test_name": "flag_equals_syntax",
     "our_result": {
       "error_message": "Parse error: invalid argument for --Count\n",
       "exit_code": 1,
-      "execution_time": 608329309,
+      "execution_time": 626933606,
       "success": false
     },
     "upstream_result": {
@@ -646,7 +644,7 @@
         "Output": "file.txt"
       },
       "exit_code": 0,
-      "execution_time": 340215968,
+      "execution_time": 319666211,
       "success": true
     },
     "match": false,
@@ -657,7 +655,7 @@
       "Error messages differ",
       "Our error: Parse error: invalid argument for --Count\n\nUpstream error: "
     ],
-    "execution_time": 1472957571
+    "execution_time": 1458646547
   },
   {
     "test_name": "short_flag_combining",
@@ -668,13 +666,13 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 650124403,
+      "execution_time": 637529812,
       "success": true
     },
     "upstream_result": {
       "error_message": "Parse error: unknown argument -vdf\n",
       "exit_code": 1,
-      "execution_time": 322123145,
+      "execution_time": 328654015,
       "success": false
     },
     "match": false,
@@ -685,7 +683,7 @@
       "Error messages differ",
       "Our error: \nUpstream error: Parse error: unknown argument -vdf\n"
     ],
-    "execution_time": 1539323236
+    "execution_time": 1504526245
   },
   {
     "test_name": "double_dash_separator",
@@ -698,7 +696,7 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 681168710,
+      "execution_time": 673619583,
       "success": true
     },
     "upstream_result": {
@@ -710,11 +708,11 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 291192959,
+      "execution_time": 313865496,
       "success": true
     },
     "match": true,
-    "execution_time": 1498685250
+    "execution_time": 1490167120
   },
   {
     "test_name": "special_characters_in_values",
@@ -724,7 +722,7 @@
         "Pattern": "*.{js,ts,go}"
       },
       "exit_code": 0,
-      "execution_time": 677087062,
+      "execution_time": 669514280,
       "success": true
     },
     "upstream_result": {
@@ -733,11 +731,11 @@
         "Pattern": "*.{js,ts,go}"
       },
       "exit_code": 0,
-      "execution_time": 338616647,
+      "execution_time": 323017699,
       "success": true
     },
     "match": true,
-    "execution_time": 1540081803
+    "execution_time": 1507390819
   },
   {
     "test_name": "unicode_in_values",
@@ -747,7 +745,7 @@
         "Name": "José María"
       },
       "exit_code": 0,
-      "execution_time": 724207360,
+      "execution_time": 623900349,
       "success": true
     },
     "upstream_result": {
@@ -756,32 +754,32 @@
         "Name": "José María"
       },
       "exit_code": 0,
-      "execution_time": 336601132,
+      "execution_time": 344376930,
       "success": true
     },
     "match": true,
-    "execution_time": 1615879424
+    "execution_time": 1467927580
   },
   {
     "test_name": "docker_run_simulation",
     "our_result": {
-      "error_message": "2026/01/11 09:50:59 ERROR unknown option: g\nParse error: unrecognized argument: -g\n",
+      "error_message": "2026/01/11 10:18:28 ERROR unknown option: g\nParse error: unrecognized argument: -g\n",
       "exit_code": 1,
-      "execution_time": 688341983,
+      "execution_time": 681328850,
       "success": false
     },
     "upstream_result": {
       "error_message": "Parse error: unknown argument -g\n",
       "exit_code": 1,
-      "execution_time": 327625261,
+      "execution_time": 327864099,
       "success": false
     },
     "match": false,
     "differences": [
       "Error messages differ",
-      "Our error: 2026/01/11 09:50:59 ERROR unknown option: g\nParse error: unrecognized argument: -g\n\nUpstream error: Parse error: unknown argument -g\n"
+      "Our error: 2026/01/11 10:18:28 ERROR unknown option: g\nParse error: unrecognized argument: -g\n\nUpstream error: Parse error: unknown argument -g\n"
     ],
-    "execution_time": 1548362609
+    "execution_time": 1538994682
   },
   {
     "test_name": "kubectl_get_simulation",
@@ -796,7 +794,7 @@
         "Watch": false
       },
       "exit_code": 0,
-      "execution_time": 666903511,
+      "execution_time": 664513519,
       "success": true
     },
     "upstream_result": {
@@ -810,10 +808,10 @@
         "Watch": false
       },
       "exit_code": 0,
-      "execution_time": 316079252,
+      "execution_time": 309745514,
       "success": true
     },
     "match": true,
-    "execution_time": 1497546627
+    "execution_time": 1495634318
   }
 ]
