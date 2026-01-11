@@ -128,6 +128,7 @@ require github.com/alexflint/go-arg v1.4.3
 
 // Test mode - use upstream alexflint/go-arg for compatibility testing
 // This configuration allows us to test against the real upstream implementation
+// No local replacements to avoid conflicts with isolated test environments
 `
 }
 
@@ -190,27 +191,90 @@ func (mam *ModuleAliasManager) copySourceFiles(src, dst string) error {
 		return fmt.Errorf("failed to copy go.mod: %w", err)
 	}
 
-	// Copy the parent go.mod file to avoid module resolution issues
-	parentGoMod := filepath.Join(filepath.Dir(src), "go.mod")
-	parentDstGoMod := filepath.Join(filepath.Dir(dst), "go.mod")
+	// Copy go.sum if it exists
+	srcGoSum := filepath.Join(src, "go.sum")
+	dstGoSum := filepath.Join(dst, "go.sum")
+	if _, err := os.Stat(srcGoSum); err == nil {
+		if err := mam.copyFile(srcGoSum, dstGoSum); err != nil {
+			return fmt.Errorf("failed to copy go.sum: %w", err)
+		}
+	}
 
-	// Create parent directory if needed
-	if err := os.MkdirAll(filepath.Dir(parentDstGoMod), 0755); err != nil {
+	// Copy the parent optargs module to make local replacement work
+	parentSrc := filepath.Dir(src)
+	parentDst := filepath.Dir(dst)
+
+	// Create parent directory structure
+	if err := os.MkdirAll(parentDst, 0755); err != nil {
 		return fmt.Errorf("failed to create parent directory: %w", err)
 	}
 
-	if err := mam.copyFile(parentGoMod, parentDstGoMod); err != nil {
-		// Parent go.mod might not exist, which is okay
-		// Just log and continue
+	// Copy parent go.mod and go.sum
+	parentGoMod := filepath.Join(parentSrc, "go.mod")
+	parentDstGoMod := filepath.Join(parentDst, "go.mod")
+	if _, err := os.Stat(parentGoMod); err == nil {
+		if err := mam.copyFile(parentGoMod, parentDstGoMod); err != nil {
+			return fmt.Errorf("failed to copy parent go.mod: %w", err)
+		}
 	}
 
+	parentGoSum := filepath.Join(parentSrc, "go.sum")
+	parentDstGoSum := filepath.Join(parentDst, "go.sum")
+	if _, err := os.Stat(parentGoSum); err == nil {
+		if err := mam.copyFile(parentGoSum, parentDstGoSum); err != nil {
+			return fmt.Errorf("failed to copy parent go.sum: %w", err)
+		}
+	}
+
+	// Copy all Go source files from parent (optargs core)
+	err := filepath.Walk(parentSrc, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip directories, test files, and non-Go files
+		if info.IsDir() || strings.HasSuffix(path, "_test.go") ||
+			(!strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "go.mod") && !strings.HasSuffix(path, "go.sum")) {
+			return nil
+		}
+
+		// Skip goarg subdirectory to avoid recursion
+		if strings.Contains(path, "/goarg/") || strings.Contains(path, "\\goarg\\") {
+			return nil
+		}
+
+		// Skip already copied files
+		if strings.HasSuffix(path, "go.mod") || strings.HasSuffix(path, "go.sum") {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(parentSrc, path)
+		if err != nil {
+			return err
+		}
+
+		dstPath := filepath.Join(parentDst, relPath)
+
+		// Create directory if needed
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			return err
+		}
+
+		return mam.copyFile(path, dstPath)
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to copy parent source files: %w", err)
+	}
+
+	// Copy goarg source files
 	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Skip directories and non-Go files
-		if info.IsDir() || (!strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "go.mod")) {
+		if info.IsDir() || (!strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "go.mod") && !strings.HasSuffix(path, "go.sum")) {
 			return nil
 		}
 
@@ -219,8 +283,8 @@ func (mam *ModuleAliasManager) copySourceFiles(src, dst string) error {
 			return nil
 		}
 
-		// Skip go.mod as we already copied it
-		if strings.HasSuffix(path, "go.mod") {
+		// Skip already copied files
+		if strings.HasSuffix(path, "go.mod") || strings.HasSuffix(path, "go.sum") {
 			return nil
 		}
 
