@@ -86,6 +86,11 @@ func NewParser(config Config, dest interface{}) (*Parser, error) {
 		return nil, fmt.Errorf("failed to parse struct: %w", err)
 	}
 
+	// Validate compatibility with upstream alexflint/go-arg
+	if err := validateUpstreamCompatibility(metadata, destElem.Type()); err != nil {
+		return nil, err
+	}
+
 	// Set default exit function if not provided
 	if config.Exit == nil {
 		config.Exit = os.Exit
@@ -128,12 +133,42 @@ func (p *Parser) Parse(args []string) error {
 		// Look for subcommand in arguments to see if one was invoked
 		var subcommandFound string
 		var subMetadata *StructMetadata
-		for _, arg := range args {
+		var unknownSubcommand string
+
+		// Find the first non-flag argument - this would be the subcommand
+		for i, arg := range args {
+			// Skip flags and their arguments
+			if strings.HasPrefix(arg, "-") {
+				// Skip this flag and potentially its argument
+				continue
+			}
+
+			// Skip arguments that follow flags requiring values
+			if i > 0 && strings.HasPrefix(args[i-1], "-") {
+				// Check if the previous flag requires an argument
+				// This is a simplified check - in practice we'd need to know which flags require args
+				prevFlag := args[i-1]
+				if !strings.Contains(prevFlag, "=") && !isBooleanFlag(prevFlag, p.metadata) {
+					// Previous flag likely requires an argument, so this arg is its value
+					continue
+				}
+			}
+
+			// This looks like a potential subcommand (first non-flag, non-flag-value argument)
 			if metadata, cmdName := p.findSubcommand(arg); metadata != nil {
 				subcommandFound = cmdName
 				subMetadata = metadata
 				break
+			} else {
+				// This is an unknown subcommand
+				unknownSubcommand = arg
+				break
 			}
+		}
+
+		// If we found an unknown subcommand, return error to match upstream
+		if unknownSubcommand != "" && subcommandFound == "" {
+			return fmt.Errorf("Parse error: invalid subcommand: %s", unknownSubcommand)
 		}
 
 		if subcommandFound != "" {
@@ -371,4 +406,34 @@ func (p *Parser) findSubcommand(name string) (*StructMetadata, string) {
 	}
 
 	return nil, ""
+}
+
+// isBooleanFlag checks if a flag is a boolean flag that doesn't require an argument
+func isBooleanFlag(flag string, metadata *StructMetadata) bool {
+	// Remove leading dashes
+	flagName := strings.TrimPrefix(flag, "--")
+	flagName = strings.TrimPrefix(flagName, "-")
+
+	// Look for this flag in metadata
+	for _, field := range metadata.Fields {
+		if field.Short == flagName || field.Long == flagName {
+			return field.Type.Kind() == reflect.Bool
+		}
+	}
+	return false
+}
+
+// validateUpstreamCompatibility validates that the struct is compatible with upstream alexflint/go-arg
+func validateUpstreamCompatibility(metadata *StructMetadata, structType reflect.Type) error {
+	// Check for slice fields with default values - upstream doesn't support this
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+		if field.Type.Kind() == reflect.Slice {
+			// Check if this field has a default value
+			if defaultTag, exists := field.Tag.Lookup("default"); exists && defaultTag != "" {
+				return fmt.Errorf("%s.%s: default values are not supported for slice or map fields", structType.Name(), field.Name)
+			}
+		}
+	}
+	return nil
 }

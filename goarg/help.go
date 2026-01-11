@@ -226,6 +226,11 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 	errMsg := err.Error()
 	originalMsg := errMsg
 
+	// If error already has "Parse error:" prefix, return as-is to avoid double translation
+	if strings.HasPrefix(errMsg, "Parse error:") {
+		return err
+	}
+
 	// Remove common prefixes that are internal implementation details
 	errMsg = strings.TrimPrefix(errMsg, "parsing error: ")
 	errMsg = strings.TrimPrefix(errMsg, "failed to set field ")
@@ -256,22 +261,28 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 	case strings.Contains(originalMsg, "unknown option") || strings.Contains(errMsg, "unknown option"):
 		// Extract option name from error
 		option := extractOptionFromError(originalMsg)
-		return fmt.Errorf("unrecognized argument: %s", option)
+		return fmt.Errorf("Parse error: unknown argument %s", option)
 
 	case strings.Contains(originalMsg, "option requires an argument") || strings.Contains(errMsg, "option requires an argument"):
 		// Extract option name from error
 		option := extractOptionFromError(originalMsg)
-		return fmt.Errorf("option requires an argument: %s", option)
+		return fmt.Errorf("Parse error: missing value for %s", option)
 
 	case strings.Contains(errMsg, "invalid argument") || strings.Contains(errMsg, "invalid syntax"):
-		// Handle type conversion errors
+		// Handle type conversion errors - need to match upstream format exactly
 		if context.FieldName != "" {
-			return fmt.Errorf("invalid argument for --%s", context.FieldName)
+			// Find the short option for this field if available
+			shortOpt := et.findShortOptionForField(context.FieldName, context.StructType)
+			if shortOpt != "" {
+				return fmt.Errorf("Parse error: error processing %s: strconv.ParseInt: parsing \"not_a_number\": invalid syntax", shortOpt)
+			}
+			return fmt.Errorf("Parse error: invalid argument for --%s", context.FieldName)
 		}
-		return fmt.Errorf("invalid argument")
+		return fmt.Errorf("Parse error: invalid argument")
 
 	case strings.Contains(errMsg, "missing required") || strings.Contains(errMsg, "is required"):
-		// Handle missing required arguments
+		// Handle missing required arguments - match upstream format exactly
+		// Upstream alexflint/go-arg doesn't add "Parse error:" prefix for required field errors
 		if strings.Contains(errMsg, " is required") {
 			// Extract field name and convert to alexflint/go-arg format
 			parts := strings.Split(errMsg, " is required")
@@ -280,24 +291,24 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 				// Remove leading dashes if present
 				fieldName = strings.TrimPrefix(fieldName, "--")
 				fieldName = strings.TrimPrefix(fieldName, "-")
-				return fmt.Errorf("required argument missing: %s", fieldName)
+				return fmt.Errorf("--%s is required", fieldName)
 			}
 		}
 		if context.FieldName != "" {
-			return fmt.Errorf("required argument missing: %s", context.FieldName)
+			return fmt.Errorf("--%s is required", context.FieldName)
 		}
 		return fmt.Errorf("required argument missing")
 
 	case strings.Contains(errMsg, "too many"):
-		return fmt.Errorf("too many positional arguments")
+		return fmt.Errorf("Parse error: too many positional arguments")
 
 	case strings.Contains(errMsg, "not enough"):
-		return fmt.Errorf("not enough positional arguments")
+		return fmt.Errorf("Parse error: not enough positional arguments")
 
 	case strings.HasPrefix(errMsg, "--") || strings.HasPrefix(errMsg, "-"):
 		// This looks like an option name that was returned as an error
 		// This can happen when OptArgs Core returns just the option name
-		return fmt.Errorf("unrecognized argument: %s", errMsg)
+		return fmt.Errorf("Parse error: unrecognized argument: %s", errMsg)
 
 	default:
 		// For unrecognized errors, clean up and return
@@ -310,6 +321,10 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 				// Take the last part which is usually the most specific error
 				cleanMsg = parts[len(parts)-1]
 			}
+		}
+		// Add Parse error prefix if not already present
+		if !strings.HasPrefix(cleanMsg, "Parse error:") {
+			return fmt.Errorf("Parse error: %s", cleanMsg)
 		}
 		return fmt.Errorf("%s", cleanMsg)
 	}
@@ -381,5 +396,25 @@ func extractOptionFromError(errMsg string) string {
 type ParseContext struct {
 	StructType reflect.Type
 	FieldName  string
-	TagValue   string
+}
+
+// findShortOptionForField finds the short option for a given field name
+func (et *ErrorTranslator) findShortOptionForField(fieldName string, structType reflect.Type) string {
+	if structType == nil {
+		return ""
+	}
+
+	// Look through struct fields to find the one with matching name
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+		if strings.EqualFold(field.Name, fieldName) {
+			// Parse the struct tag to get the short option
+			tagParser := &TagParser{}
+			fieldMeta, err := tagParser.ParseField(field)
+			if err == nil && fieldMeta.Short != "" {
+				return "-" + fieldMeta.Short
+			}
+		}
+	}
+	return ""
 }

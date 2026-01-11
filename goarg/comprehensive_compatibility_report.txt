@@ -1,103 +1,58 @@
 Detailed Compatibility Test Report
 ==================================
 
-✓ bool_flags (1527.59ms)
-✓ string_flags (1558.99ms)
-✓ numeric_flags (1478.49ms)
-✓ slice_flags (1564.40ms)
-✓ positional_single (1498.09ms)
-✓ positional_multiple (1526.57ms)
-✓ positional_slice (1456.14ms)
-✓ mixed_positional_flags (1516.63ms)
-✗ default_values (1484.22ms)
-  - Exit code differs: ours=0, upstream=1
-  - Success status differs: ours=true, upstream=false
-  - Parsed structures differ
+✓ bool_flags (1554.93ms)
+✓ string_flags (1549.93ms)
+✓ numeric_flags (1496.77ms)
+✓ slice_flags (1505.03ms)
+✓ positional_single (1475.79ms)
+✓ positional_multiple (1489.13ms)
+✓ positional_slice (1513.93ms)
+✓ mixed_positional_flags (1524.35ms)
+✓ default_values (1508.62ms)
+✓ partial_defaults (1542.42ms)
+✓ required_fields_present (2720.37ms)
+✓ required_fields_missing (1944.66ms)
+✓ env_var_fallback (1948.48ms)
+✓ env_var_override (1836.51ms)
+✓ simple_subcommand (1929.54ms)
+✓ nested_subcommands (1917.99ms)
+✓ subcommand_with_global_flags (1663.83ms)
+✓ help_main (2038.69ms)
+✓ help_subcommand (2026.07ms)
+✓ help_with_defaults (1808.94ms)
+✗ unknown_flag (1753.52ms)
   - Error messages differ
-  - Our error:
-Upstream error: Parser creation failed: Args.Tags: default values are not supported for slice or map fields
 
-
-✓ partial_defaults (1447.13ms)
-✓ required_fields_present (1485.97ms)
-✗ required_fields_missing (1482.46ms)
+✗ invalid_type_conversion (1697.54ms)
   - Error messages differ
-  - Our error: Parse error: required argument missing: output
 
-Upstream error: Parse error: --output is required
-
-
-✓ env_var_fallback (1485.08ms)
-✓ env_var_override (1499.08ms)
-✓ simple_subcommand (1500.97ms)
-✓ nested_subcommands (1563.96ms)
-✓ subcommand_with_global_flags (1433.42ms)
-✓ help_main (1524.02ms)
-✓ help_subcommand (1495.53ms)
-✓ help_with_defaults (1553.81ms)
-✗ unknown_flag (1471.47ms)
+✗ missing_argument_value (1954.68ms)
   - Error messages differ
-  - Our error: 2026/01/11 10:18:13 ERROR unknown option: unknown-flag
-2026/01/11 10:18:13 ERROR unknown option: unknown-flag
-Parse error: unrecognized argument: -flag
 
-Upstream error: Parse error: unknown argument --unknown-flag
-
-
-✗ invalid_type_conversion (1600.00ms)
+✗ unknown_subcommand (1681.80ms)
   - Error messages differ
-  - Our error: Parse error: invalid argument for --Count
 
-Upstream error: Parse error: error processing -c: strconv.ParseInt: parsing "not_a_number": invalid syntax
-
-
-✗ missing_argument_value (1605.37ms)
-  - Error messages differ
-  - Our error: 2026/01/11 10:18:16 ERROR option requires an argument: o
-Parse error: option requires an argument: -o
-
-Upstream error: Parse error: missing value for -o
-
-
-✗ unknown_subcommand (1499.79ms)
-  - Exit code differs: ours=0, upstream=1
-  - Success status differs: ours=true, upstream=false
-  - Error messages differ
-  - Our error:
-Upstream error: Parse error: invalid subcommand: unknown_command
-
-
-✓ empty_arguments (1489.11ms)
-✗ flag_equals_syntax (1458.65ms)
+✓ empty_arguments (1786.19ms)
+✗ flag_equals_syntax (1597.60ms)
   - Exit code differs: ours=1, upstream=0
   - Success status differs: ours=false, upstream=true
   - Parsed structures differ
   - Error messages differ
-  - Our error: Parse error: invalid argument for --Count
 
-Upstream error:
-
-✗ short_flag_combining (1504.53ms)
+✗ short_flag_combining (1495.98ms)
   - Exit code differs: ours=0, upstream=1
   - Success status differs: ours=true, upstream=false
   - Parsed structures differ
   - Error messages differ
-  - Our error:
-Upstream error: Parse error: unknown argument -vdf
 
-
-✓ double_dash_separator (1490.17ms)
-✓ special_characters_in_values (1507.39ms)
-✓ unicode_in_values (1467.93ms)
-✗ docker_run_simulation (1538.99ms)
+✓ double_dash_separator (1789.59ms)
+✓ special_characters_in_values (1665.15ms)
+✓ unicode_in_values (1602.45ms)
+✗ docker_run_simulation (1540.71ms)
   - Error messages differ
-  - Our error: 2026/01/11 10:18:28 ERROR unknown option: g
-Parse error: unrecognized argument: -g
 
-Upstream error: Parse error: unknown argument -g
+✓ kubectl_get_simulation (1536.75ms)
 
-
-✓ kubectl_get_simulation (1495.63ms)
-
-Summary: 23 passed, 9 failed
-Success Rate: 71.88%
+Summary: 25 passed, 7 failed
+Success Rate: 78.12%
