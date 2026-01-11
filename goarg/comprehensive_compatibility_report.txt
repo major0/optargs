@@ -1,46 +1,15 @@
 Detailed Compatibility Test Report
 ==================================
 
-✓ bool_flags (2352.88ms)
-✓ string_flags (1487.08ms)
-✓ numeric_flags (1492.48ms)
-✗ slice_flags (1440.20ms)
-  - Parsed structures differ
-  - Our result:
-{
-  "Numbers": [
-    1,
-    2,
-    3
-  ],
-  "Rates": [
-    1.1,
-    2.2
-  ],
-  "Tags": [
-    "tag1",
-    "tag2",
-    "tag3"
-  ]
-}
-Upstream result:
-{
-  "Numbers": [
-    3
-  ],
-  "Rates": [
-    2.2
-  ],
-  "Tags": [
-    "tag3"
-  ]
-}
-
-✓ positional_single (1499.31ms)
-✓ positional_multiple (1413.29ms)
-✓ positional_slice (1458.89ms)
-✓ mixed_positional_flags (1403.21ms)
-✗ default_values (1523.17ms)
+✓ bool_flags (2153.22ms)
+✓ string_flags (1515.67ms)
+✓ numeric_flags (1550.26ms)
+✓ slice_flags (1484.25ms)
+✓ positional_single (1503.47ms)
+✓ positional_multiple (1513.61ms)
+✓ positional_slice (1497.67ms)
+✓ mixed_positional_flags (1673.40ms)
+✗ default_values (1540.74ms)
   - Exit code differs: ours=0, upstream=1
   - Success status differs: ours=true, upstream=false
   - Parsed structures differ
@@ -49,19 +18,19 @@ Upstream result:
 Upstream error: Parser creation failed: Args.Tags: default values are not supported for slice or map fields
 
 
-✓ partial_defaults (1421.88ms)
-✓ required_fields_present (1463.66ms)
-✗ required_fields_missing (1455.84ms)
+✓ partial_defaults (1495.18ms)
+✓ required_fields_present (1490.01ms)
+✗ required_fields_missing (1444.65ms)
   - Error messages differ
   - Our error: Parse error: required argument missing: output
 
 Upstream error: Parse error: --output is required
 
 
-✓ env_var_fallback (1495.43ms)
-✓ env_var_override (1460.13ms)
-✓ simple_subcommand (1494.68ms)
-✗ nested_subcommands (1501.35ms)
+✓ env_var_fallback (1531.30ms)
+✓ env_var_override (1570.91ms)
+✓ simple_subcommand (1553.30ms)
+✗ nested_subcommands (1480.04ms)
   - Parsed structures differ
   - Our result:
 {
@@ -84,7 +53,7 @@ Upstream result:
   }
 }
 
-✗ subcommand_with_global_flags (1449.20ms)
+✗ subcommand_with_global_flags (1487.56ms)
   - Parsed structures differ
   - Our result:
 {
@@ -107,34 +76,34 @@ Upstream result:
   "Verbose": true
 }
 
-✓ help_main (1489.75ms)
-✓ help_subcommand (1419.83ms)
-✓ help_with_defaults (1500.49ms)
-✗ unknown_flag (1462.58ms)
+✓ help_main (1485.40ms)
+✓ help_subcommand (1494.28ms)
+✓ help_with_defaults (1456.55ms)
+✗ unknown_flag (1499.17ms)
   - Error messages differ
-  - Our error: 2026/01/11 09:44:41 ERROR unknown option: unknown-flag
-2026/01/11 09:44:41 ERROR unknown option: unknown-flag
+  - Our error: 2026/01/11 09:50:44 ERROR unknown option: unknown-flag
+2026/01/11 09:50:44 ERROR unknown option: unknown-flag
 Parse error: unrecognized argument: -flag
 
 Upstream error: Parse error: unknown argument --unknown-flag
 
 
-✗ invalid_type_conversion (1548.90ms)
+✗ invalid_type_conversion (1517.97ms)
   - Error messages differ
   - Our error: Parse error: invalid argument for --Count
 
 Upstream error: Parse error: error processing -c: strconv.ParseInt: parsing "not_a_number": invalid syntax
 
 
-✗ missing_argument_value (1454.47ms)
+✗ missing_argument_value (1458.19ms)
   - Error messages differ
-  - Our error: 2026/01/11 09:44:44 ERROR option requires an argument: o
+  - Our error: 2026/01/11 09:50:47 ERROR option requires an argument: o
 Parse error: option requires an argument: -o
 
 Upstream error: Parse error: missing value for -o
 
 
-✗ unknown_subcommand (1424.97ms)
+✗ unknown_subcommand (1526.98ms)
   - Exit code differs: ours=0, upstream=1
   - Success status differs: ours=true, upstream=false
   - Error messages differ
@@ -142,8 +111,8 @@ Upstream error: Parse error: missing value for -o
 Upstream error: Parse error: invalid subcommand: unknown_command
 
 
-✓ empty_arguments (1449.56ms)
-✗ flag_equals_syntax (1405.20ms)
+✓ empty_arguments (1565.14ms)
+✗ flag_equals_syntax (1472.96ms)
   - Exit code differs: ours=1, upstream=0
   - Success status differs: ours=false, upstream=true
   - Parsed structures differ
@@ -152,7 +121,7 @@ Upstream error: Parse error: invalid subcommand: unknown_command
 
 Upstream error:
 
-✗ short_flag_combining (1429.67ms)
+✗ short_flag_combining (1539.32ms)
   - Exit code differs: ours=0, upstream=1
   - Success status differs: ours=true, upstream=false
   - Parsed structures differ
@@ -161,18 +130,18 @@ Upstream error:
 Upstream error: Parse error: unknown argument -vdf
 
 
-✓ double_dash_separator (1412.49ms)
-✓ special_characters_in_values (1418.19ms)
-✓ unicode_in_values (1505.07ms)
-✗ docker_run_simulation (1498.20ms)
+✓ double_dash_separator (1498.69ms)
+✓ special_characters_in_values (1540.08ms)
+✓ unicode_in_values (1615.88ms)
+✗ docker_run_simulation (1548.36ms)
   - Error messages differ
-  - Our error: 2026/01/11 09:44:55 ERROR unknown option: g
+  - Our error: 2026/01/11 09:50:59 ERROR unknown option: g
 Parse error: unrecognized argument: -g
 
 Upstream error: Parse error: unknown argument -g
 
 
-✓ kubectl_get_simulation (1423.24ms)
+✓ kubectl_get_simulation (1497.55ms)
 
-Summary: 20 passed, 12 failed
-Success Rate: 62.50%
+Summary: 21 passed, 11 failed
+Success Rate: 65.62%

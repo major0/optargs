@@ -227,7 +227,7 @@ func (ci *CoreIntegration) setFieldValue(fieldValue reflect.Value, field *FieldM
 		return nil
 	}
 
-	// Handle slice types - append to existing values
+	// Handle slice types - replace existing values (match alexflint/go-arg behavior)
 	if field.Type.Kind() == reflect.Slice {
 		// Convert the argument to the element type
 		elemType := field.Type.Elem()
@@ -236,8 +236,10 @@ func (ci *CoreIntegration) setFieldValue(fieldValue reflect.Value, field *FieldM
 			return fmt.Errorf("failed to convert slice element: %w", err)
 		}
 
-		// Append to existing slice
-		newSlice := reflect.Append(fieldValue, reflect.ValueOf(converted))
+		// Create new slice with only this value (match upstream behavior)
+		// alexflint/go-arg replaces slice values instead of accumulating them
+		newSlice := reflect.MakeSlice(field.Type, 1, 1)
+		newSlice.Index(0).Set(reflect.ValueOf(converted))
 		fieldValue.Set(newSlice)
 		return nil
 	}
