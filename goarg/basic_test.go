@@ -235,7 +235,7 @@ func TestDefaultValues(t *testing.T) {
 		IntVal    int      `arg:"--int" default:"42" help:"integer value"`
 		FloatVal  float64  `arg:"--float" default:"3.14" help:"float value"`
 		BoolVal   bool     `arg:"--bool" default:"true" help:"boolean value"`
-		SliceVal  []string `arg:"--slice" default:"a,b,c" help:"slice value"`
+		SliceVal  []string `arg:"--slice" help:"slice value"` // No default - upstream doesn't support slice defaults
 	}
 
 	tests := []struct {
@@ -251,18 +251,18 @@ func TestDefaultValues(t *testing.T) {
 				IntVal:    42,
 				FloatVal:  3.14,
 				BoolVal:   true,
-				SliceVal:  []string{"a", "b", "c"},
+				SliceVal:  nil, // No default for slices
 			},
 		},
 		{
 			name: "override_some_defaults",
 			args: []string{"--string", "custom", "--int", "100"},
 			expected: DefaultCmd{
-				StringVal: "custom",                // Overridden
-				IntVal:    100,                     // Overridden
-				FloatVal:  3.14,                    // Default
-				BoolVal:   true,                    // Default
-				SliceVal:  []string{"a", "b", "c"}, // Default
+				StringVal: "custom", // Overridden
+				IntVal:    100,      // Overridden
+				FloatVal:  3.14,     // Default
+				BoolVal:   true,     // Default
+				SliceVal:  nil,      // No default for slices
 			},
 		},
 	}

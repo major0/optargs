@@ -86,6 +86,11 @@ func NewParser(config Config, dest interface{}) (*Parser, error) {
 		return nil, fmt.Errorf("failed to parse struct: %w", err)
 	}
 
+	// Validate compatibility with upstream alexflint/go-arg
+	if err := validateUpstreamCompatibility(metadata, destElem.Type()); err != nil {
+		return nil, err
+	}
+
 	// Set default exit function if not provided
 	if config.Exit == nil {
 		config.Exit = os.Exit
@@ -123,44 +128,81 @@ func (p *Parser) Parse(args []string) error {
 
 	p.coreParser = coreParser
 
-	// Check if we have subcommands and if a subcommand was invoked
-	if len(p.metadata.Subcommands) > 0 && len(args) > 0 {
-		// Look for subcommand in arguments
+	// Check if we have subcommands - let OptArgs Core handle the full parsing including global flags
+	if len(p.metadata.Subcommands) > 0 {
+		// Look for subcommand in arguments to see if one was invoked
+		var subcommandFound string
+		var subMetadata *StructMetadata
+		var unknownSubcommand string
+
+		// Find the first non-flag argument - this would be the subcommand
 		for i, arg := range args {
-			// Try case insensitive lookup for subcommands
-			subMetadata, subcommandName := p.findSubcommand(arg)
-			if subMetadata != nil {
-				// Found subcommand, dispatch to it
-				subParser, err := coreParser.Commands.ExecuteCommandCaseInsensitive(subcommandName, args[i+1:], true) // Always use case insensitive for go-arg
-				if err != nil {
-					return p.translateError(err, arg)
-				}
-
-				// Get the subcommand field from the destination struct
-				destValue := reflect.ValueOf(p.dest).Elem()
-				var subcommandField reflect.Value
-				for j := 0; j < destValue.NumField(); j++ {
-					field := destValue.Type().Field(j)
-					fieldMeta, _ := (&TagParser{}).ParseField(field)
-					if fieldMeta.IsSubcommand && strings.EqualFold(fieldMeta.SubcommandName, arg) {
-						subcommandField = destValue.Field(j)
-						break
-					}
-				}
-
-				if !subcommandField.IsValid() {
-					return p.translateError(fmt.Errorf("subcommand field not found for %s", arg), arg)
-				}
-
-				// Ensure subcommand field is initialized
-				if subcommandField.IsNil() {
-					subcommandField.Set(reflect.New(subcommandField.Type().Elem()))
-				}
-
-				// Process all options from the subcommand parser in a single pass
-				// This handles both inherited options (set on parent) and subcommand options (set on subcommand)
-				return p.translateError(p.processOptionsWithInheritance(subParser, coreIntegration, subMetadata, subcommandField.Interface()), "")
+			// Skip flags and their arguments
+			if strings.HasPrefix(arg, "-") {
+				// Skip this flag and potentially its argument
+				continue
 			}
+
+			// Skip arguments that follow flags requiring values
+			if i > 0 && strings.HasPrefix(args[i-1], "-") {
+				// Check if the previous flag requires an argument
+				// This is a simplified check - in practice we'd need to know which flags require args
+				prevFlag := args[i-1]
+				if !strings.Contains(prevFlag, "=") && !isBooleanFlag(prevFlag, p.metadata) {
+					// Previous flag likely requires an argument, so this arg is its value
+					continue
+				}
+			}
+
+			// This looks like a potential subcommand (first non-flag, non-flag-value argument)
+			if metadata, cmdName := p.findSubcommand(arg); metadata != nil {
+				subcommandFound = cmdName
+				subMetadata = metadata
+				break
+			} else {
+				// This is an unknown subcommand
+				unknownSubcommand = arg
+				break
+			}
+		}
+
+		// If we found an unknown subcommand, return error to match upstream
+		if unknownSubcommand != "" && subcommandFound == "" {
+			return fmt.Errorf("Parse error: invalid subcommand: %s", unknownSubcommand)
+		}
+
+		if subcommandFound != "" {
+			// Found subcommand, let OptArgs Core parse the entire argument list
+			// This allows global flags before the subcommand to be parsed correctly
+			subParser, err := coreParser.Commands.ExecuteCommandCaseInsensitive(subcommandFound, args, true) // Pass full args, not just subcommand args
+			if err != nil {
+				return p.translateError(err, subcommandFound)
+			}
+
+			// Get the subcommand field from the destination struct
+			destValue := reflect.ValueOf(p.dest).Elem()
+			var subcommandField reflect.Value
+			for j := 0; j < destValue.NumField(); j++ {
+				field := destValue.Type().Field(j)
+				fieldMeta, _ := (&TagParser{}).ParseField(field)
+				if fieldMeta.IsSubcommand && strings.EqualFold(fieldMeta.SubcommandName, subcommandFound) {
+					subcommandField = destValue.Field(j)
+					break
+				}
+			}
+
+			if !subcommandField.IsValid() {
+				return p.translateError(fmt.Errorf("subcommand field not found for %s", subcommandFound), subcommandFound)
+			}
+
+			// Ensure subcommand field is initialized
+			if subcommandField.IsNil() {
+				subcommandField.Set(reflect.New(subcommandField.Type().Elem()))
+			}
+
+			// Process all options from the subcommand parser in a single pass
+			// This handles both inherited options (set on parent) and subcommand options (set on subcommand)
+			return p.translateError(p.processOptionsWithInheritance(subParser, coreIntegration, subMetadata, subcommandField.Interface()), "")
 		}
 	}
 
@@ -178,8 +220,9 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 		positionals: []PositionalArg{},
 	}
 
-	// Build subcommand option mappings
+	// Build subcommand option mappings and positional arguments
 	subIntegration.BuildLongOpts()
+	subIntegration.buildPositionalArgs() // This was missing!
 
 	destValue := reflect.ValueOf(p.dest).Elem()
 	subDestValue := reflect.ValueOf(subcommandDest).Elem()
@@ -245,6 +288,42 @@ func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parent
 	typeConverter := &TypeConverter{}
 	if err := typeConverter.ValidateRequired(subcommandDest, subMetadata); err != nil {
 		return p.translateError(err, "")
+	}
+
+	// Process nested subcommands if any were invoked
+	if len(subMetadata.Subcommands) > 0 {
+		// Check if a nested subcommand was invoked by looking at the subcommand parser's commands
+		if subParser.Commands != nil {
+			// Look for executed subcommands in the subcommand parser
+			for nestedCmdName, nestedMetadata := range subMetadata.Subcommands {
+				// Check if this nested command exists
+				if nestedParser, exists := subParser.Commands.GetCommand(nestedCmdName); exists && nestedParser != nil {
+					// Check if this nested command should be processed by looking at its arguments
+					// If the nested parser has arguments, it means this command was invoked
+					if len(nestedParser.Args) > 0 {
+						// Find the corresponding field in the subcommand struct
+						for i := 0; i < subDestValue.NumField(); i++ {
+							field := subDestValue.Type().Field(i)
+							fieldMeta, _ := (&TagParser{}).ParseField(field)
+							if fieldMeta.IsSubcommand && strings.EqualFold(fieldMeta.SubcommandName, nestedCmdName) {
+								nestedField := subDestValue.Field(i)
+
+								// Initialize the nested subcommand field if it's nil
+								if nestedField.IsNil() {
+									nestedField.Set(reflect.New(nestedField.Type().Elem()))
+								}
+
+								// Recursively process the nested subcommand
+								if err := p.processOptionsWithInheritance(nestedParser, subIntegration, nestedMetadata, nestedField.Interface()); err != nil {
+									return p.translateError(err, nestedCmdName)
+								}
+								break
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	// Process environment variables and defaults for parent as well
@@ -327,4 +406,34 @@ func (p *Parser) findSubcommand(name string) (*StructMetadata, string) {
 	}
 
 	return nil, ""
+}
+
+// isBooleanFlag checks if a flag is a boolean flag that doesn't require an argument
+func isBooleanFlag(flag string, metadata *StructMetadata) bool {
+	// Remove leading dashes
+	flagName := strings.TrimPrefix(flag, "--")
+	flagName = strings.TrimPrefix(flagName, "-")
+
+	// Look for this flag in metadata
+	for _, field := range metadata.Fields {
+		if field.Short == flagName || field.Long == flagName {
+			return field.Type.Kind() == reflect.Bool
+		}
+	}
+	return false
+}
+
+// validateUpstreamCompatibility validates that the struct is compatible with upstream alexflint/go-arg
+func validateUpstreamCompatibility(metadata *StructMetadata, structType reflect.Type) error {
+	// Check for slice fields with default values - upstream doesn't support this
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+		if field.Type.Kind() == reflect.Slice {
+			// Check if this field has a default value
+			if defaultTag, exists := field.Tag.Lookup("default"); exists && defaultTag != "" {
+				return fmt.Errorf("%s.%s: default values are not supported for slice or map fields", structType.Name(), field.Name)
+			}
+		}
+	}
+	return nil
 }

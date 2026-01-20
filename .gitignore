@@ -27,8 +27,14 @@ debug.test
 # Test artifacts and temporary files
 *.tmp
 *.temp
-*_test_*
-test_*
+*_test_*.txt
+*_test_*.json
+*_test_*.xml
+test_*.txt
+test_*.json
+test_*.xml
+test_output/
+test_results/
 
 # Git workflow temporary files (security requirement)
 .commit-msg.txt

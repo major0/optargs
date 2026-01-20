@@ -1,0 +1,792 @@
+[
+  {
+    "test_name": "bool_flags",
+    "our_result": {
+      "parsed_struct": {
+        "Debug": true,
+        "Quiet": false,
+        "Verbose": true
+      },
+      "exit_code": 0,
+      "execution_time": 463678880,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Debug": true,
+        "Quiet": false,
+        "Verbose": true
+      },
+      "exit_code": 0,
+      "execution_time": 309355434,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1641619156
+  },
+  {
+    "test_name": "string_flags",
+    "our_result": {
+      "parsed_struct": {
+        "Config": "config.yaml",
+        "LogLevel": "debug",
+        "Output": "output.txt"
+      },
+      "exit_code": 0,
+      "execution_time": 520904463,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Config": "config.yaml",
+        "LogLevel": "debug",
+        "Output": "output.txt"
+      },
+      "exit_code": 0,
+      "execution_time": 342711815,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1373798908
+  },
+  {
+    "test_name": "numeric_flags",
+    "our_result": {
+      "parsed_struct": {
+        "Count": 42,
+        "Port": 8080,
+        "Rate": 3.14159,
+        "Size": 1048576,
+        "Timeout": 30.5
+      },
+      "exit_code": 0,
+      "execution_time": 519317647,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Count": 42,
+        "Port": 8080,
+        "Rate": 3.14159,
+        "Size": 1048576,
+        "Timeout": 30.5
+      },
+      "exit_code": 0,
+      "execution_time": 349530406,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1371554270
+  },
+  {
+    "test_name": "slice_flags",
+    "our_result": {
+      "parsed_struct": {
+        "Numbers": [
+          3
+        ],
+        "Rates": [
+          2.2
+        ],
+        "Tags": [
+          "tag3"
+        ]
+      },
+      "exit_code": 0,
+      "execution_time": 462120485,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Numbers": [
+          3
+        ],
+        "Rates": [
+          2.2
+        ],
+        "Tags": [
+          "tag3"
+        ]
+      },
+      "exit_code": 0,
+      "execution_time": 304638449,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1264979709
+  },
+  {
+    "test_name": "positional_single",
+    "our_result": {
+      "parsed_struct": {
+        "File": "input.txt"
+      },
+      "exit_code": 0,
+      "execution_time": 496120307,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "File": "input.txt"
+      },
+      "exit_code": 0,
+      "execution_time": 298785442,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1308347069
+  },
+  {
+    "test_name": "positional_multiple",
+    "our_result": {
+      "parsed_struct": {
+        "Dest": "dest.txt",
+        "Source": "source.txt"
+      },
+      "exit_code": 0,
+      "execution_time": 505420186,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Dest": "dest.txt",
+        "Source": "source.txt"
+      },
+      "exit_code": 0,
+      "execution_time": 330517777,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1314055527
+  },
+  {
+    "test_name": "positional_slice",
+    "our_result": {
+      "parsed_struct": {
+        "Files": [
+          "file1.txt",
+          "file2.txt",
+          "file3.txt"
+        ]
+      },
+      "exit_code": 0,
+      "execution_time": 486411008,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Files": [
+          "file1.txt",
+          "file2.txt",
+          "file3.txt"
+        ]
+      },
+      "exit_code": 0,
+      "execution_time": 299717544,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1286418252
+  },
+  {
+    "test_name": "mixed_positional_flags",
+    "our_result": {
+      "parsed_struct": {
+        "Files": [
+          "extra1.txt",
+          "extra2.txt"
+        ],
+        "Input": "input.txt",
+        "Output": "output.txt",
+        "Verbose": true
+      },
+      "exit_code": 0,
+      "execution_time": 495637625,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Files": [
+          "extra1.txt",
+          "extra2.txt"
+        ],
+        "Input": "input.txt",
+        "Output": "output.txt",
+        "Verbose": true
+      },
+      "exit_code": 0,
+      "execution_time": 322379363,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1296990154
+  },
+  {
+    "test_name": "default_values",
+    "our_result": {
+      "error_message": "Parser creation failed: Args.Tags: default values are not supported for slice or map fields\n",
+      "exit_code": 1,
+      "execution_time": 507252001,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "Parser creation failed: Args.Tags: default values are not supported for slice or map fields\n",
+      "exit_code": 1,
+      "execution_time": 322609793,
+      "success": false
+    },
+    "match": true,
+    "execution_time": 1306204852
+  },
+  {
+    "test_name": "partial_defaults",
+    "our_result": {
+      "parsed_struct": {
+        "Host": "localhost",
+        "Port": 9000
+      },
+      "exit_code": 0,
+      "execution_time": 448139622,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Host": "localhost",
+        "Port": 9000
+      },
+      "exit_code": 0,
+      "execution_time": 292384662,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1229793581
+  },
+  {
+    "test_name": "required_fields_present",
+    "our_result": {
+      "parsed_struct": {
+        "Input": "in.txt",
+        "Output": "out.txt"
+      },
+      "exit_code": 0,
+      "execution_time": 500663051,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Input": "in.txt",
+        "Output": "out.txt"
+      },
+      "exit_code": 0,
+      "execution_time": 290612167,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1278545318
+  },
+  {
+    "test_name": "required_fields_missing",
+    "our_result": {
+      "error_message": "required argument missing: output\n",
+      "exit_code": 1,
+      "execution_time": 488845865,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "--output is required\n",
+      "exit_code": 1,
+      "execution_time": 333662226,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ"
+    ],
+    "execution_time": 1337847416
+  },
+  {
+    "test_name": "env_var_fallback",
+    "our_result": {
+      "parsed_struct": {
+        "Debug": false,
+        "Token": ""
+      },
+      "exit_code": 0,
+      "execution_time": 529061656,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Debug": false,
+        "Token": ""
+      },
+      "exit_code": 0,
+      "execution_time": 307033937,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1316216671,
+    "metadata": {
+      "env_vars": {
+        "API_TOKEN": "test-token-123",
+        "DEBUG": "true"
+      }
+    }
+  },
+  {
+    "test_name": "env_var_override",
+    "our_result": {
+      "parsed_struct": {
+        "Token": "cli-token-456"
+      },
+      "exit_code": 0,
+      "execution_time": 505522395,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Token": "cli-token-456"
+      },
+      "exit_code": 0,
+      "execution_time": 319699224,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1321843418,
+    "metadata": {
+      "env_vars": {
+        "API_TOKEN": "env-token-123"
+      }
+    }
+  },
+  {
+    "test_name": "simple_subcommand",
+    "our_result": {
+      "parsed_struct": {
+        "Client": null,
+        "Server": {
+          "Host": "0.0.0.0",
+          "Port": 9000
+        }
+      },
+      "exit_code": 0,
+      "execution_time": 495785676,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Client": null,
+        "Server": {
+          "Host": "0.0.0.0",
+          "Port": 9000
+        }
+      },
+      "exit_code": 0,
+      "execution_time": 307648827,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1295487938
+  },
+  {
+    "test_name": "nested_subcommands",
+    "our_result": {
+      "parsed_struct": {
+        "Git": {
+          "Branch": null,
+          "Remote": {
+            "Add": {
+              "Name": "origin",
+              "URL": "https://github.com/user/repo.git"
+            },
+            "Remove": null
+          }
+        }
+      },
+      "exit_code": 0,
+      "execution_time": 468741503,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Git": {
+          "Branch": null,
+          "Remote": {
+            "Add": {
+              "Name": "origin",
+              "URL": "https://github.com/user/repo.git"
+            },
+            "Remove": null
+          }
+        }
+      },
+      "exit_code": 0,
+      "execution_time": 299483344,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1265203596
+  },
+  {
+    "test_name": "subcommand_with_global_flags",
+    "our_result": {
+      "parsed_struct": {
+        "Build": {
+          "Debug": true,
+          "Output": "app"
+        },
+        "Config": "config.yaml",
+        "Test": null,
+        "Verbose": true
+      },
+      "exit_code": 0,
+      "execution_time": 473335918,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Build": {
+          "Debug": true,
+          "Output": "app"
+        },
+        "Config": "config.yaml",
+        "Test": null,
+        "Verbose": true
+      },
+      "exit_code": 0,
+      "execution_time": 308335700,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1281011154
+  },
+  {
+    "test_name": "help_main",
+    "our_result": {
+      "exit_code": 1,
+      "execution_time": 517554781,
+      "success": false
+    },
+    "upstream_result": {
+      "exit_code": 1,
+      "execution_time": 311631820,
+      "success": false
+    },
+    "match": true,
+    "execution_time": 1328159836
+  },
+  {
+    "test_name": "help_subcommand",
+    "our_result": {
+      "exit_code": 1,
+      "execution_time": 498664804,
+      "success": false
+    },
+    "upstream_result": {
+      "exit_code": 1,
+      "execution_time": 315880542,
+      "success": false
+    },
+    "match": true,
+    "execution_time": 1323358911
+  },
+  {
+    "test_name": "help_with_defaults",
+    "our_result": {
+      "exit_code": 1,
+      "execution_time": 493238588,
+      "success": false
+    },
+    "upstream_result": {
+      "exit_code": 1,
+      "execution_time": 315825992,
+      "success": false
+    },
+    "match": true,
+    "execution_time": 1321019913
+  },
+  {
+    "test_name": "unknown_flag",
+    "our_result": {
+      "error_message": "2026/01/16 07:17:52 ERROR unknown option: unknown-flag\n2026/01/16 07:17:52 ERROR unknown option: unknown-flag\nunrecognized argument: --unknown-flag\n",
+      "exit_code": 1,
+      "execution_time": 556667869,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "unknown argument --unknown-flag\n",
+      "exit_code": 1,
+      "execution_time": 303198225,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ"
+    ],
+    "execution_time": 1350684523
+  },
+  {
+    "test_name": "invalid_type_conversion",
+    "our_result": {
+      "error_message": "invalid argument for -c: strconv.ParseInt: parsing \"not_a_number\": invalid syntax\n",
+      "exit_code": 1,
+      "execution_time": 516954019,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "error processing -c: strconv.ParseInt: parsing \"not_a_number\": invalid syntax\n",
+      "exit_code": 1,
+      "execution_time": 303360264,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ"
+    ],
+    "execution_time": 1326265759
+  },
+  {
+    "test_name": "missing_argument_value",
+    "our_result": {
+      "error_message": "2026/01/16 07:17:54 ERROR option requires an argument: o\noption requires an argument: -o\n",
+      "exit_code": 1,
+      "execution_time": 498804384,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "missing value for -o\n",
+      "exit_code": 1,
+      "execution_time": 287258256,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ"
+    ],
+    "execution_time": 1283643561
+  },
+  {
+    "test_name": "unknown_subcommand",
+    "our_result": {
+      "error_message": "Parse error: invalid subcommand: unknown_command\n",
+      "exit_code": 1,
+      "execution_time": 482231214,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "invalid subcommand: unknown_command\n",
+      "exit_code": 1,
+      "execution_time": 306837776,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ"
+    ],
+    "execution_time": 1284857103
+  },
+  {
+    "test_name": "empty_arguments",
+    "our_result": {
+      "parsed_struct": {
+        "Output": "",
+        "Verbose": false
+      },
+      "exit_code": 0,
+      "execution_time": 445282042,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Output": "",
+        "Verbose": false
+      },
+      "exit_code": 0,
+      "execution_time": 320857057,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1261399093
+  },
+  {
+    "test_name": "flag_equals_syntax",
+    "our_result": {
+      "error_message": "invalid argument for -c: strconv.ParseInt: parsing \"not_a_number\": invalid syntax\n",
+      "exit_code": 1,
+      "execution_time": 467865040,
+      "success": false
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Count": 42,
+        "Output": "file.txt"
+      },
+      "exit_code": 0,
+      "execution_time": 313329234,
+      "success": true
+    },
+    "match": false,
+    "differences": [
+      "Exit code differs: ours=1, upstream=0",
+      "Success status differs: ours=false, upstream=true",
+      "Parsed structures differ",
+      "Error messages differ"
+    ],
+    "execution_time": 1273913970
+  },
+  {
+    "test_name": "short_flag_combining",
+    "our_result": {
+      "parsed_struct": {
+        "Debug": true,
+        "Force": true,
+        "Verbose": true
+      },
+      "exit_code": 0,
+      "execution_time": 509510256,
+      "success": true
+    },
+    "upstream_result": {
+      "error_message": "unknown argument -vdf\n",
+      "exit_code": 1,
+      "execution_time": 309225832,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Exit code differs: ours=0, upstream=1",
+      "Success status differs: ours=true, upstream=false",
+      "Parsed structures differ",
+      "Error messages differ"
+    ],
+    "execution_time": 1326190218
+  },
+  {
+    "test_name": "double_dash_separator",
+    "our_result": {
+      "parsed_struct": {
+        "Files": [
+          "-file-with-dash.txt",
+          "--another-file.txt"
+        ],
+        "Verbose": true
+      },
+      "exit_code": 0,
+      "execution_time": 486142245,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Files": [
+          "-file-with-dash.txt",
+          "--another-file.txt"
+        ],
+        "Verbose": true
+      },
+      "exit_code": 0,
+      "execution_time": 301349998,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1285274253
+  },
+  {
+    "test_name": "special_characters_in_values",
+    "our_result": {
+      "parsed_struct": {
+        "Message": "Fix bug with special chars: !@#$%^\u0026*()",
+        "Pattern": "*.{js,ts,go}"
+      },
+      "exit_code": 0,
+      "execution_time": 472972516,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Message": "Fix bug with special chars: !@#$%^\u0026*()",
+        "Pattern": "*.{js,ts,go}"
+      },
+      "exit_code": 0,
+      "execution_time": 287384776,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1253423198
+  },
+  {
+    "test_name": "unicode_in_values",
+    "our_result": {
+      "parsed_struct": {
+        "Message": "Hello 世界! 🌍",
+        "Name": "José María"
+      },
+      "exit_code": 0,
+      "execution_time": 508897504,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "Message": "Hello 世界! 🌍",
+        "Name": "José María"
+      },
+      "exit_code": 0,
+      "execution_time": 309212002,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1298351903
+  },
+  {
+    "test_name": "docker_run_simulation",
+    "our_result": {
+      "error_message": "2026/01/16 07:18:05 ERROR unknown option: g\nunrecognized argument: -g\n",
+      "exit_code": 1,
+      "execution_time": 499478166,
+      "success": false
+    },
+    "upstream_result": {
+      "error_message": "unknown argument -g\n",
+      "exit_code": 1,
+      "execution_time": 318025249,
+      "success": false
+    },
+    "match": false,
+    "differences": [
+      "Error messages differ"
+    ],
+    "execution_time": 1315681805
+  },
+  {
+    "test_name": "kubectl_get_simulation",
+    "our_result": {
+      "parsed_struct": {
+        "AllNamespaces": true,
+        "Name": "nginx-deployment-12345",
+        "Namespace": "default",
+        "Output": "yaml",
+        "Resource": "pods",
+        "Selector": "app=nginx,version=1.0",
+        "Watch": false
+      },
+      "exit_code": 0,
+      "execution_time": 485296132,
+      "success": true
+    },
+    "upstream_result": {
+      "parsed_struct": {
+        "AllNamespaces": true,
+        "Name": "nginx-deployment-12345",
+        "Namespace": "default",
+        "Output": "yaml",
+        "Resource": "pods",
+        "Selector": "app=nginx,version=1.0",
+        "Watch": false
+      },
+      "exit_code": 0,
+      "execution_time": 315238440,
+      "success": true
+    },
+    "match": true,
+    "execution_time": 1300867170
+  }
+]

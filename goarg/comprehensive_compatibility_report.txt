@@ -1,0 +1,60 @@
+Detailed Compatibility Test Report
+==================================
+
+✓ bool_flags (1641.62ms)
+✓ string_flags (1373.80ms)
+✓ numeric_flags (1371.55ms)
+✓ slice_flags (1264.98ms)
+✓ positional_single (1308.35ms)
+✓ positional_multiple (1314.06ms)
+✓ positional_slice (1286.42ms)
+✓ mixed_positional_flags (1296.99ms)
+✓ default_values (1306.20ms)
+✓ partial_defaults (1229.79ms)
+✓ required_fields_present (1278.55ms)
+✗ required_fields_missing (1337.85ms)
+  - Error messages differ
+
+✓ env_var_fallback (1316.22ms)
+✓ env_var_override (1321.84ms)
+✓ simple_subcommand (1295.49ms)
+✓ nested_subcommands (1265.20ms)
+✓ subcommand_with_global_flags (1281.01ms)
+✓ help_main (1328.16ms)
+✓ help_subcommand (1323.36ms)
+✓ help_with_defaults (1321.02ms)
+✗ unknown_flag (1350.68ms)
+  - Error messages differ
+
+✗ invalid_type_conversion (1326.27ms)
+  - Error messages differ
+
+✗ missing_argument_value (1283.64ms)
+  - Error messages differ
+
+✗ unknown_subcommand (1284.86ms)
+  - Error messages differ
+
+✓ empty_arguments (1261.40ms)
+✗ flag_equals_syntax (1273.91ms)
+  - Exit code differs: ours=1, upstream=0
+  - Success status differs: ours=false, upstream=true
+  - Parsed structures differ
+  - Error messages differ
+
+✗ short_flag_combining (1326.19ms)
+  - Exit code differs: ours=0, upstream=1
+  - Success status differs: ours=true, upstream=false
+  - Parsed structures differ
+  - Error messages differ
+
+✓ double_dash_separator (1285.27ms)
+✓ special_characters_in_values (1253.42ms)
+✓ unicode_in_values (1298.35ms)
+✗ docker_run_simulation (1315.68ms)
+  - Error messages differ
+
+✓ kubectl_get_simulation (1300.87ms)
+
+Summary: 24 passed, 8 failed
+Success Rate: 75.00%
