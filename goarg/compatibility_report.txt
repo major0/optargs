@@ -1,18 +1,20 @@
 Detailed Compatibility Test Report
 ==================================
 
-✓ basic_flags (1558.65ms)
-✓ positional_args (1484.41ms)
-✓ required_fields (1514.75ms)
-✓ default_values (1500.89ms)
-✓ environment_variables (1525.82ms)
-✓ subcommands (1574.75ms)
-✓ type_conversion (1581.44ms)
-✓ help_generation (1545.05ms)
-✗ unknown_option_error (1517.30ms)
+✓ basic_flags (1323.33ms)
+✓ positional_args (1331.96ms)
+✗ required_fields (1292.71ms)
   - Error messages differ
 
-✓ complex_nested_subcommands (1627.27ms)
+✓ default_values (1295.17ms)
+✓ environment_variables (1320.70ms)
+✓ subcommands (1404.92ms)
+✓ type_conversion (1277.51ms)
+✓ help_generation (1267.52ms)
+✗ unknown_option_error (1264.93ms)
+  - Error messages differ
 
-Summary: 9 passed, 1 failed
-Success Rate: 90.00%
+✓ complex_nested_subcommands (1251.22ms)
+
+Summary: 8 passed, 2 failed
+Success Rate: 80.00%

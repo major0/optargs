@@ -7,7 +7,7 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 713575190,
+      "execution_time": 508932839,
       "success": true
     },
     "upstream_result": {
@@ -16,11 +16,11 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 325447974,
+      "execution_time": 325147967,
       "success": true
     },
     "match": true,
-    "execution_time": 1558648463
+    "execution_time": 1323326546
   },
   {
     "test_name": "positional_args",
@@ -33,7 +33,7 @@
         ]
       },
       "exit_code": 0,
-      "execution_time": 663074633,
+      "execution_time": 512272209,
       "success": true
     },
     "upstream_result": {
@@ -45,28 +45,31 @@
         ]
       },
       "exit_code": 0,
-      "execution_time": 308039900,
+      "execution_time": 327419324,
       "success": true
     },
     "match": true,
-    "execution_time": 1484405275
+    "execution_time": 1331958022
   },
   {
     "test_name": "required_fields",
     "our_result": {
-      "error_message": "--input is required\n",
+      "error_message": "required argument missing: input\n",
       "exit_code": 1,
-      "execution_time": 640556458,
+      "execution_time": 472199359,
       "success": false
     },
     "upstream_result": {
       "error_message": "--input is required\n",
       "exit_code": 1,
-      "execution_time": 323706506,
+      "execution_time": 314373035,
       "success": false
     },
-    "match": true,
-    "execution_time": 1514748362
+    "match": false,
+    "differences": [
+      "Error messages differ"
+    ],
+    "execution_time": 1292714055
   },
   {
     "test_name": "default_values",
@@ -76,7 +79,7 @@
         "Port": 8080
       },
       "exit_code": 0,
-      "execution_time": 660635759,
+      "execution_time": 508278097,
       "success": true
     },
     "upstream_result": {
@@ -85,11 +88,11 @@
         "Port": 8080
       },
       "exit_code": 0,
-      "execution_time": 318633886,
+      "execution_time": 304591405,
       "success": true
     },
     "match": true,
-    "execution_time": 1500889166
+    "execution_time": 1295171630
   },
   {
     "test_name": "environment_variables",
@@ -98,7 +101,7 @@
         "Token": ""
       },
       "exit_code": 0,
-      "execution_time": 681188062,
+      "execution_time": 507020643,
       "success": true
     },
     "upstream_result": {
@@ -106,11 +109,11 @@
         "Token": ""
       },
       "exit_code": 0,
-      "execution_time": 329362755,
+      "execution_time": 325920109,
       "success": true
     },
     "match": true,
-    "execution_time": 1525818151,
+    "execution_time": 1320701088,
     "metadata": {
       "env_vars": {
         "API_TOKEN": "test-token-123"
@@ -128,7 +131,7 @@
         }
       },
       "exit_code": 0,
-      "execution_time": 673542792,
+      "execution_time": 573419252,
       "success": true
     },
     "upstream_result": {
@@ -140,11 +143,11 @@
         }
       },
       "exit_code": 0,
-      "execution_time": 337397793,
+      "execution_time": 339405980,
       "success": true
     },
     "match": true,
-    "execution_time": 1574750126
+    "execution_time": 1404920790
   },
   {
     "test_name": "type_conversion",
@@ -158,7 +161,7 @@
         ]
       },
       "exit_code": 0,
-      "execution_time": 718010882,
+      "execution_time": 468043416,
       "success": true
     },
     "upstream_result": {
@@ -171,46 +174,46 @@
         ]
       },
       "exit_code": 0,
-      "execution_time": 333445297,
+      "execution_time": 332948750,
       "success": true
     },
     "match": true,
-    "execution_time": 1581443373
+    "execution_time": 1277505008
   },
   {
     "test_name": "help_generation",
     "our_result": {
       "exit_code": 1,
-      "execution_time": 680810564,
+      "execution_time": 503355702,
       "success": false
     },
     "upstream_result": {
       "exit_code": 1,
-      "execution_time": 330372435,
+      "execution_time": 293130711,
       "success": false
     },
     "match": true,
-    "execution_time": 1545052416
+    "execution_time": 1267515267
   },
   {
     "test_name": "unknown_option_error",
     "our_result": {
-      "error_message": "2026/01/11 13:46:34 ERROR unknown option: unknown-flag\n2026/01/11 13:46:34 ERROR unknown option: unknown-flag\nParse error: unknown argument -flag\n",
+      "error_message": "2026/01/16 07:19:20 ERROR unknown option: unknown-flag\n2026/01/16 07:19:20 ERROR unknown option: unknown-flag\nunrecognized argument: --unknown-flag\n",
       "exit_code": 1,
-      "execution_time": 688091408,
+      "execution_time": 463426652,
       "success": false
     },
     "upstream_result": {
       "error_message": "unknown argument --unknown-flag\n",
       "exit_code": 1,
-      "execution_time": 308274693,
+      "execution_time": 302953910,
       "success": false
     },
     "match": false,
     "differences": [
       "Error messages differ"
     ],
-    "execution_time": 1517297600
+    "execution_time": 1264926269
   },
   {
     "test_name": "complex_nested_subcommands",
@@ -230,7 +233,7 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 692795682,
+      "execution_time": 469215319,
       "success": true
     },
     "upstream_result": {
@@ -249,10 +252,10 @@
         "Verbose": true
       },
       "exit_code": 0,
-      "execution_time": 389489097,
+      "execution_time": 292208358,
       "success": true
     },
     "match": true,
-    "execution_time": 1627269034
+    "execution_time": 1251219538
   }
 ]

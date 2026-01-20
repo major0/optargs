@@ -107,7 +107,7 @@
   {
     "name": "simple_subcommand",
     "description": "Simple subcommand",
-    "struct_definition": "type Args struct {\n\t\t\t\tServer *ServerCmd `arg:\"subcommand:server\"`\n\t\t\t}\n\t\t\t\n\t\t\ttype ServerCmd struct {\n\t\t\t\tPort int `arg:\"-p,--port\" default:\"8080\"`\n\t\t\t}",
+    "struct_definition": "type Args struct {\n\t\t\t\tServer *ServerCmd `arg:\"subcommand:server\"`\n\t\t\t}\n\n\t\t\ttype ServerCmd struct {\n\t\t\t\tPort int `arg:\"-p,--port\" default:\"8080\"`\n\t\t\t}",
     "arguments": [
       "server",
       "--port",
@@ -119,7 +119,7 @@
   {
     "name": "nested_subcommands",
     "description": "Nested subcommands",
-    "struct_definition": "type Args struct {\n\t\t\t\tGit *GitCmd `arg:\"subcommand:git\"`\n\t\t\t}\n\t\t\t\n\t\t\ttype GitCmd struct {\n\t\t\t\tRemote *RemoteCmd `arg:\"subcommand:remote\"`\n\t\t\t}\n\t\t\t\n\t\t\ttype RemoteCmd struct {\n\t\t\t\tAdd *RemoteAddCmd `arg:\"subcommand:add\"`\n\t\t\t}\n\t\t\t\n\t\t\ttype RemoteAddCmd struct {\n\t\t\t\tName string `arg:\"positional,required\"`\n\t\t\t\tURL  string `arg:\"positional,required\"`\n\t\t\t}",
+    "struct_definition": "type Args struct {\n\t\t\t\tGit *GitCmd `arg:\"subcommand:git\"`\n\t\t\t}\n\n\t\t\ttype GitCmd struct {\n\t\t\t\tRemote *RemoteCmd `arg:\"subcommand:remote\"`\n\t\t\t}\n\n\t\t\ttype RemoteCmd struct {\n\t\t\t\tAdd *RemoteAddCmd `arg:\"subcommand:add\"`\n\t\t\t}\n\n\t\t\ttype RemoteAddCmd struct {\n\t\t\t\tName string `arg:\"positional,required\"`\n\t\t\t\tURL  string `arg:\"positional,required\"`\n\t\t\t}",
     "arguments": [
       "git",
       "remote",
