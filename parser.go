@@ -271,6 +271,37 @@ func (p *Parser) lookupShortOpt(c byte) (byte, *Flag) {
 	return 0, nil
 }
 
+// tryLongOnly attempts to match a single-dash argument as a long option
+// per getopt_long_only(3). Returns (true, option, err) on match or when
+// no short-option fallback is possible. Returns (false, ...) when the
+// caller should fall through to short option parsing.
+// tryLongOnly attempts to match a single-dash argument as a long option
+// per getopt_long_only(3). Returns (true, option, err) on match or when
+// no short-option fallback is possible. Returns (false, ...) when the
+// caller should fall through to short option parsing.
+func (p *Parser) tryLongOnly(word string, remaining []string) (matched bool, args []string, option Option, err error) {
+	// Suppress error logging during the long option probe —
+	// we may fall back to short options.
+	savedErrors := p.config.enableErrors
+	p.config.enableErrors = false
+	args, option, err = p.findLongOpt(word, remaining)
+	p.config.enableErrors = savedErrors
+
+	if err == nil {
+		return true, args, option, nil
+	}
+
+	// Long match failed — fall back to short options per getopt_long_only(3).
+	if len(p.shortOpts) == 0 {
+		err = p.optError(err.Error())
+		return true, remaining, option, err
+	}
+
+	// Has short opts — restore the original arg for short option parsing.
+	restored := append([]string{"-" + word}, remaining...)
+	return false, restored, Option{}, nil
+}
+
 // Options returns an iterator over parsed options. Each iteration yields
 // an [Option] and an error. When a subcommand is encountered, the iterator
 // dispatches to the child parser automatically.
@@ -307,35 +338,14 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 			case strings.HasPrefix(p.Args[0], "-"):
 				slog.Debug("Options", "prefix", "-")
 				if p.config.longOptsOnly {
-					longOnlyWord := p.Args[0][1:]
-					remainingArgs := p.Args[1:]
-
-					// Suppress error logging during the long option
-					// probe — we may fall back to short options.
-					savedErrors := p.config.enableErrors
-					p.config.enableErrors = false
-					p.Args, option, err = p.findLongOpt(longOnlyWord, remainingArgs)
-					p.config.enableErrors = savedErrors
-
-					if err == nil {
+					var matched bool
+					matched, p.Args, option, err = p.tryLongOnly(p.Args[0][1:], p.Args[1:])
+					if matched {
 						if !yield(option, err) {
 							return
 						}
 						continue
 					}
-
-					// Long match failed — fall back to short options
-					// per getopt_long_only(3)
-					if len(p.shortOpts) == 0 {
-						err = p.optError(err.Error())
-						if !yield(option, err) {
-							return
-						}
-						continue
-					}
-
-					// Restore args for short option parsing
-					p.Args = append([]string{"-" + longOnlyWord}, remainingArgs...)
 				}
 
 				// iterate over each character in the word looking

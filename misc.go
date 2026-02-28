@@ -13,27 +13,26 @@ func isGraph(c byte) bool {
 
 // hasPrefix checks whether s starts with prefix, optionally ignoring case.
 func hasPrefix(s, prefix string, ignoreCase bool) bool {
-	if ignoreCase {
-		// Note: `strings.ToLower()` is expensive
-		s = strings.ToLower(s)
-		prefix = strings.ToLower(prefix)
+	if len(s) < len(prefix) {
+		return false
 	}
-
+	if ignoreCase {
+		return strings.EqualFold(s[:len(prefix)], prefix)
+	}
 	return strings.HasPrefix(s, prefix)
 }
 
 // trimPrefix removes prefix from s, optionally ignoring case.
 // The returned string preserves the original casing of s.
 func trimPrefix(s, prefix string, ignoreCase bool) string {
+	if len(prefix) == 0 || len(s) < len(prefix) {
+		return s
+	}
 	if ignoreCase {
-		// Note: `strings.ToLower()` is expensive
-		lower := strings.ToLower(s)
-		prefix = strings.ToLower(prefix)
-		if strings.HasPrefix(lower, prefix) {
+		if strings.EqualFold(s[:len(prefix)], prefix) {
 			return s[len(prefix):]
 		}
 		return s
 	}
-
 	return strings.TrimPrefix(s, prefix)
 }
