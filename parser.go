@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
-	"regexp"
 	"strings"
+	"unicode"
 )
 
 type ParseMode int
@@ -64,15 +64,11 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 	}
 	parser.shortOpts = shortOpts
 
-	// Regex pattern to find any character that is _not_ a graph or
-	// _is_ a space. Using regexp here is slightly faster than
-	// terating the string char by char calling `isGraph()` on it, but
-	// ultimately has the same effect.
-	notGraph := regexp.MustCompile(`[^[:graph:]]`)
-	isSpace := regexp.MustCompile(`[[:space:]]`)
 	for s := range longOpts {
-		if notGraph.MatchString(s) || isSpace.MatchString(s) {
-			return nil, fmt.Errorf("invalid long option: %s", s)
+		for _, r := range s {
+			if unicode.IsSpace(r) || !unicode.IsGraphic(r) {
+				return nil, fmt.Errorf("invalid long option: %s", s)
+			}
 		}
 	}
 	parser.longOpts = longOpts
