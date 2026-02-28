@@ -16,7 +16,7 @@ func genOpts() []byte {
 }
 
 func TestParserInit(t *testing.T) {
-	_, err := NewParser(ParserConfig{}, nil, nil, nil, nil)
+	_, err := NewParser(ParserConfig{}, nil, nil, nil)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -42,7 +42,7 @@ func TestParserInitShortOpts(t *testing.T) {
 
 		shortOpts[i] = &Flag{Name: string(i), HasArg: hasArg}
 	}
-	_, err := NewParser(ParserConfig{}, shortOpts, nil, nil, nil)
+	_, err := NewParser(ParserConfig{}, shortOpts, nil, nil)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -54,7 +54,7 @@ func TestParserInitInvalidShortOpts(t *testing.T) {
 		'-': &Flag{Name: "-", HasArg: NoArgument},
 	}
 
-	_, err := NewParser(ParserConfig{}, shortOpts, nil, nil, nil)
+	_, err := NewParser(ParserConfig{}, shortOpts, nil, nil)
 	if err == nil {
 		t.Errorf("Expected invalid option error")
 	}
@@ -65,7 +65,7 @@ func TestParserInitNotIsGraphShortOpts(t *testing.T) {
 		' ': &Flag{Name: " ", HasArg: NoArgument},
 	}
 
-	_, err := NewParser(ParserConfig{}, shortOpts, nil, nil, nil)
+	_, err := NewParser(ParserConfig{}, shortOpts, nil, nil)
 	if err == nil {
 		t.Errorf("Expected invalid option error")
 	}
@@ -76,7 +76,7 @@ func TestParserInitNotIsGraphLongOpts(t *testing.T) {
 		" ": &Flag{Name: " ", HasArg: NoArgument},
 	}
 
-	_, err := NewParser(ParserConfig{}, nil, options, nil, nil)
+	_, err := NewParser(ParserConfig{}, nil, options, nil)
 	if err == nil {
 		t.Errorf("Expected invalid option error")
 	}
@@ -98,7 +98,7 @@ func TestParserInitLongOpts(t *testing.T) {
 
 		longOpts[s] = &Flag{Name: s, HasArg: hasArg}
 	}
-	_, err := NewParser(ParserConfig{}, nil, longOpts, nil, nil)
+	_, err := NewParser(ParserConfig{}, nil, longOpts, nil)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -113,7 +113,7 @@ func TestParserPosixBreak(t *testing.T) {
 	}
 	args := []string{"--", "-a", "--a"}
 
-	parser, err := NewParser(ParserConfig{}, shopts, lopts, args, nil)
+	parser, err := NewParser(ParserConfig{}, shopts, lopts, args)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -139,7 +139,7 @@ func TestParserNonOptShift(t *testing.T) {
 	}
 	args := []string{"param", "-a", "--a"}
 
-	parser, err := NewParser(ParserConfig{}, shopts, lopts, args, nil)
+	parser, err := NewParser(ParserConfig{}, shopts, lopts, args)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -168,7 +168,7 @@ func TestParserNonOpt(t *testing.T) {
 	}
 	args := []string{"-a", "param", "--a"}
 
-	parser, err := NewParser(ParserConfig{parseMode: ParseNonOpts}, shopts, lopts, args, nil)
+	parser, err := NewParser(ParserConfig{parseMode: ParseNonOpts}, shopts, lopts, args)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -206,7 +206,7 @@ func TestParserPosixNonOpt(t *testing.T) {
 	}
 	args := []string{"param", "-a", "--a"}
 
-	parser, err := NewParser(ParserConfig{parseMode: ParsePosixlyCorrect}, shopts, lopts, args, nil)
+	parser, err := NewParser(ParserConfig{parseMode: ParsePosixlyCorrect}, shopts, lopts, args)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -237,7 +237,7 @@ func TestParserLongOptsLongPrefix(t *testing.T) {
 	}
 
 	args := []string{"--foo"}
-	parser, err := NewParser(ParserConfig{}, nil, longOpts, args, nil)
+	parser, err := NewParser(ParserConfig{}, nil, longOpts, args)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -255,7 +255,7 @@ func TestParserLongOptsPrefix(t *testing.T) {
 	}
 
 	args := []string{"--foo="}
-	parser, err := NewParser(ParserConfig{}, nil, longOpts, args, nil)
+	parser, err := NewParser(ParserConfig{}, nil, longOpts, args)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -286,7 +286,7 @@ func TestParserLongOptsProvidedArgs(t *testing.T) {
 	}
 
 	args := []string{"--foo=bar", "--foo", "bar", "--boo=baz", "--boo", "baz"}
-	parser, err := NewParser(ParserConfig{}, nil, longOpts, args, nil)
+	parser, err := NewParser(ParserConfig{}, nil, longOpts, args)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -313,7 +313,7 @@ func TestParserLongOptsMissingOptArg(t *testing.T) {
 	}
 
 	args := []string{"--foo"}
-	parser, err := NewParser(ParserConfig{}, nil, longOpts, args, nil)
+	parser, err := NewParser(ParserConfig{}, nil, longOpts, args)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
