@@ -15,7 +15,7 @@
 //   - short-only options.
 //   - long-only options.
 //   - long and short options that do not require a value. I.e. it should
-//     be possoble to pass `--foo` and specify that it never takes a
+//     be possible to pass `--foo` and specify that it never takes a
 //     value, and any attempt to pass it a value should be ignored or
 //     or result in an error.
 //   - short-options of any character that is a valid `isgraph()`
@@ -30,14 +30,14 @@
 //     this includes allowing `=` in the name of the argument. For
 //     example, `--foo=bar=boo` should map `foo=bar` as the Flag, and
 //     `boo` as the value to the flag. This potentially also allows for
-//     curious long-arg syntax sych as: `--command:arg=value`.
+//     curious long-arg syntax such as: `--command:arg=value`.
 //   - many-to-one flag mappings. For example, the GNU `ls` command supports
 //     `--format=<format>` where each possible `<format>` options is also
 //     supported by a unique short-option. For example:
 //     `--format=across` = `-x`, `--format=commas` = `-m`,
 //     `--format=horizontal` = `-x`, `--format=long` = `-l`, etc.
 //   - The GNU `-W` flag which allows short-options to behave like an
-//     undefined long-option. E.g. `-W foo` should be interpretted as if
+//     undefined long-option. E.g. `-W foo` should be interpreted as if
 //     `--foo` was passed to the application.
 //   - long-options that may look similar, but behave differently, from
 //     short options. E.g. `-c` and `--c` are allowed to behave
@@ -66,7 +66,7 @@
 // be overcome by [optargs] and in the case of [spf13/pflag], those quirks
 // ultimately percolate up to the user, such as [spf13/pflag]'s boolean
 // flags. Or putting arbitrary restrictions on applications, such as
-// suporting long-only options, but not allowing short-only options. Or
+// supporting long-only options, but not allowing short-only options. Or
 // not supporting true non-option flags. I.e. many (all?) of the existing
 // [Go] flag packages only allow an argument to a flag to be optional or
 // required and are not capable of handling flags that never require an
@@ -87,45 +87,59 @@ import (
 	"os"
 )
 
+// ArgType specifies whether a flag takes no argument, a required argument,
+// or an optional argument.
 type ArgType int
 
 const (
+	// NoArgument indicates the flag takes no argument.
 	NoArgument ArgType = iota
+	// RequiredArgument indicates the flag requires an argument.
 	RequiredArgument
+	// OptionalArgument indicates the flag accepts an optional argument.
 	OptionalArgument
 )
 
+// Flag describes a single option definition for long option parsing.
+// Name is the option name (without leading dashes) and HasArg specifies
+// the argument requirement.
 type Flag struct {
 	Name   string
 	HasArg ArgType
 }
 
+// Option represents a parsed option yielded by the iterator.
+// Name is the option name, HasArg indicates whether an argument was
+// consumed, and Arg holds the argument value if present.
 type Option struct {
 	Name   string
 	HasArg bool
 	Arg    string
 }
 
+// GetOpt creates a parser implementing POSIX [getopt(3)] behavior.
+// It parses args according to the optstring specification.
+//
+// [getopt(3)]: https://pubs.opengroup.org/onlinepubs/9699919799/functions/getopt.html
 func GetOpt(args []string, optstring string) (*Parser, error) {
 	return getOpt(args, optstring, nil, false)
 }
 
+// GetOptLong creates a parser implementing GNU [getopt_long(3)] behavior.
+// It supports both short options via optstring and long options via longopts.
+//
+// [getopt_long(3)]: https://man7.org/linux/man-pages/man3/getopt.3.html
 func GetOptLong(args []string, optstring string, longopts []Flag) (*Parser, error) {
-	parser, err := getOpt(args, optstring, longopts, false)
-	if err != nil {
-		return nil, err
-	}
-
-	return parser, nil
+	return getOpt(args, optstring, longopts, false)
 }
 
+// GetOptLongOnly creates a parser implementing GNU [getopt_long_only(3)] behavior.
+// Single-dash options are first tried as long options; on failure, the parser
+// falls back to short option parsing via the optstring.
+//
+// [getopt_long_only(3)]: https://man7.org/linux/man-pages/man3/getopt.3.html
 func GetOptLongOnly(args []string, optstring string, longopts []Flag) (*Parser, error) {
-	parser, err := getOpt(args, optstring, longopts, true)
-	if err != nil {
-		return nil, err
-	}
-
-	return parser, nil
+	return getOpt(args, optstring, longopts, true)
 }
 
 // Handle parsing the traditional GetOpt/GetOptLong inputs into the parser
@@ -146,7 +160,7 @@ func getOpt(args []string, optstring string, longopts []Flag, longOnly bool) (*P
 		config.parseMode = ParsePosixlyCorrect
 	}
 
-	// Itterate over the longOpts list populating the map
+	// Iterate over the longOpts list populating the map
 	longOpts := make(map[string]*Flag)
 	for _, opt := range longopts {
 		longOpts[opt.Name] = &opt
@@ -179,7 +193,7 @@ opt_prefix:
 		optstring = optstring[1:]
 	}
 
-	// Itterate over optstring parsing it according to the libc
+	// Iterate over optstring parsing it according to the libc
 	// getopt() spec. Note, the spec fully allows definitions to
 	// overwrite previous definitions. The code will not treat this as
 	// an error as this allows for the most flexibility.
@@ -189,13 +203,13 @@ opt_prefix:
 		c := optstring[0]
 		optstring = optstring[1:]
 		if !isGraph(c) {
-			return nil, errors.New("Invalid option character: " + string(c))
+			return nil, errors.New("invalid option character: " + string(c))
 		}
 
 		slog.Debug("GetOpt", "c", string(c), "optstring", optstring, "len", len(optstring))
 		switch c {
-		case ':', '-', ';': // Dissallowed by the spec
-			return nil, errors.New("Invalid option character: " + string(c))
+		case ':', '-', ';': // Disallowed by the spec
+			return nil, errors.New("invalid option character: " + string(c))
 		}
 
 		// look ahead to see if c is followed by ":" or "::"

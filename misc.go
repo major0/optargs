@@ -11,7 +11,7 @@ func isGraph(c byte) bool {
 	return !unicode.IsSpace(r) && unicode.IsPrint(r)
 }
 
-// deal with the lack of case insenstivity in Go's string package
+// hasPrefix checks whether s starts with prefix, optionally ignoring case.
 func hasPrefix(s, prefix string, ignoreCase bool) bool {
 	if ignoreCase {
 		// Note: `strings.ToLower()` is expensive
@@ -22,6 +22,8 @@ func hasPrefix(s, prefix string, ignoreCase bool) bool {
 	return strings.HasPrefix(s, prefix)
 }
 
+// trimPrefix removes prefix from s, optionally ignoring case.
+// The returned string preserves the original casing of s.
 func trimPrefix(s, prefix string, ignoreCase bool) string {
 	if ignoreCase {
 		// Note: `strings.ToLower()` is expensive

@@ -9,14 +9,22 @@ import (
 	"unicode"
 )
 
+// ParseMode controls how non-option arguments are handled during parsing.
 type ParseMode int
 
 const (
+	// ParseDefault permutes arguments so that non-options are moved to the end.
 	ParseDefault ParseMode = iota
+	// ParseNonOpts treats each non-option argument as an argument to a
+	// synthetic option with character code 1.
 	ParseNonOpts
+	// ParsePosixlyCorrect stops option processing at the first non-option argument.
 	ParsePosixlyCorrect
 )
 
+// ParserConfig holds configuration for a Parser instance.
+// All fields are unexported; configuration is set via optstring prefix
+// flags and constructor parameters.
 type ParserConfig struct {
 	enableErrors bool
 	parseMode    ParseMode
@@ -31,6 +39,14 @@ type ParserConfig struct {
 	commandCaseIgnore bool
 }
 
+// Parser is the core argument parser. It processes command-line arguments
+// according to POSIX getopt(3) and GNU getopt_long(3) conventions.
+//
+// Args holds the remaining unprocessed arguments. After iteration completes,
+// Args contains non-option arguments (and any arguments after "--").
+//
+// Commands holds registered subcommands. Use [Parser.AddCmd] to register
+// subcommands; do not manipulate Commands directly.
 type Parser struct {
 	Args       []string
 	nonOpts    []string
@@ -44,6 +60,9 @@ type Parser struct {
 	parent   *Parser
 }
 
+// NewParser creates a Parser from pre-built configuration, short option map,
+// long option map, and argument list. Most callers should use [GetOpt],
+// [GetOptLong], or [GetOptLongOnly] instead.
 func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string) (*Parser, error) {
 	parser := Parser{
 		Args:       args,
@@ -54,11 +73,11 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 
 	for c := range shortOpts {
 		if !isGraph(c) {
-			return nil, parser.optErrorf("Invalid short option: %c", c)
+			return nil, parser.optErrorf("invalid short option: %c", c)
 		}
 		switch c {
 		case ':', ';', '-':
-			return nil, parser.optErrorf("Prohibited short option: %c", c)
+			return nil, parser.optErrorf("prohibited short option: %c", c)
 		}
 	}
 	parser.shortOpts = shortOpts
@@ -169,7 +188,7 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, Option, erro
 		}
 
 		// We need to continue processing candidates as the "last"
-		// defined canidate that is the "best" match must always
+		// defined candidate that is the "best" match must always
 		// be used.
 		if len(option.Name) >= len(best.Name) {
 			best = option
@@ -197,7 +216,7 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 		return args, word, Option{}, p.optError("invalid option: " + string(c))
 	}
 
-	// We have to itterate the shortOpts in order to support case
+	// We have to iterate the shortOpts in order to support case
 	// insensitive options.
 	for opt := range p.shortOpts {
 		if p.config.shortCaseIgnore {
@@ -271,6 +290,9 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 	return args, word, Option{}, errors.New("unknown option: " + string(c))
 }
 
+// Options returns an iterator over parsed options. Each iteration yields
+// an [Option] and an error. When a subcommand is encountered, the iterator
+// dispatches to the child parser automatically.
 func (p *Parser) Options() iter.Seq2[Option, error] {
 	slog.Debug("Iterator")
 	return func(yield func(Option, error) bool) {
