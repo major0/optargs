@@ -28,7 +28,7 @@ func TestGNULongOptionSyntax(t *testing.T) {
 			name: "long option with equals syntax",
 			args: []string{"--output=file.txt"},
 			expected: []Option{
-				{Name: "output", HasArg: true, Arg: "=file.txt"},
+				{Name: "output", HasArg: true, Arg: "file.txt"},
 			},
 		},
 		{
@@ -42,7 +42,7 @@ func TestGNULongOptionSyntax(t *testing.T) {
 			name: "optional argument provided with equals",
 			args: []string{"--config=debug"},
 			expected: []Option{
-				{Name: "config", HasArg: true, Arg: "=debug"},
+				{Name: "config", HasArg: true, Arg: "debug"},
 			},
 		},
 		{
@@ -56,7 +56,7 @@ func TestGNULongOptionSyntax(t *testing.T) {
 			name: "empty argument with equals",
 			args: []string{"--output="},
 			expected: []Option{
-				{Name: "output", HasArg: true, Arg: "="},
+				{Name: "output", HasArg: true, Arg: ""},
 			},
 		},
 	}
@@ -164,9 +164,9 @@ func TestGNULongOptionCaseSensitivity(t *testing.T) {
 		desc      string
 	}{
 		{
-			name:      "case insensitive should work but currently fails",
+			name:      "case insensitive match for different case",
 			args:      []string{"--verbose"},
-			expectErr: true, // Current implementation has bug
+			expectErr: false,
 			desc:      "lowercase match for Verbose",
 		},
 		{
@@ -243,7 +243,7 @@ func TestGNULongOnlyMode(t *testing.T) {
 			optstring: "",
 			args:      []string{"-output=file.txt"},
 			expected: []Option{
-				{Name: "output", HasArg: true, Arg: "=file.txt"},
+				{Name: "output", HasArg: true, Arg: "file.txt"},
 			},
 		},
 		{
@@ -322,14 +322,14 @@ func TestGNULongOptionComplexNames(t *testing.T) {
 			name: "option name with dashes",
 			args: []string{"--with-dashes=value"},
 			expected: []Option{
-				{Name: "with-dashes", HasArg: true, Arg: "=value"},
+				{Name: "with-dashes", HasArg: true, Arg: "value"},
 			},
 		},
 		{
 			name: "option name with underscores",
 			args: []string{"--under_scores=value"},
 			expected: []Option{
-				{Name: "under_scores", HasArg: true, Arg: "=value"},
+				{Name: "under_scores", HasArg: true, Arg: "value"},
 			},
 		},
 		{
@@ -394,7 +394,7 @@ func TestGNUMixedShortLongOptions(t *testing.T) {
 			args:      []string{"-v", "--output=file.txt", "-o", "other.txt"},
 			expected: []Option{
 				{Name: "v", HasArg: false, Arg: ""},
-				{Name: "output", HasArg: true, Arg: "=file.txt"},
+				{Name: "output", HasArg: true, Arg: "file.txt"},
 				{Name: "o", HasArg: true, Arg: "other.txt"},
 			},
 		},

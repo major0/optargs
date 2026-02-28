@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
+	"sort"
 	"strings"
 	"unicode"
 )
@@ -116,96 +117,84 @@ func (p *Parser) optErrorf(msg string, args ...interface{}) error {
 	return p.optError(fmt.Sprintf(msg, args...))
 }
 
+// longOptCandidate holds a registered option that matched as a prefix of the input.
+type longOptCandidate struct {
+	name string // registered option name
+	flag *Flag  // option definition
+}
+
 func (p *Parser) findLongOpt(name string, args []string) ([]string, Option, error) {
-	var best Option
-	for opt := range p.longOpts {
-		// Filter through the options "ruling out" anything that
-		// is not a candidate.
-		//
-		// It is important to consider that the `=` sign is
-		// allowed in the option name, and as such it is possible
-		// to have _both_ of the following in the option list.
-		//
-		// - name: `foo=`, hasArg: NoArgument
-		// - name: `foo`, hasArg: RequiredArgument
-		//
-		// Should the user pass in `--foo=` then we need to make
-		// a decision as to which handler to use.
-		//
-		// `--foo=bar` is easy as we can exclude the `NoArgument`
-		// option.
-		if len(opt) > len(name) {
-			// There is simply no way this can be a valid match.
-			continue
-		} else if len(opt) == len(name) {
-			if p.config.longCaseIgnore && !strings.EqualFold(opt, name) {
+	// Phase 1: Walk self + all ancestors, collecting every registered
+	// option whose name is a prefix of (or equal to) the input.
+	var candidates []longOptCandidate
+	for current := p; current != nil; current = current.parent {
+		caseIgnore := current.config.longCaseIgnore
+		for opt, flag := range current.longOpts {
+			if len(opt) > len(name) {
 				continue
+			}
+			if caseIgnore {
+				if !hasPrefix(name, opt, true) {
+					continue
+				}
 			} else {
-				if opt != name {
+				if !strings.HasPrefix(name, opt) {
 					continue
 				}
 			}
-		} else {
-			if name[len(opt)] != '=' {
-				continue
-			}
-
-			if p.config.longCaseIgnore && !hasPrefix(name, opt, p.config.longCaseIgnore) {
-				continue
-			}
-		}
-
-		// From here we have a possible candidate, but we do not
-		// yet know how to handle any potential `=` in the name
-		// until we look at how to handle the candidate based on
-		// the HasArg field.
-		option := Option{
-			HasArg: false,
-		}
-		if p.longOpts[opt].HasArg != NoArgument {
-			option.Name = opt
-			if len(name) == len(opt) {
-				if len(args) != 0 {
-					option.Arg = args[0]
-					args = args[1:]
-					option.HasArg = true
-				} else if p.longOpts[opt].HasArg == RequiredArgument {
-					// Defer logging to caller when parent chain may re-wrap
-					if p.parent != nil {
-						return args, option, errors.New("option requires an argument: " + name)
-					}
-					return args, option, p.optError("option requires an argument: " + name)
-				}
-			} else {
-				option.Arg = name[len(opt):]
-				option.HasArg = true
-			}
-		} else if len(name) == len(opt) {
-			// No argument allowed, but the names have already
-			// been filtered, simply need to validate their
-			// length matches.
-			option.Name = opt
-		}
-
-		// We need to continue processing candidates as the "last"
-		// defined candidate that is the "best" match must always
-		// be used.
-		if len(option.Name) >= len(best.Name) {
-			best = option
+			candidates = append(candidates, longOptCandidate{name: opt, flag: flag})
 		}
 	}
 
-	if best.Name != "" {
-		return args, best, nil
-	}
-
-	// Only log error if there's no parent to fall back to
-	if p.parent == nil {
+	if len(candidates) == 0 {
 		return args, Option{}, p.optError("unknown option: " + name)
 	}
 
-	// Return error without logging - parent will be consulted
-	return args, Option{}, errors.New("unknown option: " + name)
+	// Phase 2: Sort candidates by name length, longest first.
+	sort.Slice(candidates, func(i, j int) bool {
+		return len(candidates[i].name) > len(candidates[j].name)
+	})
+
+	// Phase 3: Iterate candidates longest-first. For each candidate:
+	// - If exact match (same length): handle as space-separated arg.
+	// - If next char after the candidate name is '=': split there.
+	// - Otherwise: skip to next-shortest candidate.
+	for _, c := range candidates {
+		if len(c.name) == len(name) {
+			// Exact match — argument comes from the next element in args.
+			option := Option{Name: c.name}
+			if c.flag.HasArg == NoArgument {
+				return args, option, nil
+			}
+			if len(args) > 0 {
+				option.Arg = args[0]
+				option.HasArg = true
+				return args[1:], option, nil
+			}
+			if c.flag.HasArg == RequiredArgument {
+				return args, option, p.optError("option requires an argument: " + name)
+			}
+			// OptionalArgument with no arg available
+			return args, option, nil
+		}
+
+		// Partial match — check for '=' boundary.
+		if name[len(c.name)] == '=' {
+			option := Option{Name: c.name}
+			if c.flag.HasArg == NoArgument {
+				// NoArgument option can't accept the '=value' portion.
+				// Skip to next-shortest candidate that might accept it.
+				continue
+			}
+			option.Arg = name[len(c.name)+1:]
+			option.HasArg = true
+			return args, option, nil
+		}
+		// No '=' at boundary — this candidate doesn't match at a
+		// valid split point. Try next-shortest.
+	}
+
+	return args, Option{}, p.optError("unknown option: " + name)
 }
 
 func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, string, Option, error) {
@@ -216,78 +205,69 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 		return args, word, Option{}, p.optError("invalid option: " + string(c))
 	}
 
-	// We have to iterate the shortOpts in order to support case
-	// insensitive options.
-	for opt := range p.shortOpts {
-		if p.config.shortCaseIgnore {
-			if !strings.EqualFold(string(c), string(opt)) {
+	// Walk the parser chain: self first, then ancestors.
+	for current := p; current != nil; current = current.parent {
+		for opt := range current.shortOpts {
+			if current.config.shortCaseIgnore {
+				if !strings.EqualFold(string(c), string(opt)) {
+					continue
+				}
+			} else if c != opt {
 				continue
 			}
-		} else if c != opt {
-			continue
-		}
 
-		option := Option{
-			Name:   string(opt),
-			HasArg: false,
-			Arg:    "",
-		}
+			option := Option{
+				Name:   string(opt),
+				HasArg: false,
+				Arg:    "",
+			}
 
-		switch p.shortOpts[opt].HasArg {
-		case NoArgument:
-			slog.Debug("findShortOpt", "hasArg", "none", "c", string(c), "opt", string(opt))
+			switch current.shortOpts[opt].HasArg {
+			case NoArgument:
+				slog.Debug("findShortOpt", "hasArg", "none", "c", string(c), "opt", string(opt))
 
-		case RequiredArgument:
-			slog.Debug("findShortOpt", "hasArg", "required", "c", string(c), "opt", string(opt))
-			var arg string
-			if len(word) > 0 {
-				arg = word
-				word = ""
-			} else {
-				if len(args) == 0 {
-					// Defer logging to caller when parent chain may re-wrap
-					if p.parent != nil {
-						return args, word, option, errors.New("option requires an argument: " + string(c))
+			case RequiredArgument:
+				slog.Debug("findShortOpt", "hasArg", "required", "c", string(c), "opt", string(opt))
+				var arg string
+				if len(word) > 0 {
+					arg = word
+					word = ""
+				} else {
+					if len(args) == 0 {
+						return args, word, option, p.optError("option requires an argument: " + string(c))
 					}
-					return args, word, option, p.optError("option requires an argument: " + string(c))
+					arg = args[0]
+					args = args[1:]
 				}
-				arg = args[0]
-				args = args[1:]
+
+				option.Arg = arg
+				option.HasArg = true
+
+			case OptionalArgument:
+				slog.Debug("findShortOpt", "hasArg", "optional", "c", string(c), "opt", string(opt))
+				var arg string
+				if len(word) > 0 {
+					arg = word
+					word = ""
+					option.HasArg = true
+				} else if len(args) > 0 {
+					arg = args[0]
+					args = args[1:]
+					option.HasArg = true
+				}
+
+				option.Arg = arg
+
+			default:
+				return args, word, option, p.optErrorf("unknown argument type: %d", current.shortOpts[opt].HasArg)
 			}
 
-			option.Arg = arg
-			option.HasArg = true
-
-		case OptionalArgument:
-			slog.Debug("findShortOpt", "hasArg", "optional", "c", string(c), "opt", string(opt))
-			var arg string
-			if len(word) > 0 {
-				arg = word
-				word = ""
-				option.HasArg = true
-			} else if len(args) > 0 {
-				arg = args[0]
-				args = args[1:]
-				option.HasArg = true
-			}
-
-			option.Arg = arg
-
-		default:
-			return args, word, option, p.optErrorf("unknown argument type: %d", p.shortOpts[c].HasArg)
+			slog.Debug("findShortOpt", "args", args, "word", word, "option", option, "err", "yield")
+			return args, word, option, nil
 		}
-
-		slog.Debug("findShortOpt", "args", args, "word", word, "option", option, "err", "yield")
-		return args, word, option, nil
 	}
 
-	// Only log error if there's no parent to fall back to
-	if p.parent == nil {
-		return args, word, Option{}, p.optError("unknown option: " + string(c))
-	}
-
-	// Return error without logging - parent will be consulted
-	return args, word, Option{}, errors.New("unknown option: " + string(c))
+	return args, word, Option{}, p.optError("unknown option: " + string(c))
 }
 
 // Options returns an iterator over parsed options. Each iteration yields
@@ -322,7 +302,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				if len(p.Args) > 1 {
 					remainingArgs = p.Args[1:]
 				}
-				p.Args, option, err = p.findLongOptWithFallback(p.Args[0][2:], remainingArgs)
+				p.Args, option, err = p.findLongOpt(p.Args[0][2:], remainingArgs)
 				if !yield(option, err) {
 					return
 				}
@@ -340,7 +320,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 					// probe — we may fall back to short options.
 					savedErrors := p.config.enableErrors
 					p.config.enableErrors = false
-					p.Args, option, err = p.findLongOptWithFallback(longOnlyWord, remainingArgs)
+					p.Args, option, err = p.findLongOpt(longOnlyWord, remainingArgs)
 					p.config.enableErrors = savedErrors
 
 					if err == nil {
@@ -373,7 +353,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 					if len(originalArgs) > 1 {
 						remainingArgs = originalArgs[1:]
 					}
-					p.Args, word, option, err = p.findShortOptWithFallback(word[0], word[1:], remainingArgs)
+					p.Args, word, option, err = p.findShortOpt(word[0], word[1:], remainingArgs)
 
 					// Transform usages such as `-W foo` into `--foo`
 					if option.Name == "W" && p.config.gnuWords {
@@ -465,101 +445,4 @@ func (p *Parser) HasCommands() bool {
 // GetAliases returns all aliases for a given parser
 func (p *Parser) GetAliases(targetParser *Parser) []string {
 	return p.Commands.GetAliases(targetParser)
-}
-
-// findLongOptWithFallback finds a long option, falling back through the entire parent chain.
-// Error reporting uses the originating parser's error mode, not the parent's.
-func (p *Parser) findLongOptWithFallback(name string, args []string) ([]string, Option, error) {
-	remainingArgs, option, err := p.findLongOpt(name, args)
-	if err == nil {
-		return remainingArgs, option, err
-	}
-
-	// Only fall back to parent for "unknown option" errors.
-	// Other errors like "option requires an argument" should be returned immediately.
-	if !strings.Contains(err.Error(), "unknown option") {
-		return remainingArgs, option, err
-	}
-
-	// Walk the parent chain looking for the option
-	current := p.parent
-	for current != nil {
-		parentArgs, parentOpt, parentErr := current.findLongOpt(name, args)
-		if parentErr == nil {
-			return parentArgs, parentOpt, nil
-		}
-		if !strings.Contains(parentErr.Error(), "unknown option") {
-			// Found the option in a parent but it had a different error (e.g. missing arg).
-			// Report using the originating parser's error mode.
-			return parentArgs, parentOpt, p.optError(parentErr.Error())
-		}
-		current = current.parent
-	}
-
-	// Not found anywhere in the chain — report using originating parser's error mode
-	return remainingArgs, option, p.optError("unknown option: " + name)
-}
-
-// findShortOptWithFallback finds a short option, falling back through the entire parent chain.
-// Error reporting uses the originating parser's error mode, not the parent's.
-func (p *Parser) findShortOptWithFallback(c byte, word string, args []string) ([]string, string, Option, error) {
-	remainingArgs, remainingWord, option, err := p.findShortOpt(c, word, args)
-	if err == nil {
-		return remainingArgs, remainingWord, option, err
-	}
-
-	// Only fall back for "unknown option" errors
-	if !strings.Contains(err.Error(), "unknown option") {
-		return remainingArgs, remainingWord, option, err
-	}
-
-	// Walk the parent chain looking for the option
-	current := p.parent
-	for current != nil {
-		if parentFlag, exists := current.shortOpts[c]; exists {
-			parentOption := Option{
-				Name:   string(c),
-				HasArg: false,
-				Arg:    "",
-			}
-
-			switch parentFlag.HasArg {
-			case NoArgument:
-				return args, word, parentOption, nil
-
-			case RequiredArgument:
-				if len(word) > 0 {
-					parentOption.Arg = word
-					parentOption.HasArg = true
-					return args, "", parentOption, nil
-				}
-				if len(args) == 0 {
-					return args, word, parentOption, p.optError("option requires an argument: " + string(c))
-				}
-				parentOption.Arg = args[0]
-				parentOption.HasArg = true
-				return args[1:], "", parentOption, nil
-
-			case OptionalArgument:
-				if len(word) > 0 {
-					parentOption.Arg = word
-					parentOption.HasArg = true
-					return args, "", parentOption, nil
-				}
-				if len(args) > 0 {
-					parentOption.Arg = args[0]
-					parentOption.HasArg = true
-					return args[1:], "", parentOption, nil
-				}
-				return args, word, parentOption, nil
-
-			default:
-				return args, word, parentOption, p.optErrorf("unknown argument type: %d", parentFlag.HasArg)
-			}
-		}
-		current = current.parent
-	}
-
-	// Not found anywhere in the chain
-	return args, word, Option{}, p.optError("unknown option: " + string(c))
 }

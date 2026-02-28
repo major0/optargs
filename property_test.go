@@ -413,8 +413,8 @@ func TestProperty5_LongOptionSyntaxSupport(t *testing.T) {
 			}
 			if opt.Name == "test" {
 				found1 = true
-				if !opt.HasArg || opt.Arg != "=value" { // Current parser behavior includes =
-					return false // Should have argument "=value"
+				if !opt.HasArg || opt.Arg != "value" {
+					return false // Should have argument "value"
 				}
 			}
 		}
@@ -461,8 +461,8 @@ func TestProperty5_LongOptionSyntaxSupport(t *testing.T) {
 			}
 			if opt.Name == "optional" {
 				found3 = true
-				if !opt.HasArg || opt.Arg != "=value" { // Current parser behavior includes =
-					return false // Should have argument "=value"
+				if !opt.HasArg || opt.Arg != "value" {
+					return false // Should have argument "value"
 				}
 			}
 		}
@@ -996,8 +996,8 @@ func TestProperty10_NegativeArgumentSupport(t *testing.T) {
 			}
 			if opt.Name == "number" {
 				found4 = true
-				if !opt.HasArg || opt.Arg != "=-999" { // Current parser behavior includes =
-					return false // Should have argument "=-999"
+				if !opt.HasArg || opt.Arg != "-999" {
+					return false // Should have argument "-999"
 				}
 			}
 		}
