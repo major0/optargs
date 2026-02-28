@@ -49,12 +49,11 @@ type ParserConfig struct {
 // Commands holds registered subcommands. Use [Parser.AddCmd] to register
 // subcommands; do not manipulate Commands directly.
 type Parser struct {
-	Args       []string
-	nonOpts    []string
-	shortOpts  map[byte]*Flag
-	longOpts   map[string]*Flag
-	config     ParserConfig
-	lockConfig bool
+	Args      []string
+	nonOpts   []string
+	shortOpts map[byte]*Flag
+	longOpts  map[string]*Flag
+	config    ParserConfig
 
 	// Command support - simple map of command name to parser
 	Commands CommandRegistry
@@ -66,9 +65,8 @@ type Parser struct {
 // [GetOptLong], or [GetOptLongOnly] instead.
 func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string) (*Parser, error) {
 	parser := Parser{
-		Args:       args,
-		config:     config,
-		lockConfig: false,
+		Args:   args,
+		config: config,
 	}
 
 	for c := range shortOpts {
@@ -271,10 +269,6 @@ func (p *Parser) lookupShortOpt(c byte) (byte, *Flag) {
 	return 0, nil
 }
 
-// tryLongOnly attempts to match a single-dash argument as a long option
-// per getopt_long_only(3). Returns (true, option, err) on match or when
-// no short-option fallback is possible. Returns (false, ...) when the
-// caller should fall through to short option parsing.
 // tryLongOnly attempts to match a single-dash argument as a long option
 // per getopt_long_only(3). Returns (true, option, err) on match or when
 // no short-option fallback is possible. Returns (false, ...) when the
