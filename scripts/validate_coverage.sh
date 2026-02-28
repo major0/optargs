@@ -5,7 +5,6 @@
 set -e
 
 COVERAGE_FILE="${1:-coverage.out}"
-COVERAGE_TARGET=100.0
 CORE_FUNCTIONS_TARGET=100.0
 
 # Colors for output

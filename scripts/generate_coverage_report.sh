@@ -280,10 +280,10 @@ EOF
 echo -e "${GREEN}✓ Detailed gaps analysis generated: $GAPS_FILE${NC}"
 
 # Generate summary statistics
-TOTAL_FUNCTIONS=$(echo "$FUNC_COVERAGE" | grep -v "total:" | wc -l)
-ZERO_COVERAGE=$(echo "$FUNC_COVERAGE" | grep "0.0%" | wc -l)
-PARTIAL_COVERAGE=$(echo "$FUNC_COVERAGE" | grep -v "100.0%" | grep -v "0.0%" | grep -v "total:" | wc -l)
-FULL_COVERAGE=$(echo "$FUNC_COVERAGE" | grep "100.0%" | wc -l)
+TOTAL_FUNCTIONS=$(echo "$FUNC_COVERAGE" | grep -vc "total:")
+ZERO_COVERAGE=$(echo "$FUNC_COVERAGE" | grep -c "0.0%")
+PARTIAL_COVERAGE=$(echo "$FUNC_COVERAGE" | grep -v "100.0%" | grep -v "0.0%" | grep -vc "total:")
+FULL_COVERAGE=$(echo "$FUNC_COVERAGE" | grep -c "100.0%")
 
 echo ""
 echo "Coverage Analysis Summary:"

@@ -12,7 +12,6 @@ permissions:
   issues: write
 
 jobs:
-  # Detect which modules need testing based on changed files
   detect-changes:
     name: Detect Changes
     runs-on: ubuntu-latest
@@ -29,65 +28,52 @@ jobs:
     - name: Detect changes
       id: changes
       run: |
-        # Check for changes in each module
-        if git diff --name-only HEAD~1 | grep -E '^(api_stability_test\.go|benchmark_test\.go|command\.go|command_case_insensitive_test\.go|command_test\.go|comparison_benchmark_test\.go|coverage_completion_test\.go|coverage_fallback_test\.go|coverage_final_test\.go|coverage_gap_test\.go|debug_equals_test\.go|edge_case_test\.go|example_command_usage_test\.go|findshortopt_coverage_test\.go|getopt\.go|getopt_long_test\.go|getopt_test\.go|gnu_long_compliance_test\.go|integration_command_test\.go|integration_test\.go|misc\.go|misc_test\.go|optargs_test\.go|parser\.go|parser_test\.go|performance_regression_test\.go|posix_compliance_test\.go|property_test\.go|round_trip_test\.go|go\.mod|go\.sum)$' || [ "${{ github.event_name }}" = "push" ]; then
-          echo "optargs=true" >> $GITHUB_OUTPUT
-        else
-          echo "optargs=false" >> $GITHUB_OUTPUT
-        fi
+        {
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "optargs=true"
+            echo "goarg=true"
+            echo "pflags=true"
+          else
+            CHANGED=$(git diff --name-only HEAD~1 2>/dev/null || echo "")
+            if echo "$CHANGED" | grep -qE '^[^/]+\.(go|mod|sum)$'; then
+              echo "optargs=true"
+            else
+              echo "optargs=false"
+            fi
+            if echo "$CHANGED" | grep -qE '^(goarg/|[^/]+\.(go|mod|sum)$)'; then
+              echo "goarg=true"
+            else
+              echo "goarg=false"
+            fi
+            if echo "$CHANGED" | grep -qE '^(pflags/|[^/]+\.(go|mod|sum)$)'; then
+              echo "pflags=true"
+            else
+              echo "pflags=false"
+            fi
+          fi
+        } >> "$GITHUB_OUTPUT"
 
-        if git diff --name-only HEAD~1 | grep -E '^(goarg/|optargs/)' || [ "${{ github.event_name }}" = "push" ]; then
-          echo "goarg=true" >> $GITHUB_OUTPUT
-        else
-          echo "goarg=false" >> $GITHUB_OUTPUT
-        fi
-
-        if git diff --name-only HEAD~1 | grep -E '^(pflags/|goarg/|optargs/)' || [ "${{ github.event_name }}" = "push" ]; then
-          echo "pflags=true" >> $GITHUB_OUTPUT
-        else
-          echo "pflags=false" >> $GITHUB_OUTPUT
-        fi
-
-  # Test coverage for optargs core module
   coverage-optargs:
-    name: OptArgs Core Coverage Analysis
+    name: OptArgs Core Coverage
     runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.optargs-changed == 'true'
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: '1.23'
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y bc
-
-    - name: Run tests with coverage
-      run: make coverage
-
-    - name: Generate coverage reports
-      run: make coverage-report
-
-    - name: Validate coverage targets
-      run: make coverage-validate
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+    - run: sudo apt-get update && sudo apt-get install -y bc
+    - run: make coverage
+    - run: make coverage-report
+    - run: make coverage-validate
+    - uses: codecov/codecov-action@v4
       with:
         file: ./coverage.out
         flags: optargs-core
         name: optargs-core-coverage
         fail_ci_if_error: false
-
-    - name: Upload coverage reports as artifacts
-      uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v4
       with:
         name: optargs-coverage-reports
         path: |
@@ -97,44 +83,29 @@ jobs:
           coverage_gaps_detailed.md
         retention-days: 30
 
-  # Test coverage for goarg module
   coverage-goarg:
-    name: GoArg Module Coverage Analysis
+    name: GoArg Module Coverage
     runs-on: ubuntu-latest
     needs: [detect-changes, coverage-optargs]
     if: always() && needs.detect-changes.outputs.goarg-changed == 'true'
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: '1.23'
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y bc
-
     - name: Run goarg tests with coverage
       working-directory: goarg
       run: |
         go mod tidy
         go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
         go tool cover -html=coverage.out -o coverage.html
-
-    - name: Upload goarg coverage to Codecov
-      uses: codecov/codecov-action@v3
+    - uses: codecov/codecov-action@v4
       with:
         file: ./goarg/coverage.out
         flags: goarg-module
         name: goarg-module-coverage
         fail_ci_if_error: false
-
-    - name: Upload goarg coverage reports as artifacts
-      uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v4
       with:
         name: goarg-coverage-reports
         path: |
@@ -142,44 +113,29 @@ jobs:
           goarg/coverage.html
         retention-days: 30
 
-  # Test coverage for pflags module
   coverage-pflags:
-    name: PFlags Module Coverage Analysis
+    name: PFlags Module Coverage
     runs-on: ubuntu-latest
-    needs: [detect-changes, coverage-goarg]
+    needs: [detect-changes, coverage-optargs]
     if: always() && needs.detect-changes.outputs.pflags-changed == 'true'
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: '1.23'
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y bc
-
     - name: Run pflags tests with coverage
       working-directory: pflags
       run: |
         go mod tidy
         go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
         go tool cover -html=coverage.out -o coverage.html
-
-    - name: Upload pflags coverage to Codecov
-      uses: codecov/codecov-action@v3
+    - uses: codecov/codecov-action@v4
       with:
         file: ./pflags/coverage.out
         flags: pflags-module
         name: pflags-module-coverage
         fail_ci_if_error: false
-
-    - name: Upload pflags coverage reports as artifacts
-      uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v4
       with:
         name: pflags-coverage-reports
         path: |
@@ -187,63 +143,48 @@ jobs:
           pflags/coverage.html
         retention-days: 30
 
-  # Combined coverage reporting
   coverage-summary:
     name: Combined Coverage Summary
     runs-on: ubuntu-latest
     needs: [detect-changes, coverage-optargs, coverage-goarg, coverage-pflags]
     if: always()
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Download all coverage artifacts
-      uses: actions/download-artifact@v4
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+    - uses: actions/download-artifact@v4
       with:
         path: coverage-artifacts
-
     - name: Generate combined coverage summary
       run: |
-        echo "# Combined Coverage Summary" > coverage-summary.md
-        echo "" >> coverage-summary.md
-
-        if [ -f "coverage-artifacts/optargs-coverage-reports/coverage_analysis.md" ]; then
-          echo "## OptArgs Core Module" >> coverage-summary.md
-          grep "Overall Coverage:" coverage-artifacts/optargs-coverage-reports/coverage_analysis.md >> coverage-summary.md || echo "Coverage data not available" >> coverage-summary.md
-          echo "" >> coverage-summary.md
-        fi
-
-        if [ -f "coverage-artifacts/goarg-coverage-reports/coverage.out" ]; then
-          echo "## GoArg Module" >> coverage-summary.md
-          if command -v go &> /dev/null; then
-            go tool cover -func=coverage-artifacts/goarg-coverage-reports/coverage.out | grep "total:" >> coverage-summary.md || echo "Coverage data not available" >> coverage-summary.md
-          else
-            echo "Coverage data not available (go not installed)" >> coverage-summary.md
+        {
+          echo "# Combined Coverage Summary"
+          echo ""
+          if [ -f "coverage-artifacts/optargs-coverage-reports/coverage_analysis.md" ]; then
+            echo "## OptArgs Core Module"
+            grep "Overall Coverage:" coverage-artifacts/optargs-coverage-reports/coverage_analysis.md || echo "Coverage data not available"
+            echo ""
           fi
-          echo "" >> coverage-summary.md
-        fi
-
-        if [ -f "coverage-artifacts/pflags-coverage-reports/coverage.out" ]; then
-          echo "## PFlags Module" >> coverage-summary.md
-          if command -v go &> /dev/null; then
-            go tool cover -func=coverage-artifacts/pflags-coverage-reports/coverage.out | grep "total:" >> coverage-summary.md || echo "Coverage data not available" >> coverage-summary.md
-          else
-            echo "Coverage data not available (go not installed)" >> coverage-summary.md
+          if [ -f "coverage-artifacts/goarg-coverage-reports/coverage.out" ]; then
+            echo "## GoArg Module"
+            go tool cover -func=coverage-artifacts/goarg-coverage-reports/coverage.out | grep "total:" || echo "Coverage data not available"
+            echo ""
           fi
-          echo "" >> coverage-summary.md
-        fi
-
+          if [ -f "coverage-artifacts/pflags-coverage-reports/coverage.out" ]; then
+            echo "## PFlags Module"
+            go tool cover -func=coverage-artifacts/pflags-coverage-reports/coverage.out | grep "total:" || echo "Coverage data not available"
+            echo ""
+          fi
+        } > coverage-summary.md
         cat coverage-summary.md
-
     - name: Comment coverage summary on PR
       if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       continue-on-error: true
       with:
         script: |
           const fs = require('fs');
-
           let coverageSummary = '';
           try {
             coverageSummary = fs.readFileSync('coverage-summary.md', 'utf8');
@@ -251,27 +192,7 @@ jobs:
             console.log('Coverage summary file not found');
             return;
           }
-
-          const commentBody = `## 📊 Multi-Module Test Coverage Report
-
-          ### Coverage Summary by Module
-          ${coverageSummary}
-
-          ### Build Status
-          - ✅ Cascading builds completed successfully
-          - 📈 Module-specific coverage reports generated
-          - 🎯 Target: 100% for core parsing functions
-
-          ### Module Dependencies
-          - **optargs**: Core POSIX/GNU parsing engine
-          - **goarg**: alexflint/go-arg compatibility layer (depends on optargs)
-          - **pflags**: spf13/pflag compatibility layer (depends on goarg)
-
-          ### Artifacts Available
-          - OptArgs Core: \`optargs-coverage-reports\`
-          - GoArg Module: \`goarg-coverage-reports\`
-          - PFlags Module: \`pflags-coverage-reports\``;
-
+          const commentBody = `## Multi-Module Test Coverage Report\n\n${coverageSummary}`;
           try {
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -279,200 +200,48 @@ jobs:
               repo: context.repo.repo,
               body: commentBody
             });
-            console.log('Coverage summary comment posted successfully');
           } catch (error) {
             console.log('Failed to post coverage comment:', error.message);
-          }
-
-  # Legacy coverage job for backward compatibility
-  coverage:
-    name: Legacy Coverage (Backward Compatibility)
-    runs-on: ubuntu-latest
-    needs: detect-changes
-    if: needs.detect-changes.outputs.optargs-changed == 'true'
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.23'
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y bc
-
-    - name: Run tests with coverage
-      run: make coverage
-
-    - name: Generate coverage reports
-      run: make coverage-report
-
-    - name: Validate coverage targets
-      run: make coverage-validate
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.out
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
-
-    - name: Upload coverage reports as artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-reports
-        path: |
-          coverage.out
-          coverage.html
-          coverage_analysis.md
-          coverage_gaps_detailed.md
-        retention-days: 30
-
-    - name: Comment coverage on PR
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
-      continue-on-error: true
-      with:
-        script: |
-          const fs = require('fs');
-
-          // Read coverage analysis
-          let coverageReport = '';
-          try {
-            coverageReport = fs.readFileSync('coverage_analysis.md', 'utf8');
-          } catch (error) {
-            console.log('Coverage analysis file not found');
-            return;
-          }
-
-          // Extract overall coverage percentage
-          const coverageMatch = coverageReport.match(/Overall Coverage: ([\d.]+%)/);
-          const overallCoverage = coverageMatch ? coverageMatch[1] : 'Unknown';
-
-          // Create comment body
-          const commentBody = `## 📊 Test Coverage Report
-
-          **Overall Coverage: ${overallCoverage}**
-
-          ### Coverage Analysis
-          - ✅ Automated coverage validation completed
-          - 📈 Detailed coverage reports generated
-          - 🎯 Target: 100% for core parsing functions
-
-          ### Artifacts
-          - Coverage profile: \`coverage.out\`
-          - HTML report: \`coverage.html\`
-          - Analysis report: \`coverage_analysis.md\`
-          - Gap analysis: \`coverage_gaps_detailed.md\`
-
-          ### Quick Commands
-          \`\`\`bash
-          # View coverage locally
-          make coverage-html
-
-          # Validate coverage targets
-          make coverage-validate
-
-          # Generate analysis reports
-          make coverage-report
-          \`\`\`
-
-          <details>
-          <summary>📋 View detailed coverage analysis</summary>
-
-          \`\`\`
-          ${coverageReport.substring(0, 2000)}...
-          \`\`\`
-
-          </details>`;
-
-          // Post comment with error handling
-          try {
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: commentBody
-            });
-            console.log('Coverage comment posted successfully');
-          } catch (error) {
-            console.log('Failed to post coverage comment (permissions issue):', error.message);
-            console.log('Coverage validation completed successfully despite comment failure');
           }
 
   coverage-regression:
     name: Coverage Regression Check
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-
     steps:
-    - name: Checkout PR code
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: '1.23'
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y bc
-
+    - run: sudo apt-get update && sudo apt-get install -y bc
     - name: Generate PR coverage
       run: |
         make coverage
         PR_COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
-        echo "PR_COVERAGE=$PR_COVERAGE" >> $GITHUB_ENV
-
+        echo "PR_COVERAGE=$PR_COVERAGE" >> "$GITHUB_ENV"
     - name: Checkout main branch
       uses: actions/checkout@v4
       with:
         ref: main
-
     - name: Generate main coverage
       run: |
-        # Try to generate coverage for main branch, but don't fail if it has build issues
         if make coverage 2>/dev/null; then
           MAIN_COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
-          echo "MAIN_COVERAGE=$MAIN_COVERAGE" >> $GITHUB_ENV
-          echo "Main branch coverage: ${MAIN_COVERAGE}%"
+          echo "MAIN_COVERAGE=$MAIN_COVERAGE" >> "$GITHUB_ENV"
         else
-          echo "Main branch has build failures, skipping regression check"
-          echo "MAIN_COVERAGE=0" >> $GITHUB_ENV
-          echo "SKIP_REGRESSION=true" >> $GITHUB_ENV
+          echo "MAIN_COVERAGE=0" >> "$GITHUB_ENV"
+          echo "SKIP_REGRESSION=true" >> "$GITHUB_ENV"
         fi
-
     - name: Check for coverage regression
       run: |
         if [ "$SKIP_REGRESSION" = "true" ]; then
-          echo "⚠️ Skipping regression check due to main branch build failures"
+          echo "Skipping regression check due to main branch build failures"
           echo "PR branch coverage: ${PR_COVERAGE}%"
-          echo "✅ PR builds successfully, regression check will be available after merge"
           exit 0
         fi
-
-        echo "Main branch coverage: ${MAIN_COVERAGE}%"
-        echo "PR branch coverage: ${PR_COVERAGE}%"
-
-        # Check if coverage decreased by more than 1%
-        REGRESSION_THRESHOLD=1.0
+        echo "Main: ${MAIN_COVERAGE}%, PR: ${PR_COVERAGE}%"
         COVERAGE_DIFF=$(echo "$MAIN_COVERAGE - $PR_COVERAGE" | bc -l)
-
-        if (( $(echo "$COVERAGE_DIFF > $REGRESSION_THRESHOLD" | bc -l) )); then
-          echo "❌ Coverage regression detected!"
-          echo "Coverage decreased by ${COVERAGE_DIFF}% (threshold: ${REGRESSION_THRESHOLD}%)"
-          echo "Main: ${MAIN_COVERAGE}%, PR: ${PR_COVERAGE}%"
+        if (( $(echo "$COVERAGE_DIFF > 1.0" | bc -l) )); then
+          echo "Coverage regression: ${COVERAGE_DIFF}%"
           exit 1
-        else
-          echo "✅ No significant coverage regression detected"
-          if (( $(echo "$PR_COVERAGE > $MAIN_COVERAGE" | bc -l) )); then
-            IMPROVEMENT=$(echo "$PR_COVERAGE - $MAIN_COVERAGE" | bc -l)
-            echo "🎉 Coverage improved by ${IMPROVEMENT}%!"
-          fi
         fi

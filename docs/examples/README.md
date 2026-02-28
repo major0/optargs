@@ -28,6 +28,7 @@ go run docs/examples/automatic_help.go
 ## Features Demonstrated
 
 Each example shows:
+
 - How to define flags using the pflags API
 - Command-line usage patterns
 - Expected output and behavior

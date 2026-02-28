@@ -1,4 +1,9 @@
 #!/bin/sh
+# shellcheck disable=SC2059,SC2015,SC1090
+# SC2059: printf format strings are intentionally dynamic (byte function)
+# SC2015: A && B || C pattern is intentional (getopt_version)
+# SC1090: sourced files are dynamic by design (test data fragments)
+#
 # This is a simple script attempts to demonstrate valid GNU/POSIX uses of
 # `getopt(3)`. This script relies on the util-linux version of the
 # `getopt(1)` CLI utility which makes significant efforts to expose

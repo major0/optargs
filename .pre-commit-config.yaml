@@ -1,49 +1,63 @@
 repos:
+  # General file hygiene
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+      - id: check-json
       - id: check-added-large-files
-  - repo: https://github.com/dnephin/pre-commit-golang
-    rev: v0.5.1
+
+  # Go formatting and imports (actively maintained, monorepo-aware)
+  - repo: https://github.com/TekWizely/pre-commit-golang
+    rev: v1.0.0-rc.4
     hooks:
       - id: go-fmt
       - id: go-imports
-      - id: no-go-testing
-      # - id: golangci-lint  # Temporarily disabled due to Go 1.23 compatibility issues
-      - id: go-mod-tidy
+
+  # Commit message linting
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
-    rev: v9.20.0
+    rev: v9.24.0
     hooks:
       - id: commitlint
         stages: [commit-msg]
         additional_dependencies: ['@commitlint/config-conventional']
+
+  # Secret detection
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
         exclude: go.sum
-  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
-    rev: v1.3.3
+
+  # GitHub Actions workflow linting
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.11
     hooks:
-      - id: python-safety-dependencies-check
-        files: requirements.*\.txt$
+      - id: actionlint
+
+  # Markdown linting
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.21.0
+    hooks:
+      - id: markdownlint-cli2
+
+  # Local hooks for tools that need system installation
   - repo: local
     hooks:
-      - id: golangci-lint-local
-        name: golangci-lint (local config)
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck
+        language: system
+        types: [shell]
+        exclude: '^posix/(?!getopt_examples\.sh$)'
+      - id: golangci-lint
+        name: golangci-lint
         entry: golangci-lint run
         language: system
         types: [go]
-        pass_filenames: false
-      - id: go-mod-verify
-        name: go mod verify
-        entry: go mod verify
-        language: system
-        files: go\.(mod|sum)$
         pass_filenames: false
       - id: go-vet
         name: go vet
