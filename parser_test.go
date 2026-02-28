@@ -10,6 +10,7 @@ func genOpts() []byte {
 		if !isGraph(byte(i)) {
 			continue
 		}
+		opts = append(opts, byte(i))
 	}
 	return opts
 }
@@ -23,8 +24,8 @@ func TestParserInit(t *testing.T) {
 
 func TestParserInitShortOpts(t *testing.T) {
 	var shortOpts = make(map[byte]*Flag)
-	for c, i := range genOpts() {
-		switch byte(i) {
+	for _, i := range genOpts() {
+		switch i {
 		case ':', ';', '-':
 			continue
 		}
@@ -39,7 +40,7 @@ func TestParserInitShortOpts(t *testing.T) {
 			hasArg = OptionalArgument
 		}
 
-		shortOpts[byte(c)] = &Flag{Name: string(byte(c)), HasArg: hasArg}
+		shortOpts[i] = &Flag{Name: string(i), HasArg: hasArg}
 	}
 	_, err := NewParser(ParserConfig{}, shortOpts, nil, nil, nil)
 	if err != nil {
@@ -83,8 +84,8 @@ func TestParserInitNotIsGraphLongOpts(t *testing.T) {
 
 func TestParserInitLongOpts(t *testing.T) {
 	var longOpts = make(map[string]*Flag)
-	for c, i := range genOpts() {
-		s := string(byte(c))
+	for _, i := range genOpts() {
+		s := string(rune(i))
 		var hasArg ArgType
 		switch i % 3 {
 		case 0:
