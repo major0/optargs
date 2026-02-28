@@ -177,7 +177,7 @@ func getOpt(args []string, optstring string, longopts []Flag, longOnly bool) (*P
 	//	 value of `1`, i.e. `true`.
 	//       See `getopt_long(3)` for more information.
 	shortOpts := make(map[byte]*Flag)
-opt_prefix:
+optPrefix:
 	for len(optstring) > 0 {
 		slog.Debug("GetOpt", "mode", true, "optstring", optstring)
 		switch optstring[0] {
@@ -188,7 +188,7 @@ opt_prefix:
 		case '-':
 			config.parseMode = ParseNonOpts
 		default:
-			break opt_prefix
+			break optPrefix
 		}
 		optstring = optstring[1:]
 	}

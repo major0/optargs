@@ -207,67 +207,76 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 
 	// Walk the parser chain: self first, then ancestors.
 	for current := p; current != nil; current = current.parent {
-		for opt := range current.shortOpts {
-			if current.config.shortCaseIgnore {
-				if !strings.EqualFold(string(c), string(opt)) {
-					continue
-				}
-			} else if c != opt {
-				continue
-			}
-
-			option := Option{
-				Name:   string(opt),
-				HasArg: false,
-				Arg:    "",
-			}
-
-			switch current.shortOpts[opt].HasArg {
-			case NoArgument:
-				slog.Debug("findShortOpt", "hasArg", "none", "c", string(c), "opt", string(opt))
-
-			case RequiredArgument:
-				slog.Debug("findShortOpt", "hasArg", "required", "c", string(c), "opt", string(opt))
-				var arg string
-				if len(word) > 0 {
-					arg = word
-					word = ""
-				} else {
-					if len(args) == 0 {
-						return args, word, option, p.optError("option requires an argument: " + string(c))
-					}
-					arg = args[0]
-					args = args[1:]
-				}
-
-				option.Arg = arg
-				option.HasArg = true
-
-			case OptionalArgument:
-				slog.Debug("findShortOpt", "hasArg", "optional", "c", string(c), "opt", string(opt))
-				var arg string
-				if len(word) > 0 {
-					arg = word
-					word = ""
-					option.HasArg = true
-				} else if len(args) > 0 {
-					arg = args[0]
-					args = args[1:]
-					option.HasArg = true
-				}
-
-				option.Arg = arg
-
-			default:
-				return args, word, option, p.optErrorf("unknown argument type: %d", current.shortOpts[opt].HasArg)
-			}
-
-			slog.Debug("findShortOpt", "args", args, "word", word, "option", option, "err", "yield")
-			return args, word, option, nil
+		matched, flag := current.lookupShortOpt(c)
+		if flag == nil {
+			continue
 		}
+
+		option := Option{Name: string(matched)}
+
+		switch flag.HasArg {
+		case NoArgument:
+			slog.Debug("findShortOpt", "hasArg", "none", "c", string(c))
+
+		case RequiredArgument:
+			slog.Debug("findShortOpt", "hasArg", "required", "c", string(c))
+			if len(word) > 0 {
+				option.Arg = word
+				word = ""
+			} else if len(args) == 0 {
+				return args, word, option, p.optError("option requires an argument: " + string(c))
+			} else {
+				option.Arg = args[0]
+				args = args[1:]
+			}
+			option.HasArg = true
+
+		case OptionalArgument:
+			slog.Debug("findShortOpt", "hasArg", "optional", "c", string(c))
+			if len(word) > 0 {
+				option.Arg = word
+				word = ""
+				option.HasArg = true
+			} else if len(args) > 0 {
+				option.Arg = args[0]
+				args = args[1:]
+				option.HasArg = true
+			}
+
+		default:
+			return args, word, option, p.optErrorf("unknown argument type: %d", flag.HasArg)
+		}
+
+		slog.Debug("findShortOpt", "args", args, "word", word, "option", option, "err", "yield")
+		return args, word, option, nil
 	}
 
 	return args, word, Option{}, p.optError("unknown option: " + string(c))
+}
+
+// lookupShortOpt finds a short option in this parser's shortOpts map,
+// respecting the case-sensitivity configuration. Returns the matched key
+// and the flag definition.
+func (p *Parser) lookupShortOpt(c byte) (byte, *Flag) {
+	if flag, ok := p.shortOpts[c]; ok {
+		return c, flag
+	}
+	if !p.config.shortCaseIgnore {
+		return 0, nil
+	}
+	// Case-insensitive fallback: try the opposite case.
+	var alt byte
+	if c >= 'a' && c <= 'z' {
+		alt = c - 32
+	} else if c >= 'A' && c <= 'Z' {
+		alt = c + 32
+	} else {
+		return 0, nil
+	}
+	if flag, ok := p.shortOpts[alt]; ok {
+		return alt, flag
+	}
+	return 0, nil
 }
 
 // Options returns an iterator over parsed options. Each iteration yields
@@ -298,11 +307,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 
 			case strings.HasPrefix(p.Args[0], "--"):
 				slog.Debug("Options", "prefix", "--")
-				var remainingArgs []string
-				if len(p.Args) > 1 {
-					remainingArgs = p.Args[1:]
-				}
-				p.Args, option, err = p.findLongOpt(p.Args[0][2:], remainingArgs)
+				p.Args, option, err = p.findLongOpt(p.Args[0][2:], p.Args[1:])
 				if !yield(option, err) {
 					return
 				}
@@ -311,10 +316,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				slog.Debug("Options", "prefix", "-")
 				if p.config.longOptsOnly {
 					longOnlyWord := p.Args[0][1:]
-					var remainingArgs []string
-					if len(p.Args) > 1 {
-						remainingArgs = p.Args[1:]
-					}
+					remainingArgs := p.Args[1:]
 
 					// Suppress error logging during the long option
 					// probe — we may fall back to short options.
@@ -346,13 +348,9 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 
 				// iterate over each character in the word looking
 				// for short options
-				originalArgs := p.Args // Save original args for compacted option processing
+				remainingArgs := p.Args[1:]
 				for word := p.Args[0][1:]; len(word) > 0; {
 					slog.Debug("Options", "word", word)
-					var remainingArgs []string
-					if len(originalArgs) > 1 {
-						remainingArgs = originalArgs[1:]
-					}
 					p.Args, word, option, err = p.findShortOpt(word[0], word[1:], remainingArgs)
 
 					// Transform usages such as `-W foo` into `--foo`
@@ -366,24 +364,21 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				}
 
 			default:
-				// Check if this is a command
+				// Check if this is a registered command
 				if p.HasCommands() {
 					if _, exists := p.GetCommand(p.Args[0]); exists {
-						// Found a command, execute it with remaining args
-						remainingArgs := p.Args[1:]
-						_, err := p.ExecuteCommand(p.Args[0], remainingArgs)
+						_, err := p.ExecuteCommand(p.Args[0], p.Args[1:])
 						if err != nil {
 							if !yield(Option{}, err) {
 								return
 							}
 						}
-						// Command handled, stop processing at root level
 						p.Args = []string{}
 						break out
 					}
 				}
 
-				// Not a command, handle as non-option
+				// Handle as non-option
 				switch p.config.parseMode {
 				case ParseDefault:
 					p.nonOpts = append(p.nonOpts, p.Args[0])
@@ -424,7 +419,10 @@ func (p *Parser) AddAlias(alias, existingCommand string) error {
 
 // GetCommand retrieves a parser by command name
 func (p *Parser) GetCommand(name string) (*Parser, bool) {
-	return p.Commands.GetCommandCaseInsensitive(name, p.config.commandCaseIgnore)
+	if p.config.commandCaseIgnore {
+		return p.Commands.getCommandFold(name)
+	}
+	return p.Commands.GetCommand(name)
 }
 
 // ListCommands returns all command mappings
@@ -434,7 +432,10 @@ func (p *Parser) ListCommands() map[string]*Parser {
 
 // ExecuteCommand finds and executes a command
 func (p *Parser) ExecuteCommand(name string, args []string) (*Parser, error) {
-	return p.Commands.ExecuteCommandCaseInsensitive(name, args, p.config.commandCaseIgnore)
+	if p.config.commandCaseIgnore {
+		return p.Commands.executeCommandFold(name, args)
+	}
+	return p.Commands.ExecuteCommand(name, args)
 }
 
 // HasCommands returns true if any commands are registered

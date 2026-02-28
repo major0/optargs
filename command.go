@@ -30,19 +30,18 @@ func (cr CommandRegistry) AddAlias(alias, existingCommand string) error {
 	return nil
 }
 
-// GetCommand retrieves a parser by command name
+// GetCommand retrieves a parser by command name (exact match).
 func (cr CommandRegistry) GetCommand(name string) (*Parser, bool) {
 	parser, exists := cr[name]
 	return parser, exists
 }
 
-// GetCommandCaseInsensitive retrieves a parser by command name with case insensitive matching
-func (cr CommandRegistry) GetCommandCaseInsensitive(name string, caseIgnore bool) (*Parser, bool) {
-	if !caseIgnore {
-		return cr.GetCommand(name)
+// getCommandFold retrieves a parser by command name with case-insensitive matching.
+func (cr CommandRegistry) getCommandFold(name string) (*Parser, bool) {
+	// Try exact match first (fast path).
+	if parser, exists := cr[name]; exists {
+		return parser, true
 	}
-
-	// Case insensitive lookup
 	for cmdName, parser := range cr {
 		if strings.EqualFold(cmdName, name) {
 			return parser, true
@@ -56,40 +55,41 @@ func (cr CommandRegistry) ListCommands() map[string]*Parser {
 	return map[string]*Parser(cr)
 }
 
-// ExecuteCommand finds and executes a command
+// ExecuteCommand finds and prepares a command for execution.
 func (cr CommandRegistry) ExecuteCommand(name string, args []string) (*Parser, error) {
 	parser, exists := cr[name]
 	if !exists {
 		return nil, fmt.Errorf("unknown command: %s", name)
 	}
-
 	if parser == nil {
 		return nil, fmt.Errorf("command %s has no parser", name)
 	}
-
-	// Update the parser's args for this execution
 	parser.Args = args
 	parser.nonOpts = []string{}
-
 	return parser, nil
 }
 
-// ExecuteCommandCaseInsensitive finds and executes a command with case insensitive matching
-func (cr CommandRegistry) ExecuteCommandCaseInsensitive(name string, args []string, caseIgnore bool) (*Parser, error) {
-	parser, exists := cr.GetCommandCaseInsensitive(name, caseIgnore)
+// executeCommandFold finds and prepares a command for execution with case-insensitive matching.
+func (cr CommandRegistry) executeCommandFold(name string, args []string) (*Parser, error) {
+	parser, exists := cr.getCommandFold(name)
 	if !exists {
 		return nil, fmt.Errorf("unknown command: %s", name)
 	}
-
 	if parser == nil {
 		return nil, fmt.Errorf("command %s has no parser", name)
 	}
-
-	// Update the parser's args for this execution
 	parser.Args = args
 	parser.nonOpts = []string{}
-
 	return parser, nil
+}
+
+// ExecuteCommandCaseInsensitive finds and prepares a command for execution
+// with optional case-insensitive matching.
+func (cr CommandRegistry) ExecuteCommandCaseInsensitive(name string, args []string, caseIgnore bool) (*Parser, error) {
+	if !caseIgnore {
+		return cr.ExecuteCommand(name, args)
+	}
+	return cr.executeCommandFold(name, args)
 }
 
 // HasCommands returns true if any commands are registered
