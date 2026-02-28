@@ -1,33 +1,53 @@
-# Contributing
+# Contributing to OptArgs
 
-Welcome to the Go OptArgs Project. Here you will find some basic information on
-how to contribute to the project.
+## Dev Setup
 
-## Reporting Bugs
+```bash
+git clone https://github.com/major0/optargs.git
+cd optargs
+go mod tidy
+```
 
-Simply open an issue on [GitHub](../issues).
+Requires Go 1.23+ and [pre-commit](https://pre-commit.com/#install).
 
-## Submitting Changes
+Install pre-commit hooks:
 
-All changes should:
-- Use [Conventional Commits](https://www.conventionalcommits.org)
-- Should pass local [pre-commit][] tests.
-- Should be submitted as a pull-request to the repository.
+```bash
+pre-commit install
+```
 
 ## Testing
 
-Local testing is handled by [pre-commit][], which will also be used to
-automatically test any pull-requests in the repositories CI/CD pipeline.
+```bash
+# Run all tests
+make test
 
-See the [installation instructions](https://pre-commit.com/#install) for
-[pre-commit][] for more details.
+# Coverage report
+make coverage-html
 
-## Roadmap
+# Validate coverage targets
+make coverage-validate
 
-Please review the [roadmap](Roadmap.md) to see where we are in the project
-and how you might be able to help.
+# Full static analysis + tests
+make pre-commit
+```
 
-[//]: # (References)
+Property-based tests use `testing/quick` with 100+ iterations. Test files use `_test.go` suffix; property tests use the `Property` prefix.
 
-[GitHub]: https://github.com
-[pre-commit]: https://pre-commit.com
+## Code Style
+
+- `go fmt` and `goimports` enforced
+- `golangci-lint` must pass with zero issues
+- Simple, readable over clever — see design philosophy in project steering
+
+## PR Workflow
+
+1. Fork and create a feature branch
+2. Use [Conventional Commits](https://www.conventionalcommits.org) for commit messages
+3. Ensure `make pre-commit` passes locally
+4. Submit a pull request — CI runs pre-commit, build, and coverage checks
+5. Maintain or improve test coverage
+
+## Reporting Bugs
+
+Open an issue on [GitHub](https://github.com/major0/optargs/issues).
