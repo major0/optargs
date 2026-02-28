@@ -1724,3 +1724,118 @@ func TestProperty15_IteratorCorrectness(t *testing.T) {
 		t.Errorf("Property 15 failed: %v", err)
 	}
 }
+
+// Property 18: Native Subcommand Dispatch
+// **Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.5**
+// For any parser with registered subcommands, the iterator dispatches to the
+// correct child parser when a non-option argument matches a subcommand name,
+// and unknown options in child parsers are resolved by walking the parent chain.
+// Both verbose and silent error modes work correctly through the chain.
+func TestProperty18_NativeSubcommandDispatch(t *testing.T) {
+	// Valid short option characters for random generation
+	validShortOpts := []byte("abcdefghijklmnopqrstuvwxyz")
+
+	property := func(seed int64) bool {
+		rng := rand.New(rand.NewSource(seed))
+
+		// Pick random non-overlapping short options for root and child
+		perm := rng.Perm(len(validShortOpts))
+		rootOptChar := validShortOpts[perm[0]]
+		childOptChar := validShortOpts[perm[1]]
+		inheritedOptChar := validShortOpts[perm[2]]
+
+		// Random command name from a small set
+		cmdNames := []string{"serve", "build", "test", "deploy", "run"}
+		cmdName := cmdNames[rng.Intn(len(cmdNames))]
+
+		// Random error mode: verbose or silent
+		silentMode := rng.Intn(2) == 0
+
+		rootOptstring := string(rootOptChar) + string(inheritedOptChar)
+		childOptstring := string(childOptChar)
+		if silentMode {
+			rootOptstring = ":" + rootOptstring
+			childOptstring = ":" + childOptstring
+		}
+
+		// Build args: root option, then command, then child option, then inherited option
+		args := []string{
+			"-" + string(rootOptChar),
+			cmdName,
+			"-" + string(childOptChar),
+			"-" + string(inheritedOptChar),
+		}
+
+		root, err := GetOpt(args, rootOptstring)
+		if err != nil {
+			t.Logf("Failed to create root parser: %v", err)
+			return false
+		}
+
+		child, err := GetOpt([]string{}, childOptstring)
+		if err != nil {
+			t.Logf("Failed to create child parser: %v", err)
+			return false
+		}
+		root.AddCmd(cmdName, child)
+
+		// Requirement 6.5: no subcommands on child means plain getopt behavior
+		if child.HasCommands() {
+			return false
+		}
+
+		// Phase 1: iterate root — should yield root option, then dispatch command
+		var rootOpts []Option
+		for opt, err := range root.Options() {
+			if err != nil {
+				t.Logf("Root iteration error: %v", err)
+				return false
+			}
+			rootOpts = append(rootOpts, opt)
+		}
+
+		// Requirement 6.2: root should yield its own option, then dispatch
+		if len(rootOpts) != 1 {
+			t.Logf("Expected 1 root option, got %d", len(rootOpts))
+			return false
+		}
+		if rootOpts[0].Name != string(rootOptChar) {
+			t.Logf("Expected root option '%s', got '%s'", string(rootOptChar), rootOpts[0].Name)
+			return false
+		}
+
+		// Phase 2: iterate child — should yield child's own option + inherited option
+		var childOpts []Option
+		for opt, err := range child.Options() {
+			if err != nil {
+				t.Logf("Child iteration error: %v", err)
+				return false
+			}
+			childOpts = append(childOpts, opt)
+		}
+
+		// Requirement 6.3: child resolves its own option and parent's option via chain
+		if len(childOpts) != 2 {
+			t.Logf("Expected 2 child options, got %d", len(childOpts))
+			return false
+		}
+		if childOpts[0].Name != string(childOptChar) {
+			t.Logf("Expected child option '%s', got '%s'", string(childOptChar), childOpts[0].Name)
+			return false
+		}
+		if childOpts[1].Name != string(inheritedOptChar) {
+			t.Logf("Expected inherited option '%s', got '%s'", string(inheritedOptChar), childOpts[1].Name)
+			return false
+		}
+
+		// Requirement 6.7: parent field is unexported — verified by compilation
+		// (parser.parent is unexported, so external packages can't access it)
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 18 failed: %v", err)
+	}
+}

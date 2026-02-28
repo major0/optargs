@@ -4,7 +4,8 @@ import (
 	"testing"
 )
 
-// TestCoverageCompletion adds tests to achieve 100% coverage for core parsing functions
+// TestCoverageCompletion tests parser internal paths: findShortOpt edge cases,
+// Options() mode handling, and subcommand dispatch through the iterator.
 func TestCoverageCompletion(t *testing.T) {
 	// Test findShortOpt unknown argument type error path
 	t.Run("findShortOpt_unknown_argument_type", func(t *testing.T) {
@@ -15,7 +16,7 @@ func TestCoverageCompletion(t *testing.T) {
 		longOpts := map[string]*Flag{}
 		args := []string{}
 
-		parser, err := NewParser(config, shortOpts, longOpts, args, nil)
+		parser, err := NewParser(config, shortOpts, longOpts, args)
 		if err != nil {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
@@ -40,7 +41,7 @@ func TestCoverageCompletion(t *testing.T) {
 		longOpts := map[string]*Flag{}
 		args := []string{}
 
-		parser, err := NewParser(config, shortOpts, longOpts, args, nil)
+		parser, err := NewParser(config, shortOpts, longOpts, args)
 		if err != nil {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
@@ -88,7 +89,7 @@ func TestCoverageCompletion(t *testing.T) {
 		longOpts := map[string]*Flag{}
 		args := []string{"-Wfoo"}
 
-		parser, err := NewParser(config, shortOpts, longOpts, args, nil)
+		parser, err := NewParser(config, shortOpts, longOpts, args)
 		if err != nil {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
@@ -110,7 +111,7 @@ func TestCoverageCompletion(t *testing.T) {
 		longOpts := map[string]*Flag{}
 		args := []string{"non-option"}
 
-		parser, err := NewParser(config, shortOpts, longOpts, args, nil)
+		parser, err := NewParser(config, shortOpts, longOpts, args)
 		if err != nil {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
@@ -135,7 +136,7 @@ func TestCoverageCompletion(t *testing.T) {
 		longOpts := map[string]*Flag{}
 		args := []string{"non-option", "-v"}
 
-		parser, err := NewParser(config, shortOpts, longOpts, args, nil)
+		parser, err := NewParser(config, shortOpts, longOpts, args)
 		if err != nil {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
@@ -168,7 +169,7 @@ func TestCoverageCompletion(t *testing.T) {
 		}
 		args := []string{"-verbose"}
 
-		parser, err := NewParser(config, shortOpts, longOpts, args, nil)
+		parser, err := NewParser(config, shortOpts, longOpts, args)
 		if err != nil {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
@@ -190,13 +191,13 @@ func TestCoverageCompletion(t *testing.T) {
 		longOpts := map[string]*Flag{}
 		args := []string{"subcmd", "arg1"}
 
-		parser, err := NewParser(config, shortOpts, longOpts, args, nil)
+		parser, err := NewParser(config, shortOpts, longOpts, args)
 		if err != nil {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
 
 		// Create a subcommand parser
-		subParser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil)
+		subParser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
 		if err != nil {
 			t.Fatalf("Failed to create subparser: %v", err)
 		}
@@ -229,7 +230,7 @@ func TestCoverageCompletion(t *testing.T) {
 		longOpts := map[string]*Flag{}
 		args := []string{"subcmd"}
 
-		parser, err := NewParser(config, shortOpts, longOpts, args, nil)
+		parser, err := NewParser(config, shortOpts, longOpts, args)
 		if err != nil {
 			t.Fatalf("Failed to create parser: %v", err)
 		}

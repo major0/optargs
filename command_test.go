@@ -370,3 +370,120 @@ func TestCommandInspection(t *testing.T) {
 		}
 	}
 }
+
+// TestRealWorldCommandHierarchy demonstrates a complete real-world usage
+// of the command system with nested commands, aliases, and option inheritance
+func TestRealWorldCommandHierarchy(t *testing.T) {
+	rootParser, err := GetOptLong([]string{}, "vhc:", []Flag{
+		{Name: "verbose", HasArg: NoArgument},
+		{Name: "help", HasArg: NoArgument},
+		{Name: "config", HasArg: RequiredArgument},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create root parser: %v", err)
+	}
+
+	serverParser, err := GetOptLong([]string{}, "p:H:", []Flag{
+		{Name: "port", HasArg: RequiredArgument},
+		{Name: "host", HasArg: RequiredArgument},
+		{Name: "daemon", HasArg: NoArgument},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create server parser: %v", err)
+	}
+
+	clientParser, err := GetOptLong([]string{}, "u:t:", []Flag{
+		{Name: "url", HasArg: RequiredArgument},
+		{Name: "timeout", HasArg: RequiredArgument},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create client parser: %v", err)
+	}
+
+	dbParser, err := GetOptLong([]string{}, "d:", []Flag{
+		{Name: "database", HasArg: RequiredArgument},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create db parser: %v", err)
+	}
+
+	migrateParser, err := GetOptLong([]string{}, "", []Flag{
+		{Name: "dry-run", HasArg: NoArgument},
+		{Name: "steps", HasArg: RequiredArgument},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create migrate parser: %v", err)
+	}
+
+	rootParser.AddCmd("server", serverParser)
+	rootParser.AddCmd("client", clientParser)
+	rootParser.AddCmd("database", dbParser)
+	dbParser.AddCmd("migrate", migrateParser)
+
+	_ = rootParser.AddAlias("srv", "server")
+	_ = rootParser.AddAlias("s", "server")
+	_ = rootParser.AddAlias("c", "client")
+	_ = rootParser.AddAlias("db", "database")
+	_ = dbParser.AddAlias("mig", "migrate")
+	_ = dbParser.AddAlias("m", "migrate")
+
+	t.Run("alias_execution", func(t *testing.T) {
+		parser, err := rootParser.ExecuteCommand("srv", []string{"--port", "9000"})
+		if err != nil {
+			t.Errorf("Server alias command failed: %v", err)
+		}
+		if parser != serverParser {
+			t.Error("Alias should point to same parser")
+		}
+	})
+
+	t.Run("nested_alias_execution", func(t *testing.T) {
+		parser, err := dbParser.ExecuteCommand("mig", []string{"--dry-run"})
+		if err != nil {
+			t.Errorf("Migrate alias command failed: %v", err)
+		}
+		if parser != migrateParser {
+			t.Error("Nested alias should point to migrate parser")
+		}
+	})
+
+	t.Run("multi_level_long_opt_inheritance", func(t *testing.T) {
+		_, option, err := migrateParser.findLongOptWithFallback("config", []string{"test.conf"})
+		if err != nil {
+			t.Errorf("Migrate couldn't inherit config option: %v", err)
+		}
+		if option.Name != "config" {
+			t.Errorf("Expected 'config', got '%s'", option.Name)
+		}
+		if option.Arg != "test.conf" {
+			t.Errorf("Expected 'test.conf', got '%s'", option.Arg)
+		}
+	})
+
+	t.Run("full_command_tree_inspection", func(t *testing.T) {
+		commands := rootParser.ListCommands()
+		// server, srv, s, client, c, database, db = 7
+		if len(commands) != 7 {
+			t.Errorf("Expected 7 commands, got %d", len(commands))
+		}
+
+		testCases := []struct {
+			name     string
+			expected *Parser
+		}{
+			{"server", serverParser},
+			{"srv", serverParser},
+			{"s", serverParser},
+			{"client", clientParser},
+			{"c", clientParser},
+			{"database", dbParser},
+			{"db", dbParser},
+		}
+
+		for _, tc := range testCases {
+			if parser, exists := commands[tc.name]; !exists || parser != tc.expected {
+				t.Errorf("Command '%s' mapping incorrect", tc.name)
+			}
+		}
+	})
+}

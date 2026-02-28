@@ -4,7 +4,8 @@ import (
 	"testing"
 )
 
-// TestCoverageRegressionFix adds tests for uncovered functions to achieve 100% coverage
+// TestCoverageRegressionFix tests CommandRegistry methods and NewParserWithCaseInsensitiveCommands
+// to ensure full coverage of command dispatch paths.
 func TestCoverageRegressionFix(t *testing.T) {
 	// Test NewParserWithCaseInsensitiveCommands function (0% coverage)
 	t.Run("NewParserWithCaseInsensitiveCommands", func(t *testing.T) {
@@ -16,7 +17,7 @@ func TestCoverageRegressionFix(t *testing.T) {
 		}
 		args := []string{"test", "arg"}
 
-		parser, err := NewParserWithCaseInsensitiveCommands(shortOpts, longOpts, args, nil)
+		parser, err := NewParserWithCaseInsensitiveCommands(shortOpts, longOpts, args)
 		if err != nil {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
@@ -70,7 +71,7 @@ func TestCoverageRegressionFix(t *testing.T) {
 
 		// Test successful command execution
 		t.Run("successful_execution", func(t *testing.T) {
-			subParser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"original"}, nil)
+			subParser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"original"})
 			if err != nil {
 				t.Fatalf("Failed to create subparser: %v", err)
 			}
@@ -129,7 +130,7 @@ func TestCoverageRegressionFix(t *testing.T) {
 
 		// Test successful case insensitive command execution
 		t.Run("successful_case_insensitive_execution", func(t *testing.T) {
-			subParser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"original"}, nil)
+			subParser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{"original"})
 			if err != nil {
 				t.Fatalf("Failed to create subparser: %v", err)
 			}
@@ -162,7 +163,7 @@ func TestCoverageRegressionFix(t *testing.T) {
 		// Test case sensitive mode (caseIgnore = false)
 		t.Run("case_sensitive_mode", func(t *testing.T) {
 			registry := NewCommandRegistry()
-			subParser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil)
+			subParser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
 			if err != nil {
 				t.Fatalf("Failed to create subparser: %v", err)
 			}
@@ -188,17 +189,19 @@ func TestCoverageRegressionFix(t *testing.T) {
 
 	// Test additional edge cases for complete coverage
 	t.Run("additional_edge_cases", func(t *testing.T) {
-		// Test NewParserWithCaseInsensitiveCommands with parent
+		// Test NewParserWithCaseInsensitiveCommands with AddCmd parent relationship
 		t.Run("with_parent", func(t *testing.T) {
-			parent, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil)
+			parent, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
 			if err != nil {
 				t.Fatalf("Failed to create parent parser: %v", err)
 			}
 
-			child, err := NewParserWithCaseInsensitiveCommands(map[byte]*Flag{}, map[string]*Flag{}, []string{}, parent)
+			child, err := NewParserWithCaseInsensitiveCommands(map[byte]*Flag{}, map[string]*Flag{}, []string{})
 			if err != nil {
 				t.Fatalf("Failed to create child parser: %v", err)
 			}
+
+			parent.AddCmd("child", child)
 
 			if child.parent != parent {
 				t.Error("Expected child parser to have correct parent")
@@ -211,7 +214,7 @@ func TestCoverageRegressionFix(t *testing.T) {
 		// Test ExecuteCommand with parser that has existing nonOpts
 		t.Run("execute_with_existing_nonOpts", func(t *testing.T) {
 			registry := NewCommandRegistry()
-			subParser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{}, nil)
+			subParser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{}, []string{})
 			if err != nil {
 				t.Fatalf("Failed to create subparser: %v", err)
 			}
