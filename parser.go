@@ -68,7 +68,6 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 	parser := Parser{
 		Args:       args,
 		config:     config,
-		longOpts:   longOpts,
 		lockConfig: false,
 	}
 
@@ -86,7 +85,7 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 	for s := range longOpts {
 		for _, r := range s {
 			if unicode.IsSpace(r) || !unicode.IsGraphic(r) {
-				return nil, fmt.Errorf("invalid long option: %s", s)
+				return nil, parser.optErrorf("invalid long option: %s", s)
 			}
 		}
 	}
@@ -365,17 +364,15 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 
 			default:
 				// Check if this is a registered command
-				if p.HasCommands() {
-					if _, exists := p.GetCommand(p.Args[0]); exists {
-						_, err := p.ExecuteCommand(p.Args[0], p.Args[1:])
-						if err != nil {
-							if !yield(Option{}, err) {
-								return
-							}
+				if _, exists := p.GetCommand(p.Args[0]); exists {
+					_, err := p.ExecuteCommand(p.Args[0], p.Args[1:])
+					if err != nil {
+						if !yield(Option{}, err) {
+							return
 						}
-						p.Args = []string{}
-						break out
 					}
+					p.Args = []string{}
+					break out
 				}
 
 				// Handle as non-option

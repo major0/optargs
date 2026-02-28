@@ -55,9 +55,8 @@ func (cr CommandRegistry) ListCommands() map[string]*Parser {
 	return map[string]*Parser(cr)
 }
 
-// ExecuteCommand finds and prepares a command for execution.
-func (cr CommandRegistry) ExecuteCommand(name string, args []string) (*Parser, error) {
-	parser, exists := cr[name]
+// prepareCommand validates and prepares a looked-up command parser for execution.
+func prepareCommand(name string, parser *Parser, exists bool, args []string) (*Parser, error) {
 	if !exists {
 		return nil, fmt.Errorf("unknown command: %s", name)
 	}
@@ -69,18 +68,16 @@ func (cr CommandRegistry) ExecuteCommand(name string, args []string) (*Parser, e
 	return parser, nil
 }
 
+// ExecuteCommand finds and prepares a command for execution.
+func (cr CommandRegistry) ExecuteCommand(name string, args []string) (*Parser, error) {
+	parser, exists := cr[name]
+	return prepareCommand(name, parser, exists, args)
+}
+
 // executeCommandFold finds and prepares a command for execution with case-insensitive matching.
 func (cr CommandRegistry) executeCommandFold(name string, args []string) (*Parser, error) {
 	parser, exists := cr.getCommandFold(name)
-	if !exists {
-		return nil, fmt.Errorf("unknown command: %s", name)
-	}
-	if parser == nil {
-		return nil, fmt.Errorf("command %s has no parser", name)
-	}
-	parser.Args = args
-	parser.nonOpts = []string{}
-	return parser, nil
+	return prepareCommand(name, parser, exists, args)
 }
 
 // ExecuteCommandCaseInsensitive finds and prepares a command for execution
