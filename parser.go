@@ -361,8 +361,8 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 
 			default:
 				// Check if this is a registered command
-				if _, exists := p.GetCommand(p.Args[0]); exists {
-					_, err := p.ExecuteCommand(p.Args[0], p.Args[1:])
+				if cmd, exists := p.GetCommand(p.Args[0]); exists {
+					_, err := prepareCommand(p.Args[0], cmd, true, p.Args[1:])
 					if err != nil {
 						if !yield(Option{}, err) {
 							return
