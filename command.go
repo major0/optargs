@@ -36,8 +36,11 @@ func (cr CommandRegistry) GetCommand(name string) (*Parser, bool) {
 	return parser, exists
 }
 
-// getCommandFold retrieves a parser by command name with case-insensitive matching.
-func (cr CommandRegistry) getCommandFold(name string) (*Parser, bool) {
+// getCommand retrieves a parser by command name, optionally case-insensitive.
+func (cr CommandRegistry) getCommand(name string, caseIgnore bool) (*Parser, bool) {
+	if !caseIgnore {
+		return cr.GetCommand(name)
+	}
 	// Try exact match first (fast path).
 	if parser, exists := cr[name]; exists {
 		return parser, true
@@ -74,19 +77,16 @@ func (cr CommandRegistry) ExecuteCommand(name string, args []string) (*Parser, e
 	return prepareCommand(name, parser, exists, args)
 }
 
-// executeCommandFold finds and prepares a command for execution with case-insensitive matching.
-func (cr CommandRegistry) executeCommandFold(name string, args []string) (*Parser, error) {
-	parser, exists := cr.getCommandFold(name)
+// executeCommand finds and prepares a command for execution with optional case-insensitive matching.
+func (cr CommandRegistry) executeCommand(name string, args []string, caseIgnore bool) (*Parser, error) {
+	parser, exists := cr.getCommand(name, caseIgnore)
 	return prepareCommand(name, parser, exists, args)
 }
 
 // ExecuteCommandCaseInsensitive finds and prepares a command for execution
 // with optional case-insensitive matching.
 func (cr CommandRegistry) ExecuteCommandCaseInsensitive(name string, args []string, caseIgnore bool) (*Parser, error) {
-	if !caseIgnore {
-		return cr.ExecuteCommand(name, args)
-	}
-	return cr.executeCommandFold(name, args)
+	return cr.executeCommand(name, args, caseIgnore)
 }
 
 // HasCommands returns true if any commands are registered

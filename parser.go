@@ -127,19 +127,12 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, Option, erro
 	// option whose name is a prefix of (or equal to) the input.
 	var candidates []longOptCandidate
 	for current := p; current != nil; current = current.parent {
-		caseIgnore := current.config.longCaseIgnore
 		for opt, flag := range current.longOpts {
 			if len(opt) > len(name) {
 				continue
 			}
-			if caseIgnore {
-				if !hasPrefix(name, opt, true) {
-					continue
-				}
-			} else {
-				if !strings.HasPrefix(name, opt) {
-					continue
-				}
+			if !hasPrefix(name, opt, current.config.longCaseIgnore) {
+				continue
 			}
 			candidates = append(candidates, longOptCandidate{name: opt, flag: flag})
 		}
@@ -416,10 +409,7 @@ func (p *Parser) AddAlias(alias, existingCommand string) error {
 
 // GetCommand retrieves a parser by command name
 func (p *Parser) GetCommand(name string) (*Parser, bool) {
-	if p.config.commandCaseIgnore {
-		return p.Commands.getCommandFold(name)
-	}
-	return p.Commands.GetCommand(name)
+	return p.Commands.getCommand(name, p.config.commandCaseIgnore)
 }
 
 // ListCommands returns all command mappings
@@ -429,10 +419,7 @@ func (p *Parser) ListCommands() map[string]*Parser {
 
 // ExecuteCommand finds and executes a command
 func (p *Parser) ExecuteCommand(name string, args []string) (*Parser, error) {
-	if p.config.commandCaseIgnore {
-		return p.Commands.executeCommandFold(name, args)
-	}
-	return p.Commands.ExecuteCommand(name, args)
+	return p.Commands.executeCommand(name, args, p.config.commandCaseIgnore)
 }
 
 // HasCommands returns true if any commands are registered
