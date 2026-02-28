@@ -16,10 +16,12 @@ This directory contains two things:
 
 ### Running
 
+From the `posix/` directory:
+
 ```bash
-go run ./posix/subcommand
-go run ./posix/silent
-go run ./posix/posixly_correct
+go run ./subcommand
+go run ./silent
+go run ./posixly_correct
 ```
 
 ## Shell Scripts
