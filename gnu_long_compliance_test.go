@@ -247,10 +247,12 @@ func TestGNULongOnlyMode(t *testing.T) {
 			},
 		},
 		{
-			name:      "non-empty optstring should fail",
+			name:      "non-empty optstring with short fallback",
 			optstring: "v",
 			args:      []string{"-v"},
-			expectErr: true,
+			expected: []Option{
+				{Name: "v", HasArg: false, Arg: ""},
+			},
 		},
 	}
 

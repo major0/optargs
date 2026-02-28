@@ -301,15 +301,38 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 			case strings.HasPrefix(p.Args[0], "-"):
 				slog.Debug("Options", "prefix", "-")
 				if p.config.longOptsOnly {
+					longOnlyWord := p.Args[0][1:]
 					var remainingArgs []string
 					if len(p.Args) > 1 {
 						remainingArgs = p.Args[1:]
 					}
-					p.Args, option, err = p.findLongOptWithFallback(p.Args[0][1:], remainingArgs)
-					if !yield(option, err) {
-						return
+
+					// Suppress error logging during the long option
+					// probe — we may fall back to short options.
+					savedErrors := p.config.enableErrors
+					p.config.enableErrors = false
+					p.Args, option, err = p.findLongOptWithFallback(longOnlyWord, remainingArgs)
+					p.config.enableErrors = savedErrors
+
+					if err == nil {
+						if !yield(option, err) {
+							return
+						}
+						continue
 					}
-					continue
+
+					// Long match failed — fall back to short options
+					// per getopt_long_only(3)
+					if len(p.shortOpts) == 0 {
+						err = p.optError(err.Error())
+						if !yield(option, err) {
+							return
+						}
+						continue
+					}
+
+					// Restore args for short option parsing
+					p.Args = append([]string{"-" + longOnlyWord}, remainingArgs...)
 				}
 
 				// iterate over each character in the word looking

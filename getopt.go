@@ -186,10 +186,6 @@ opt_prefix:
 	for len(optstring) > 0 {
 		slog.Debug("GetOpt", "optstring", optstring, "len", len(optstring))
 
-		if config.longOptsOnly {
-			return nil, errors.New("non-empty option string found when long-only parsing was enabled")
-		}
-
 		c := optstring[0]
 		optstring = optstring[1:]
 		if !isGraph(c) {
