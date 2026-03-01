@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-// Generate all possible permutations of `ab` followed by no colons,
-// 1 colon, or 2 colons
+// genShortOpts generates all permutations of the input characters, each
+// followed by no colons, one colon, or two colons.
 func genShortOpts(input string, index int, current string, result *[]string) {
 	if index == len(input) {
 		*result = append(*result, current)
@@ -20,14 +20,15 @@ func genShortOpts(input string, index int, current string, result *[]string) {
 	genShortOpts(input, index, word+"::", result)
 }
 
-func GenShortOpts(opts string) []string {
+// allShortOptPermutations returns every colon-suffix permutation of opts.
+func allShortOptPermutations(opts string) []string {
 	var permutations []string
 	genShortOpts(opts, 0, "", &permutations)
 	return permutations
 }
 
-// Test ot make certain that "any" allowed isGraph() character is usable
-// as a short option
+// TestShortOptsGraph validates that every isgraph() character allowed by
+// the spec is usable as a short option.
 func TestShortOptsGraph(t *testing.T) {
 	for i := 0; i < 127; i++ {
 		if !isGraph(byte(i)) {
@@ -40,11 +41,10 @@ func TestShortOptsGraph(t *testing.T) {
 			continue
 		}
 
-		// prefix the optstring with a non-config character so we
-		// can _actually_ test the characer we are passing into
-		// the optstring. POSIX allows us to overwrite optstring
-		// configs for existing characters, so it wont matter if
-		// we pass "aa" as the optstring.
+		// Prefix the optstring with a non-config character so we
+		// actually test the character we are passing. POSIX allows
+		// overwriting optstring configs for existing characters, so
+		// passing "aa" as the optstring is fine.
 		optstring := "a" + string(byte(i))
 
 		args := []string{"-" + string(byte(i))}
@@ -62,11 +62,10 @@ func TestShortOptsGraph(t *testing.T) {
 	}
 }
 
-// Validate our default parse mode
+// TestShortOpts validates the default parse mode across all optstring
+// permutations.
 func TestShortOpts(t *testing.T) {
-	opstrings := GenShortOpts("ab")
-
-	for _, opts := range opstrings {
+	for _, opts := range allShortOptPermutations("ab") {
 		getopt, err := GetOpt(nil, opts)
 		if err != nil {
 			t.Errorf("Unexpected error: %s", err)
@@ -86,16 +85,12 @@ func TestShortOptsNone(t *testing.T) {
 	}
 }
 
-// A `:` appearing in the optstring prefix _before_ any valid option
-// characters will act to disable automatic error reporting by
-// `GetOpt()`. Per our POSIX defined behavior, that means we consume
-// any number of prefix characters, e.g. `+-:+-:+-:+-+-+-` toggling
-// the necessary parser mode and error mode settings as we go.
-// Curiously, there is no reserved character for re-enabling error
-// reporting or the default parser mode. It is up to the user to not
-// mess that up.
+// A `:` appearing in the optstring prefix before any valid option
+// characters disables automatic error reporting by GetOpt(). Per POSIX,
+// we consume any number of prefix characters, toggling parser mode and
+// error mode settings as we go.
 func TestShortOptsDisableErrors(t *testing.T) {
-	for _, opts := range GenShortOpts("ab") {
+	for _, opts := range allShortOptPermutations("ab") {
 		optstring := ":" + opts
 		getopt, err := GetOpt(nil, optstring)
 		if err != nil {
@@ -108,107 +103,73 @@ func TestShortOptsDisableErrors(t *testing.T) {
 	}
 }
 
-// Test to make certain we parse through _all_ of the valid prefix
-// characters toggling the parser mode. This means we should be
-// able to have a prefix string of `+-+-+-` and the last character
-// in the string sets the final mode of the parser.
-// Note: It is fine to have an optstring that _only_ comprises of
-// parser mode flags. This allows us to use the optstring to toggle
-// the parser mode for doing `getopt_long_only()` handling.
-func TestShortOptsPosixMode(t *testing.T) {
-	for _, opts := range GenShortOpts("ab") {
-		optstring := "+" + opts // Parse Mode: PosoxlyCorrect
-		getopt, err := GetOpt(nil, optstring)
-		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
-		}
-		if getopt.config.parseMode != ParsePosixlyCorrect {
-			t.Errorf("Expected parseMode to be %d, got %d", ParsePosixlyCorrect, getopt.config.parseMode)
-		}
+// parseModeTests covers prefix combinations that toggle the parser mode.
+// The last prefix character in the string sets the final mode.
+var parseModeTests = []struct {
+	name   string
+	prefix string
+	mode   ParseMode
+}{
+	{name: "plus sets PosixlyCorrect", prefix: "+", mode: ParsePosixlyCorrect},
+	{name: "minus-plus sets PosixlyCorrect", prefix: "-+", mode: ParsePosixlyCorrect},
+	{name: "minus sets NonOpts", prefix: "-", mode: ParseNonOpts},
+	{name: "plus-minus sets NonOpts", prefix: "+-", mode: ParseNonOpts},
+}
 
-		optstring = "-+" + opts // Parse Mode: non-Option parsing
-		getopt, err = GetOpt(nil, optstring)
-		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
-		}
-		if getopt.config.parseMode != ParsePosixlyCorrect {
-			t.Errorf("Expected parseMode to be %d, got %d", ParsePosixlyCorrect, getopt.config.parseMode)
-		}
+// TestShortOptsParseMode validates that prefix characters correctly toggle
+// the parser mode across all optstring permutations.
+func TestShortOptsParseMode(t *testing.T) {
+	for _, tt := range parseModeTests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, opts := range allShortOptPermutations("ab") {
+				optstring := tt.prefix + opts
+				getopt, err := GetOpt(nil, optstring)
+				if err != nil {
+					t.Errorf("Unexpected error: %s", err)
+				}
+				if getopt.config.parseMode != tt.mode {
+					t.Errorf("optstring %q: expected parseMode %d, got %d", optstring, tt.mode, getopt.config.parseMode)
+				}
+			}
+		})
 	}
 }
 
-// Similar to TestShortOptsPosixMode(), only we want the final parser mode
-// to be ParseNonOpts.
-func TestShortOptsNonOptMode(t *testing.T) {
-	for _, opts := range GenShortOpts("ab") {
-		optstring := "-" + opts // Parse Mode: non-Option parsing
-		getopt, err := GetOpt(nil, optstring)
-		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
-		}
-		if getopt.config.parseMode != ParseNonOpts {
-			t.Errorf("Expected parseMode to be %d, got %d", ParseNonOpts, getopt.config.parseMode)
-		}
+// invalidOptstrings covers optstrings that must be rejected by the parser.
+var invalidOptstrings = []struct {
+	name      string
+	optstring string
+}{
+	{name: "semicolon prefix", optstring: ";ab:"},
+	{name: "dash in options", optstring: "ab-"},
+	{name: "semicolon in options", optstring: "ab;"},
+	{name: "triple colon", optstring: "a:::"},
+}
 
-		optstring = "+-" + opts // Parse Mode: non-Option parsing
-		getopt, err = GetOpt(nil, optstring)
-		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
-		}
-		if getopt.config.parseMode != ParseNonOpts {
-			t.Errorf("Expected parseMode to be %d, got %d", ParseNonOpts, getopt.config.parseMode)
-		}
+// TestShortOptsInvalid validates that prohibited optstrings produce errors.
+func TestShortOptsInvalid(t *testing.T) {
+	for _, tt := range invalidOptstrings {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := GetOpt(nil, tt.optstring)
+			if err == nil {
+				t.Errorf("Expected error for optstring %q, got nil", tt.optstring)
+			}
+		})
 	}
 }
 
-// Disalllow `;` as a prefix character, or really any character in the
-// optstring unless it follows `W`.
-func TestShortOptsInvalidPrefix(t *testing.T) {
-	_, err := GetOpt(nil, ";ab:")
-	if err == nil {
-		t.Errorf("Expected error, got nil")
-	}
-}
-
-// Disallow `-` as an option string. POSIX disallows this as it breaks the
-// handling of `--` which is reserved for stopping all parsing of the CLI.
-func TestShortOptsInvalidChar1(t *testing.T) {
-	_, err := GetOpt(nil, "ab-")
-	if err == nil {
-		t.Errorf("Expected error, got nil")
-	}
-}
-
-// Disallow `;` as an option string unless it follows `W`
-func TestShortOptsInvalidChar2(t *testing.T) {
-	_, err := GetOpt(nil, "ab;")
-	if err == nil {
-		t.Errorf("Expected error, got nil")
-	}
-}
-
-// By testing `a:::` we expect the parser to split the tokens into
-// `a::` and `:`, which _should_ generate an error as `-:` is not
-// allowed to be an option, though `-=` is allowed.
-func TestShortOptsInvalidChar3(t *testing.T) {
-	_, err := GetOpt(nil, "a:::")
-	if err == nil {
-		t.Errorf("Expected error, got nil")
-	}
-}
-
-// The `;` is never allowed to appear in the opstring _unless_
-// it follows `W`. This is a GNU extension to POSIX.
+// The `;` is never allowed in the optstring unless it follows `W`.
+// This is a GNU extension to POSIX.
 func TestShortOptsGnuWords(t *testing.T) {
-	for _, opts := range GenShortOpts("ab") {
-		optstring := opts + "W;" // Enable GNU word parsing
+	for _, opts := range allShortOptPermutations("ab") {
+		optstring := opts + "W;"
 		getopt, err := GetOpt(nil, optstring)
 		if err != nil {
 			t.Errorf("Unexpected error: %s", err)
 		}
 
 		if getopt.config.gnuWords != true {
-			t.Errorf("Expected gnuWords to be false, got true")
+			t.Errorf("Expected gnuWords to be true, got false")
 		}
 	}
 }
@@ -261,11 +222,11 @@ func TestShortOptNoArgIntegration(t *testing.T) {
 
 func TestShortOptOptionalIntegration(t *testing.T) {
 	optstring := "a::"
-	var tests = []struct {
-		args []string
-		s    string
-		a    string
-		t    bool
+	tests := []struct {
+		args   []string
+		name   string
+		arg    string
+		hasArg bool
 	}{
 		{[]string{"-afoo"}, "a", "foo", true},
 		{[]string{"-a", "bar"}, "a", "bar", true},
@@ -273,8 +234,8 @@ func TestShortOptOptionalIntegration(t *testing.T) {
 		{[]string{"-a"}, "a", "", false},
 	}
 
-	for _, test := range tests {
-		getopt, err := GetOpt(test.args, optstring)
+	for _, tt := range tests {
+		getopt, err := GetOpt(tt.args, optstring)
 		if err != nil {
 			t.Errorf("Unexpected error: %s", err)
 		}
@@ -283,60 +244,56 @@ func TestShortOptOptionalIntegration(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unexpected error: %s", err)
 			}
-			if opt.Name != test.s {
-				t.Errorf("Expected option %s, got %s", test.s, opt.Name)
+			if opt.Name != tt.name {
+				t.Errorf("Expected option %s, got %s", tt.name, opt.Name)
 			}
-			if opt.HasArg != test.t {
-				t.Errorf("Expected HasArg to be %t, got %t", test.t, opt.HasArg)
+			if opt.HasArg != tt.hasArg {
+				t.Errorf("Expected HasArg to be %t, got %t", tt.hasArg, opt.HasArg)
 			}
-			if opt.Arg != test.a {
-				t.Errorf("Expected Arg to be %s, got %s", test.a, opt.Arg)
+			if opt.Arg != tt.arg {
+				t.Errorf("Expected Arg to be %s, got %s", tt.arg, opt.Arg)
 			}
 		}
 	}
 }
 
 func TestShortOptRequiredIntegration(t *testing.T) {
-	// We disable automatic error reporting to avoid polluting the
-	// test output
+	// Disable automatic error reporting to avoid polluting test output
 	optstring := ":a:"
-	var tests = []struct {
-		args []string
-		s    string
-		a    string
-		t    bool
+	tests := []struct {
+		args      []string
+		name      string
+		arg       string
+		hasArg    bool
+		expectErr bool
 	}{
-		{[]string{"-afoo"}, "a", "foo", true},
-		{[]string{"-a", "bar"}, "a", "bar", true},
-		{[]string{"-a", "-1"}, "a", "-1", true},
-		{[]string{"-a"}, "a", "", false},
+		{[]string{"-afoo"}, "a", "foo", true, false},
+		{[]string{"-a", "bar"}, "a", "bar", true, false},
+		{[]string{"-a", "-1"}, "a", "-1", true, false},
+		{[]string{"-a"}, "a", "", false, true},
 	}
 
-	for _, test := range tests {
-		getopt, err := GetOpt(test.args, optstring)
+	for _, tt := range tests {
+		getopt, err := GetOpt(tt.args, optstring)
 		if err != nil {
 			t.Errorf("Unexpected error: %s", err)
 		}
 
 		for opt, err := range getopt.Options() {
-			if err != nil {
-				if test.a != "" {
-					t.Errorf("Unexpected error: %s", err)
-				}
-			} else {
-				if test.a == "" {
-					t.Errorf("Expected an error")
-				}
+			if tt.expectErr && err == nil {
+				t.Errorf("Expected an error for args %v", tt.args)
 			}
-
-			if opt.Name != test.s {
-				t.Errorf("Expected option %s, got %s", test.s, opt.Name)
+			if !tt.expectErr && err != nil {
+				t.Errorf("Unexpected error: %s", err)
 			}
-			if opt.HasArg != test.t {
-				t.Errorf("Expected HasArg to be %t, got %t", test.t, opt.HasArg)
+			if opt.Name != tt.name {
+				t.Errorf("Expected option %s, got %s", tt.name, opt.Name)
 			}
-			if opt.Arg != test.a {
-				t.Errorf("Expected Arg to be %s, got %s", test.a, opt.Arg)
+			if opt.HasArg != tt.hasArg {
+				t.Errorf("Expected HasArg to be %t, got %t", tt.hasArg, opt.HasArg)
+			}
+			if opt.Arg != tt.arg {
+				t.Errorf("Expected Arg to be %s, got %s", tt.arg, opt.Arg)
 			}
 		}
 	}
