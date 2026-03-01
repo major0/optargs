@@ -110,7 +110,7 @@ func (p *Parser) optError(msg string) error {
 	return errors.New(msg)
 }
 
-func (p *Parser) optErrorf(msg string, args ...interface{}) error {
+func (p *Parser) optErrorf(msg string, args ...any) error {
 	return p.optError(fmt.Sprintf(msg, args...))
 }
 
