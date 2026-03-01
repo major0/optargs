@@ -2878,3 +2878,85 @@ func TestHandlerRegistrationEquivalence(t *testing.T) {
 		})
 	}
 }
+
+// Feature: option-handlers, Property 2: Constructor nil Handle
+func TestPropertyConstructorNilHandle(t *testing.T) {
+	// Use only lowercase letters to avoid optstring prefix flags (+, :, -)
+	// and special characters that complicate config equivalence.
+	safeChars := []byte("abcdefghijklmnopqrstuvxyz") // exclude 'W' (gnuWords)
+
+	// allNilHandle returns true if every Flag in the parser has nil Handle.
+	allNilHandle := func(p *Parser, seed int64, ctor string) bool {
+		for c, f := range p.shortOpts {
+			if f.Handle != nil {
+				t.Logf("seed=%d %s: shortOpt %q has non-nil Handle", seed, ctor, c)
+				return false
+			}
+		}
+		for name, f := range p.longOpts {
+			if f.Handle != nil {
+				t.Logf("seed=%d %s: longOpt %q has non-nil Handle", seed, ctor, name)
+				return false
+			}
+		}
+		return true
+	}
+
+	property := func(seed int64) bool {
+		rng := rand.New(rand.NewSource(seed))
+
+		// Generate a random optstring with 1–6 short options.
+		nShort := 1 + rng.Intn(6)
+		perm := rng.Perm(len(safeChars))
+		var optstring string
+		for i := 0; i < nShort; i++ {
+			c := safeChars[perm[i]]
+			optstring += string(c)
+			switch ArgType(rng.Intn(3)) {
+			case RequiredArgument:
+				optstring += ":"
+			case OptionalArgument:
+				optstring += "::"
+			}
+		}
+
+		// Generate 0–4 random long options.
+		nLong := rng.Intn(5)
+		longPerm := rng.Perm(len(validLongNames))
+		var longFlags []Flag
+		for i := 0; i < nLong && i < len(validLongNames); i++ {
+			longFlags = append(longFlags, Flag{
+				Name:   validLongNames[longPerm[i]],
+				HasArg: ArgType(rng.Intn(3)),
+			})
+		}
+
+		// GetOpt — short options only.
+		if p, err := GetOpt([]string{"prog"}, optstring); err == nil {
+			if !allNilHandle(p, seed, "GetOpt") {
+				return false
+			}
+		}
+
+		// GetOptLong — short + long options.
+		if p, err := GetOptLong([]string{"prog"}, optstring, longFlags); err == nil {
+			if !allNilHandle(p, seed, "GetOptLong") {
+				return false
+			}
+		}
+
+		// GetOptLongOnly — short + long options, long-only mode.
+		if p, err := GetOptLongOnly([]string{"prog"}, optstring, longFlags); err == nil {
+			if !allNilHandle(p, seed, "GetOptLongOnly") {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 2 (Constructor nil Handle) failed: %v", err)
+	}
+}
