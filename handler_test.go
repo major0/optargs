@@ -21,6 +21,9 @@ var validShortChars = func() []byte {
 	return chars
 }()
 
+// handlerCall records a handler invocation for test assertions.
+type handlerCall struct{ name, arg string }
+
 // validLongNames is a pool of long option names for random generation.
 var validLongNames = []string{
 	"verbose", "output", "debug", "help", "version", "force",
@@ -37,19 +40,6 @@ func collectOptions(p *Parser) ([]Option, []error) {
 		errs = append(errs, err)
 	}
 	return opts, errs
-}
-
-// handlerOptionsEqual returns true if two Option slices are identical.
-func handlerOptionsEqual(a, b []Option) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i].Name != b[i].Name || a[i].HasArg != b[i].HasArg || a[i].Arg != b[i].Arg {
-			return false
-		}
-	}
-	return true
 }
 
 // errorsEqual returns true if two error slices have the same nil/non-nil
@@ -182,7 +172,7 @@ func TestPropertyNilHandleBackwardCompat(t *testing.T) {
 		remaining2 := p2.Args
 
 		// Both parsers must produce identical output.
-		if !handlerOptionsEqual(opts1, opts2) {
+		if !optionsEqual(opts1, opts2) {
 			t.Logf("seed=%d optstring=%q args=%v", seed, optstring, args)
 			t.Logf("opts1=%+v", opts1)
 			t.Logf("opts2=%+v", opts2)
@@ -238,15 +228,14 @@ func TestPropertyHandlerSuppressesYield(t *testing.T) {
 		handled[1] = false
 
 		// Track handler invocations.
-		type call struct{ name, arg string }
-		var calls []call
+		var calls []handlerCall
 
 		shortMap := make(map[byte]*Flag)
 		for i, c := range chars {
 			f := &Flag{Name: string(c), HasArg: NoArgument}
 			if handled[i] {
 				f.Handle = func(name string, arg string) error {
-					calls = append(calls, call{name, arg})
+					calls = append(calls, handlerCall{name, arg})
 					return nil
 				}
 			}
@@ -396,10 +385,9 @@ func TestPropertyHandlerReceivesCorrectNameAndArg(t *testing.T) {
 		}
 
 		// Pass 2: parse with Handle on all flags, record calls.
-		type call struct{ name, arg string }
-		var got []call
+		var got []handlerCall
 		handler := func(name string, arg string) error {
-			got = append(got, call{name, arg})
+			got = append(got, handlerCall{name, arg})
 			return nil
 		}
 
@@ -556,11 +544,10 @@ func TestPropertyMixedHandledAndNonHandled(t *testing.T) {
 
 		// Assign handled/non-handled randomly, ensuring at least one of each.
 		shortMap := make(map[byte]*Flag)
-		type call struct{ name, arg string }
-		var calls []call
+		var calls []handlerCall
 
 		handler := func(name string, arg string) error {
-			calls = append(calls, call{name, arg})
+			calls = append(calls, handlerCall{name, arg})
 			return nil
 		}
 
@@ -720,10 +707,9 @@ func TestPropertySetHandlerNameMatching(t *testing.T) {
 		}
 
 		// --- Test SetShortHandler ---
-		type call struct{ name, arg string }
-		var shortCalls []call
+		var shortCalls []handlerCall
 		shortHandler := func(name string, arg string) error {
-			shortCalls = append(shortCalls, call{name, arg})
+			shortCalls = append(shortCalls, handlerCall{name, arg})
 			return nil
 		}
 		for _, c := range chars {
@@ -734,9 +720,9 @@ func TestPropertySetHandlerNameMatching(t *testing.T) {
 		}
 
 		// --- Test SetLongHandler ---
-		var longCalls []call
+		var longCalls []handlerCall
 		longHandler := func(name string, arg string) error {
-			longCalls = append(longCalls, call{name, arg})
+			longCalls = append(longCalls, handlerCall{name, arg})
 			return nil
 		}
 		for _, name := range longNames {
@@ -796,9 +782,9 @@ func TestPropertySetHandlerNameMatching(t *testing.T) {
 			return true
 		}
 
-		var setHandlerCalls []call
+		var setHandlerCalls []handlerCall
 		setHandlerFn := func(name string, arg string) error {
-			setHandlerCalls = append(setHandlerCalls, call{name, arg})
+			setHandlerCalls = append(setHandlerCalls, handlerCall{name, arg})
 			return nil
 		}
 
@@ -1112,10 +1098,9 @@ func TestPropertyParentChainHandlerDispatch(t *testing.T) {
 		}
 
 		// Track handler invocations.
-		type call struct{ name, arg string }
-		var calls []call
+		var calls []handlerCall
 		handler := func(name string, arg string) error {
-			calls = append(calls, call{name, arg})
+			calls = append(calls, handlerCall{name, arg})
 			return nil
 		}
 
@@ -1216,15 +1201,14 @@ func TestPropertyChildOverloadingWins(t *testing.T) {
 			overlapLongNames[i] = validLongNames[longPerm[i]]
 		}
 
-		type call struct{ name, arg string }
-		var parentCalls []call
-		var childCalls []call
+		var parentCalls []handlerCall
+		var childCalls []handlerCall
 		parentHandler := func(name string, arg string) error {
-			parentCalls = append(parentCalls, call{name, arg})
+			parentCalls = append(parentCalls, handlerCall{name, arg})
 			return nil
 		}
 		childHandler := func(name string, arg string) error {
-			childCalls = append(childCalls, call{name, arg})
+			childCalls = append(childCalls, handlerCall{name, arg})
 			return nil
 		}
 
@@ -1795,7 +1779,7 @@ func TestHandlerMixedHandledAndNonHandled(t *testing.T) {
 		t.Fatalf("handler called with %q, want %q", handledName, "v")
 	}
 	expected := []Option{{Name: "x", HasArg: false, Arg: ""}}
-	if !handlerOptionsEqual(opts, expected) {
+	if !optionsEqual(opts, expected) {
 		t.Fatalf("options: got %v, want %v", opts, expected)
 	}
 }
@@ -1893,11 +1877,9 @@ func TestHandlerRequiredArgumentReceivesArg(t *testing.T) {
 func TestHandlerOptionalArgumentReceivesArg(t *testing.T) {
 	// Handler with OptionalArgument receives correct arg (present and absent)
 	var receivedName, receivedArg string
-	var callCount int
 	handler := func(name string, arg string) error {
 		receivedName = name
 		receivedArg = arg
-		callCount++
 		return nil
 	}
 
@@ -1909,7 +1891,6 @@ func TestHandlerOptionalArgumentReceivesArg(t *testing.T) {
 	}
 
 	// Short with arg attached (no space for optional)
-	callCount = 0
 	p, err := NewParser(ParserConfig{enableErrors: true, longCaseIgnore: true}, shortOpts, longOpts, []string{"-dlevel3"})
 	if err != nil {
 		t.Fatalf("NewParser: %v", err)
@@ -1929,7 +1910,6 @@ func TestHandlerOptionalArgumentReceivesArg(t *testing.T) {
 
 	// Short without arg
 	receivedName, receivedArg = "", "sentinel"
-	callCount = 0
 	p, err = NewParser(ParserConfig{enableErrors: true, longCaseIgnore: true}, shortOpts, longOpts, []string{"-d"})
 	if err != nil {
 		t.Fatalf("NewParser: %v", err)
@@ -1949,7 +1929,6 @@ func TestHandlerOptionalArgumentReceivesArg(t *testing.T) {
 
 	// Long with = syntax
 	receivedName, receivedArg = "", ""
-	callCount = 0
 	p, err = NewParser(ParserConfig{enableErrors: true, longCaseIgnore: true}, shortOpts, longOpts, []string{"--debug=trace"})
 	if err != nil {
 		t.Fatalf("NewParser: %v", err)
@@ -1969,7 +1948,6 @@ func TestHandlerOptionalArgumentReceivesArg(t *testing.T) {
 
 	// Long without arg
 	receivedName, receivedArg = "", "sentinel"
-	callCount = 0
 	p, err = NewParser(ParserConfig{enableErrors: true, longCaseIgnore: true}, shortOpts, longOpts, []string{"--debug"})
 	if err != nil {
 		t.Fatalf("NewParser: %v", err)
@@ -2018,7 +1996,7 @@ func TestHandlerNilHandleIdenticalOutput(t *testing.T) {
 		{Name: "verbose", HasArg: false, Arg: ""},
 		{Name: "output", HasArg: true, Arg: "result.txt"},
 	}
-	if !handlerOptionsEqual(opts, expected) {
+	if !optionsEqual(opts, expected) {
 		t.Fatalf("nil Handle output: got %v, want %v", opts, expected)
 	}
 }
@@ -2083,7 +2061,7 @@ func TestHandlerCompactionMixed(t *testing.T) {
 	}
 	// 'b' should be yielded as an Option; 'a' and 'c' handled
 	expected := []Option{{Name: "b", HasArg: false, Arg: ""}}
-	if !handlerOptionsEqual(opts, expected) {
+	if !optionsEqual(opts, expected) {
 		t.Fatalf("options: got %v, want %v", opts, expected)
 	}
 	if len(handledNames) != 2 || handledNames[0] != "a" || handledNames[1] != "c" {
@@ -2839,16 +2817,16 @@ func TestHandlerRegistrationEquivalence(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Track handler invocations for parser A (construction-time)
-			var callsA []struct{ name, arg string }
+			var callsA []handlerCall
 			handlerA := func(name string, arg string) error {
-				callsA = append(callsA, struct{ name, arg string }{name, arg})
+				callsA = append(callsA, handlerCall{name, arg})
 				return nil
 			}
 
 			// Track handler invocations for parser B (post-construction)
-			var callsB []struct{ name, arg string }
+			var callsB []handlerCall
 			handlerB := func(name string, arg string) error {
-				callsB = append(callsB, struct{ name, arg string }{name, arg})
+				callsB = append(callsB, handlerCall{name, arg})
 				return nil
 			}
 
@@ -2869,7 +2847,7 @@ func TestHandlerRegistrationEquivalence(t *testing.T) {
 			}
 
 			// Iterator output must match
-			if !handlerOptionsEqual(optsA, optsB) {
+			if !optionsEqual(optsA, optsB) {
 				t.Fatalf("options differ:\nA: %v\nB: %v", optsA, optsB)
 			}
 			if !errorsEqual(errsA, errsB) {
