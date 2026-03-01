@@ -1086,3 +1086,499 @@ func TestPropertySetHandlerNoParentWalk(t *testing.T) {
 		t.Errorf("Property 11 (SetHandler variants do not walk parent chain) failed: %v", err)
 	}
 }
+
+// Feature: option-handlers, Property 6: Parent-chain handler dispatch
+// Child inheriting handled Flag from ancestor invokes ancestor's handler
+// when resolved from child.
+// Validates: Requirements 3.2, 3.4, 3.6
+func TestPropertyParentChainHandlerDispatch(t *testing.T) {
+	property := func(seed int64) bool {
+		rng := rand.New(rand.NewSource(seed))
+
+		// Generate 1–3 parent-only short options with handlers.
+		nParentShort := 1 + rng.Intn(3)
+		shortPerm := rng.Perm(len(validShortChars))
+		parentShortChars := make([]byte, nParentShort)
+		for i := range parentShortChars {
+			parentShortChars[i] = validShortChars[shortPerm[i]]
+		}
+
+		// Generate 1–3 parent-only long options with handlers.
+		nParentLong := 1 + rng.Intn(3)
+		longPerm := rng.Perm(len(validLongNames))
+		parentLongNames := make([]string, nParentLong)
+		for i := range parentLongNames {
+			parentLongNames[i] = validLongNames[longPerm[i]]
+		}
+
+		// Track handler invocations.
+		type call struct{ name, arg string }
+		var calls []call
+		handler := func(name string, arg string) error {
+			calls = append(calls, call{name, arg})
+			return nil
+		}
+
+		// Build parent with handled flags.
+		parentShortMap := make(map[byte]*Flag)
+		for _, c := range parentShortChars {
+			parentShortMap[c] = &Flag{Name: string(c), HasArg: NoArgument, Handle: handler}
+		}
+		parentLongMap := make(map[string]*Flag)
+		for _, name := range parentLongNames {
+			parentLongMap[name] = &Flag{Name: name, HasArg: NoArgument, Handle: handler}
+		}
+
+		cfg := ParserConfig{enableErrors: true, longCaseIgnore: true}
+		parent, err := NewParser(cfg, parentShortMap, parentLongMap, nil)
+		if err != nil {
+			return true
+		}
+
+		// Build child with disjoint options (no overlap with parent).
+		// Child has no options of its own — it inherits everything from parent.
+		// Build args that reference parent-only options.
+		var args []string
+		for _, c := range parentShortChars {
+			args = append(args, "-"+string(c))
+		}
+		for _, name := range parentLongNames {
+			args = append(args, "--"+name)
+		}
+
+		child, err := NewParser(cfg, nil, nil, args)
+		if err != nil {
+			return true
+		}
+		parent.AddCmd("sub", child)
+
+		// Parse from child — parent-chain walk should resolve parent's flags
+		// and invoke parent's handlers.
+		calls = nil
+		for _, err := range child.Options() {
+			if err != nil {
+				t.Logf("seed=%d unexpected error: %v", seed, err)
+				return false
+			}
+		}
+
+		expected := nParentShort + nParentLong
+		if len(calls) != expected {
+			t.Logf("seed=%d handler calls: got %d, want %d", seed, len(calls), expected)
+			return false
+		}
+
+		// Verify each call matches a parent-defined option.
+		parentNames := make(map[string]bool)
+		for _, c := range parentShortChars {
+			parentNames[string(c)] = true
+		}
+		for _, name := range parentLongNames {
+			parentNames[name] = true
+		}
+		for _, c := range calls {
+			if !parentNames[c.name] {
+				t.Logf("seed=%d handler called with unexpected name %q", seed, c.name)
+				return false
+			}
+		}
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 6 (Parent-chain handler dispatch) failed: %v", err)
+	}
+}
+
+// Feature: option-handlers, Property 7: Child overloading wins
+// Child's definition determines dispatch: child handler invoked if set,
+// Option yielded if child Handle is nil, regardless of parent handler status.
+// Validates: Requirements 3.5, 7.2, 7.3
+func TestPropertyChildOverloadingWins(t *testing.T) {
+	property := func(seed int64) bool {
+		rng := rand.New(rand.NewSource(seed))
+
+		// Pick 2–4 short options that both parent and child define (overloaded).
+		nOverlap := 2 + rng.Intn(3)
+		shortPerm := rng.Perm(len(validShortChars))
+		overlapChars := make([]byte, nOverlap)
+		for i := range overlapChars {
+			overlapChars[i] = validShortChars[shortPerm[i]]
+		}
+
+		// Pick 1–3 long options that both parent and child define (overloaded).
+		nOverlapLong := 1 + rng.Intn(3)
+		longPerm := rng.Perm(len(validLongNames))
+		overlapLongNames := make([]string, nOverlapLong)
+		for i := range overlapLongNames {
+			overlapLongNames[i] = validLongNames[longPerm[i]]
+		}
+
+		type call struct{ name, arg string }
+		var parentCalls []call
+		var childCalls []call
+		parentHandler := func(name string, arg string) error {
+			parentCalls = append(parentCalls, call{name, arg})
+			return nil
+		}
+		childHandler := func(name string, arg string) error {
+			childCalls = append(childCalls, call{name, arg})
+			return nil
+		}
+
+		// For each overloaded option, randomly decide child's handler status:
+		// - child has handler → child handler invoked (parent handler ignored)
+		// - child has nil Handle → Option yielded (parent handler ignored)
+		type overloadDef struct {
+			name         string
+			isShort      bool
+			childHandled bool
+		}
+		var defs []overloadDef
+
+		// Ensure at least one child-handled and one child-non-handled.
+		shortHandled := make([]bool, nOverlap)
+		for i := range shortHandled {
+			shortHandled[i] = rng.Intn(2) == 0
+		}
+		shortHandled[0] = true
+		if nOverlap > 1 {
+			shortHandled[1] = false
+		}
+
+		longHandled := make([]bool, nOverlapLong)
+		for i := range longHandled {
+			longHandled[i] = rng.Intn(2) == 0
+		}
+
+		// Build parent — all overloaded options have handlers.
+		parentShortMap := make(map[byte]*Flag)
+		for _, c := range overlapChars {
+			parentShortMap[c] = &Flag{Name: string(c), HasArg: NoArgument, Handle: parentHandler}
+		}
+		parentLongMap := make(map[string]*Flag)
+		for _, name := range overlapLongNames {
+			parentLongMap[name] = &Flag{Name: name, HasArg: NoArgument, Handle: parentHandler}
+		}
+
+		cfg := ParserConfig{enableErrors: true, longCaseIgnore: true}
+		parent, err := NewParser(cfg, parentShortMap, parentLongMap, nil)
+		if err != nil {
+			return true
+		}
+
+		// Build child — overloaded options with varying handler status.
+		childShortMap := make(map[byte]*Flag)
+		for i, c := range overlapChars {
+			f := &Flag{Name: string(c), HasArg: NoArgument}
+			if shortHandled[i] {
+				f.Handle = childHandler
+			}
+			childShortMap[c] = f
+			defs = append(defs, overloadDef{name: string(c), isShort: true, childHandled: shortHandled[i]})
+		}
+		childLongMap := make(map[string]*Flag)
+		for i, name := range overlapLongNames {
+			f := &Flag{Name: name, HasArg: NoArgument}
+			if longHandled[i] {
+				f.Handle = childHandler
+			}
+			childLongMap[name] = f
+			defs = append(defs, overloadDef{name: name, isShort: false, childHandled: longHandled[i]})
+		}
+
+		// Build args referencing all overloaded options.
+		var args []string
+		for _, d := range defs {
+			if d.isShort {
+				args = append(args, "-"+d.name)
+			} else {
+				args = append(args, "--"+d.name)
+			}
+		}
+
+		child, err := NewParser(cfg, childShortMap, childLongMap, args)
+		if err != nil {
+			return true
+		}
+		parent.AddCmd("sub", child)
+
+		parentCalls = nil
+		childCalls = nil
+		var yielded []Option
+		for opt, err := range child.Options() {
+			if err != nil {
+				t.Logf("seed=%d unexpected error: %v", seed, err)
+				return false
+			}
+			yielded = append(yielded, opt)
+		}
+
+		// Parent handler must NEVER be invoked (child overloads all).
+		if len(parentCalls) != 0 {
+			t.Logf("seed=%d parent handler invoked %d times, want 0", seed, len(parentCalls))
+			return false
+		}
+
+		// Count expected child handler calls and yielded options.
+		var expectChildCalls, expectYielded int
+		for _, d := range defs {
+			if d.childHandled {
+				expectChildCalls++
+			} else {
+				expectYielded++
+			}
+		}
+
+		if len(childCalls) != expectChildCalls {
+			t.Logf("seed=%d child handler calls: got %d, want %d", seed, len(childCalls), expectChildCalls)
+			return false
+		}
+		if len(yielded) != expectYielded {
+			t.Logf("seed=%d yielded options: got %d, want %d", seed, len(yielded), expectYielded)
+			return false
+		}
+
+		// Verify yielded options are only from non-handled child defs.
+		childHandledNames := make(map[string]bool)
+		for _, d := range defs {
+			if d.childHandled {
+				childHandledNames[d.name] = true
+			}
+		}
+		for _, opt := range yielded {
+			if childHandledNames[opt.Name] {
+				t.Logf("seed=%d option %q yielded but child has handler", seed, opt.Name)
+				return false
+			}
+		}
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 7 (Child overloading wins) failed: %v", err)
+	}
+}
+
+// Feature: option-handlers, Property 12: Compaction handler dispatch order
+// Compacted short options dispatched left-to-right: handlers for handled,
+// Options for non-handled.
+// Validates: Requirements 8.1, 8.2
+func TestPropertyCompactionHandlerDispatchOrder(t *testing.T) {
+	property := func(seed int64) bool {
+		rng := rand.New(rand.NewSource(seed))
+
+		// Pick 3–6 distinct NoArgument short options for compaction.
+		nShort := 3 + rng.Intn(4)
+		shortPerm := rng.Perm(len(validShortChars))
+		chars := make([]byte, nShort)
+		for i := range chars {
+			chars[i] = validShortChars[shortPerm[i]]
+		}
+
+		// Randomly assign handled/non-handled, ensuring at least one of each.
+		handled := make([]bool, nShort)
+		for i := range handled {
+			handled[i] = rng.Intn(2) == 0
+		}
+		handled[0] = true
+		handled[1] = false
+
+		// Track handler invocations in order.
+		type call struct {
+			name string
+			seq  int
+		}
+		seq := 0
+		var handlerCalls []call
+		var yieldedOpts []Option
+
+		shortMap := make(map[byte]*Flag)
+		for i, c := range chars {
+			f := &Flag{Name: string(c), HasArg: NoArgument}
+			if handled[i] {
+				f.Handle = func(name string, arg string) error {
+					handlerCalls = append(handlerCalls, call{name, seq})
+					seq++
+					return nil
+				}
+			}
+			shortMap[c] = f
+		}
+
+		// Build a single compacted arg: -abc...
+		compacted := "-"
+		for _, c := range chars {
+			compacted += string(c)
+		}
+
+		p, err := NewParser(ParserConfig{enableErrors: true}, shortMap, nil, []string{compacted})
+		if err != nil {
+			return true
+		}
+
+		for opt, err := range p.Options() {
+			if err != nil {
+				t.Logf("seed=%d unexpected error: %v", seed, err)
+				return false
+			}
+			yieldedOpts = append(yieldedOpts, opt)
+			seq++
+		}
+
+		// Verify dispatch order matches left-to-right character order.
+		hIdx := 0
+		yIdx := 0
+		for i, c := range chars {
+			if handled[i] {
+				if hIdx >= len(handlerCalls) {
+					t.Logf("seed=%d missing handler call for %c at position %d", seed, c, i)
+					return false
+				}
+				if handlerCalls[hIdx].name != string(c) {
+					t.Logf("seed=%d handler call[%d] name: got %q, want %q", seed, hIdx, handlerCalls[hIdx].name, string(c))
+					return false
+				}
+				hIdx++
+			} else {
+				if yIdx >= len(yieldedOpts) {
+					t.Logf("seed=%d missing yielded option for %c at position %d", seed, c, i)
+					return false
+				}
+				if yieldedOpts[yIdx].Name != string(c) {
+					t.Logf("seed=%d yielded[%d] name: got %q, want %q", seed, yIdx, yieldedOpts[yIdx].Name, string(c))
+					return false
+				}
+				yIdx++
+			}
+		}
+
+		// Verify counts.
+		var expectHandled, expectYielded int
+		for _, h := range handled {
+			if h {
+				expectHandled++
+			} else {
+				expectYielded++
+			}
+		}
+		if len(handlerCalls) != expectHandled {
+			t.Logf("seed=%d handler calls: got %d, want %d", seed, len(handlerCalls), expectHandled)
+			return false
+		}
+		if len(yieldedOpts) != expectYielded {
+			t.Logf("seed=%d yielded: got %d, want %d", seed, len(yieldedOpts), expectYielded)
+			return false
+		}
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 12 (Compaction handler dispatch order) failed: %v", err)
+	}
+}
+
+// Feature: option-handlers, Property 13: Compaction error stops remaining
+// Handler error at position N prevents invocation of handlers at N+1 onward.
+// Validates: Requirements 8.3, 9.2
+func TestPropertyCompactionErrorStopsRemaining(t *testing.T) {
+	property := func(seed int64) bool {
+		rng := rand.New(rand.NewSource(seed))
+
+		// Pick 3–6 distinct NoArgument short options for compaction.
+		nShort := 3 + rng.Intn(4)
+		shortPerm := rng.Perm(len(validShortChars))
+		chars := make([]byte, nShort)
+		for i := range chars {
+			chars[i] = validShortChars[shortPerm[i]]
+		}
+
+		// Pick a random position (1 <= errPos < nShort) for the error.
+		// Position 0 would mean nothing runs before the error, so start at 1
+		// to ensure at least one handler runs before the error.
+		errPos := 1 + rng.Intn(nShort-1)
+		errMsg := fmt.Sprintf("handler error at position %d", errPos)
+		sentinel := fmt.Errorf("%s", errMsg)
+
+		// All options get handlers. The one at errPos returns an error.
+		var invoked []int
+		shortMap := make(map[byte]*Flag)
+		for i, c := range chars {
+			pos := i // capture
+			f := &Flag{Name: string(c), HasArg: NoArgument}
+			if pos == errPos {
+				f.Handle = func(name string, arg string) error {
+					invoked = append(invoked, pos)
+					return sentinel
+				}
+			} else {
+				f.Handle = func(name string, arg string) error {
+					invoked = append(invoked, pos)
+					return nil
+				}
+			}
+			shortMap[c] = f
+		}
+
+		// Build compacted arg.
+		compacted := "-"
+		for _, c := range chars {
+			compacted += string(c)
+		}
+
+		p, err := NewParser(ParserConfig{enableErrors: true}, shortMap, nil, []string{compacted})
+		if err != nil {
+			return true
+		}
+
+		var sawError bool
+		for opt, err := range p.Options() {
+			if err != nil {
+				if err.Error() != errMsg {
+					t.Logf("seed=%d unexpected error: %v", seed, err)
+					return false
+				}
+				if opt != (Option{}) {
+					t.Logf("seed=%d expected zero Option with error, got %+v", seed, opt)
+					return false
+				}
+				sawError = true
+				continue
+			}
+		}
+
+		if !sawError {
+			t.Logf("seed=%d never saw handler error", seed)
+			return false
+		}
+
+		// Handlers at positions 0..errPos should have been invoked.
+		// Handlers at positions errPos+1..nShort-1 should NOT have been invoked.
+		expectedInvoked := errPos + 1 // positions 0 through errPos inclusive
+		if len(invoked) != expectedInvoked {
+			t.Logf("seed=%d invoked handlers: got %d, want %d (errPos=%d)", seed, len(invoked), expectedInvoked, errPos)
+			return false
+		}
+
+		// Verify invocation order is 0, 1, ..., errPos.
+		for i, pos := range invoked {
+			if pos != i {
+				t.Logf("seed=%d invoked[%d] = %d, want %d", seed, i, pos, i)
+				return false
+			}
+		}
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 13 (Compaction error stops remaining) failed: %v", err)
+	}
+}
