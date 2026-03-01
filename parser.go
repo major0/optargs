@@ -63,6 +63,33 @@ type Parser struct {
 // NewParser creates a Parser from pre-built configuration, short option map,
 // long option map, and argument list. Most callers should use [GetOpt],
 // [GetOptLong], or [GetOptLongOnly] instead.
+//
+// Flag structs in shortOpts and longOpts may include a non-nil Handle field
+// for per-option handler dispatch. When a flag with a non-nil Handle is
+// resolved during parsing, the handler is invoked instead of yielding an
+// [Option] through the iterator. This is the construction-time path for
+// attaching handlers:
+//
+//	verbose := &optargs.Flag{Name: "verbose", HasArg: optargs.NoArgument}
+//	debug := &optargs.Flag{
+//		Name:   "debug",
+//		HasArg: optargs.NoArgument,
+//		Handle: func(name, arg string) error {
+//			log.Println("debug mode enabled")
+//			return nil
+//		},
+//	}
+//	p, err := optargs.NewParser(config,
+//		map[byte]*optargs.Flag{'v': verbose, 'd': debug},
+//		map[string]*optargs.Flag{"verbose": verbose, "debug": debug},
+//		os.Args[1:],
+//	)
+//
+// For parsers created via [GetOpt], [GetOptLong], or [GetOptLongOnly],
+// handlers can be attached after construction using [Parser.SetHandler],
+// [Parser.SetShortHandler], or [Parser.SetLongHandler]. The two paths are
+// complementary: NewParser for construction-time setup, SetHandler variants
+// for post-construction attachment.
 func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string) (*Parser, error) {
 	parser := Parser{
 		Args:   args,
