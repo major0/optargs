@@ -1,0 +1,35 @@
+name: Release pflags
+
+on:
+  create:
+  push:
+    branches:
+      - 'pflags/v[0-9]+.[0-9]+'
+    tags:
+      - 'pflags/v[0-9]+.[0-9]+.[0-9]+*'
+    paths:
+      - 'pflags/**'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Semantic Version Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semantic Versioning
+        id: semver
+        uses: major0/semver-release-action@v1
+        with:
+          release-prefix: 'pflags/v'
+          tag-prefix: 'pflags/v'
+
+      - name: Summary
+        if: steps.semver.outputs.tag != ''
+        run: |
+          echo "### Release Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Tag**: ${{ steps.semver.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Type**: ${{ steps.semver.outputs.tag-type }}" >> "$GITHUB_STEP_SUMMARY"
