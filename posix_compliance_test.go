@@ -5,8 +5,55 @@ import (
 	"testing"
 )
 
-// TestPOSIXShortOptionCompaction tests POSIX-compliant short option compaction
-// This validates that -abc is equivalent to -a -b -c
+// requireParsedOptions collects all options from a parser, failing the test on
+// any iteration error.
+func requireParsedOptions(t *testing.T, parser *Parser) []Option {
+	t.Helper()
+	var options []Option
+	for opt, err := range parser.Options() {
+		if err != nil {
+			t.Fatalf("Options iteration failed: %v", err)
+		}
+		options = append(options, opt)
+	}
+	return options
+}
+
+// assertOptions compares actual options against expected, checking Name,
+// HasArg, and Arg for each element.
+func assertOptions(t *testing.T, got, want []Option) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("expected %d options, got %d", len(want), len(got))
+	}
+	for i, w := range want {
+		if got[i].Name != w.Name {
+			t.Errorf("option %d: expected name %s, got %s", i, w.Name, got[i].Name)
+		}
+		if got[i].HasArg != w.HasArg {
+			t.Errorf("option %d: expected HasArg %t, got %t", i, w.HasArg, got[i].HasArg)
+		}
+		if got[i].Arg != w.Arg {
+			t.Errorf("option %d: expected arg %s, got %s", i, w.Arg, got[i].Arg)
+		}
+	}
+}
+
+// assertArgs compares remaining positional arguments against expected values.
+func assertArgs(t *testing.T, got, want []string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("expected %d remaining args, got %d", len(want), len(got))
+	}
+	for i, w := range want {
+		if got[i] != w {
+			t.Errorf("remaining arg %d: expected %s, got %s", i, w, got[i])
+		}
+	}
+}
+
+// TestPOSIXShortOptionCompaction tests POSIX-compliant short option compaction.
+// This validates that -abc is equivalent to -a -b -c.
 func TestPOSIXShortOptionCompaction(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -19,9 +66,9 @@ func TestPOSIXShortOptionCompaction(t *testing.T) {
 			optstring: "abc",
 			args:      []string{"-abc"},
 			expected: []Option{
-				{Name: "a", HasArg: false, Arg: ""},
-				{Name: "b", HasArg: false, Arg: ""},
-				{Name: "c", HasArg: false, Arg: ""},
+				{Name: "a"},
+				{Name: "b"},
+				{Name: "c"},
 			},
 		},
 		{
@@ -29,7 +76,7 @@ func TestPOSIXShortOptionCompaction(t *testing.T) {
 			optstring: "ab:c",
 			args:      []string{"-abfoo"},
 			expected: []Option{
-				{Name: "a", HasArg: false, Arg: ""},
+				{Name: "a"},
 				{Name: "b", HasArg: true, Arg: "foo"},
 			},
 		},
@@ -38,7 +85,7 @@ func TestPOSIXShortOptionCompaction(t *testing.T) {
 			optstring: "ab::c",
 			args:      []string{"-abfoo"},
 			expected: []Option{
-				{Name: "a", HasArg: false, Arg: ""},
+				{Name: "a"},
 				{Name: "b", HasArg: true, Arg: "foo"},
 			},
 		},
@@ -47,8 +94,8 @@ func TestPOSIXShortOptionCompaction(t *testing.T) {
 			optstring: "ab::c",
 			args:      []string{"-ab"},
 			expected: []Option{
-				{Name: "a", HasArg: false, Arg: ""},
-				{Name: "b", HasArg: false, Arg: ""},
+				{Name: "a"},
+				{Name: "b"},
 			},
 		},
 	}
@@ -59,35 +106,12 @@ func TestPOSIXShortOptionCompaction(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetOpt failed: %v", err)
 			}
-
-			var options []Option
-			for opt, err := range parser.Options() {
-				if err != nil {
-					t.Fatalf("Options iteration failed: %v", err)
-				}
-				options = append(options, opt)
-			}
-
-			if len(options) != len(tt.expected) {
-				t.Fatalf("Expected %d options, got %d", len(tt.expected), len(options))
-			}
-
-			for i, expected := range tt.expected {
-				if options[i].Name != expected.Name {
-					t.Errorf("Option %d: expected name %s, got %s", i, expected.Name, options[i].Name)
-				}
-				if options[i].HasArg != expected.HasArg {
-					t.Errorf("Option %d: expected HasArg %t, got %t", i, expected.HasArg, options[i].HasArg)
-				}
-				if options[i].Arg != expected.Arg {
-					t.Errorf("Option %d: expected arg %s, got %s", i, expected.Arg, options[i].Arg)
-				}
-			}
+			assertOptions(t, requireParsedOptions(t, parser), tt.expected)
 		})
 	}
 }
 
-// TestPOSIXArgumentHandling tests POSIX-compliant argument handling
+// TestPOSIXArgumentHandling tests POSIX-compliant argument handling.
 func TestPOSIXArgumentHandling(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -112,7 +136,7 @@ func TestPOSIXArgumentHandling(t *testing.T) {
 			name:      "required argument missing",
 			optstring: ":a:", // silent error mode
 			args:      []string{"-a"},
-			expected:  []Option{{Name: "a", HasArg: false, Arg: ""}},
+			expected:  []Option{{Name: "a"}},
 			expectErr: true,
 		},
 		{
@@ -125,7 +149,7 @@ func TestPOSIXArgumentHandling(t *testing.T) {
 			name:      "optional argument not provided",
 			optstring: "a::",
 			args:      []string{"-a"},
-			expected:  []Option{{Name: "a", HasArg: false, Arg: ""}},
+			expected:  []Option{{Name: "a"}},
 		},
 		{
 			name:      "negative argument accepted",
@@ -148,36 +172,22 @@ func TestPOSIXArgumentHandling(t *testing.T) {
 				if err != nil {
 					optErr = err
 					if !tt.expectErr {
-						t.Fatalf("Unexpected error: %v", err)
+						t.Fatalf("unexpected error: %v", err)
 					}
 				}
 				options = append(options, opt)
 			}
 
 			if tt.expectErr && optErr == nil {
-				t.Fatal("Expected error but got none")
+				t.Fatal("expected error but got none")
 			}
 
-			if len(options) != len(tt.expected) {
-				t.Fatalf("Expected %d options, got %d", len(tt.expected), len(options))
-			}
-
-			for i, expected := range tt.expected {
-				if options[i].Name != expected.Name {
-					t.Errorf("Option %d: expected name %s, got %s", i, expected.Name, options[i].Name)
-				}
-				if options[i].HasArg != expected.HasArg {
-					t.Errorf("Option %d: expected HasArg %t, got %t", i, expected.HasArg, options[i].HasArg)
-				}
-				if options[i].Arg != expected.Arg {
-					t.Errorf("Option %d: expected arg %s, got %s", i, expected.Arg, options[i].Arg)
-				}
-			}
+			assertOptions(t, options, tt.expected)
 		})
 	}
 }
 
-// TestPOSIXOptionTermination tests POSIX -- termination behavior
+// TestPOSIXOptionTermination tests POSIX -- termination behavior.
 func TestPOSIXOptionTermination(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -190,7 +200,7 @@ func TestPOSIXOptionTermination(t *testing.T) {
 			name:          "double dash stops parsing",
 			optstring:     "abc",
 			args:          []string{"-a", "--", "-b", "-c"},
-			expected:      []Option{{Name: "a", HasArg: false, Arg: ""}},
+			expected:      []Option{{Name: "a"}},
 			remainingArgs: []string{"-b", "-c"},
 		},
 		{
@@ -215,45 +225,13 @@ func TestPOSIXOptionTermination(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetOpt failed: %v", err)
 			}
-
-			var options []Option
-			for opt, err := range parser.Options() {
-				if err != nil {
-					t.Fatalf("Options iteration failed: %v", err)
-				}
-				options = append(options, opt)
-			}
-
-			if len(options) != len(tt.expected) {
-				t.Fatalf("Expected %d options, got %d", len(tt.expected), len(options))
-			}
-
-			for i, expected := range tt.expected {
-				if options[i].Name != expected.Name {
-					t.Errorf("Option %d: expected name %s, got %s", i, expected.Name, options[i].Name)
-				}
-				if options[i].HasArg != expected.HasArg {
-					t.Errorf("Option %d: expected HasArg %t, got %t", i, expected.HasArg, options[i].HasArg)
-				}
-				if options[i].Arg != expected.Arg {
-					t.Errorf("Option %d: expected arg %s, got %s", i, expected.Arg, options[i].Arg)
-				}
-			}
-
-			if len(parser.Args) != len(tt.remainingArgs) {
-				t.Fatalf("Expected %d remaining args, got %d", len(tt.remainingArgs), len(parser.Args))
-			}
-
-			for i, expected := range tt.remainingArgs {
-				if parser.Args[i] != expected {
-					t.Errorf("Remaining arg %d: expected %s, got %s", i, expected, parser.Args[i])
-				}
-			}
+			assertOptions(t, requireParsedOptions(t, parser), tt.expected)
+			assertArgs(t, parser.Args, tt.remainingArgs)
 		})
 	}
 }
 
-// TestPOSIXParseMode tests different POSIX parsing modes
+// TestPOSIXParseMode tests different POSIX parsing modes.
 func TestPOSIXParseMode(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -266,7 +244,7 @@ func TestPOSIXParseMode(t *testing.T) {
 			name:          "default mode reorders arguments",
 			optstring:     "a",
 			args:          []string{"file1", "-a", "file2"},
-			expected:      []Option{{Name: "a", HasArg: false, Arg: ""}},
+			expected:      []Option{{Name: "a"}},
 			remainingArgs: []string{"file1", "file2"},
 		},
 		{
@@ -281,9 +259,9 @@ func TestPOSIXParseMode(t *testing.T) {
 			optstring: "-a",
 			args:      []string{"-a", "file1", "-a"},
 			expected: []Option{
-				{Name: "a", HasArg: false, Arg: ""},
-				{Name: string(byte(1)), HasArg: false, Arg: "file1"},
-				{Name: "a", HasArg: false, Arg: ""},
+				{Name: "a"},
+				{Name: string(byte(1)), Arg: "file1"},
+				{Name: "a"},
 			},
 			remainingArgs: []string{},
 		},
@@ -295,45 +273,13 @@ func TestPOSIXParseMode(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetOpt failed: %v", err)
 			}
-
-			var options []Option
-			for opt, err := range parser.Options() {
-				if err != nil {
-					t.Fatalf("Options iteration failed: %v", err)
-				}
-				options = append(options, opt)
-			}
-
-			if len(options) != len(tt.expected) {
-				t.Fatalf("Expected %d options, got %d", len(tt.expected), len(options))
-			}
-
-			for i, expected := range tt.expected {
-				if options[i].Name != expected.Name {
-					t.Errorf("Option %d: expected name %s, got %s", i, expected.Name, options[i].Name)
-				}
-				if options[i].HasArg != expected.HasArg {
-					t.Errorf("Option %d: expected HasArg %t, got %t", i, expected.HasArg, options[i].HasArg)
-				}
-				if options[i].Arg != expected.Arg {
-					t.Errorf("Option %d: expected arg %s, got %s", i, expected.Arg, options[i].Arg)
-				}
-			}
-
-			if len(parser.Args) != len(tt.remainingArgs) {
-				t.Fatalf("Expected %d remaining args, got %d", len(tt.remainingArgs), len(parser.Args))
-			}
-
-			for i, expected := range tt.remainingArgs {
-				if parser.Args[i] != expected {
-					t.Errorf("Remaining arg %d: expected %s, got %s", i, expected, parser.Args[i])
-				}
-			}
+			assertOptions(t, requireParsedOptions(t, parser), tt.expected)
+			assertArgs(t, parser.Args, tt.remainingArgs)
 		})
 	}
 }
 
-// TestPOSIXErrorHandling tests POSIX-compliant error handling
+// TestPOSIXErrorHandling tests POSIX-compliant error handling.
 func TestPOSIXErrorHandling(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -388,24 +334,23 @@ func TestPOSIXErrorHandling(t *testing.T) {
 			}
 
 			if tt.expectErr && optErr == nil {
-				t.Fatal("Expected error but got none")
+				t.Fatal("expected error but got none")
 			}
 			if !tt.expectErr && optErr != nil {
-				t.Fatalf("Unexpected error: %v", optErr)
+				t.Fatalf("unexpected error: %v", optErr)
 			}
 
-			// Verify silent mode configuration
 			if tt.silentMode && parser.config.enableErrors {
-				t.Error("Expected silent mode but error reporting is enabled")
+				t.Error("expected silent mode but error reporting is enabled")
 			}
 			if !tt.silentMode && !parser.config.enableErrors {
-				t.Error("Expected error reporting but silent mode is enabled")
+				t.Error("expected error reporting but silent mode is enabled")
 			}
 		})
 	}
 }
 
-// TestGNUExtensions tests GNU extensions to POSIX
+// TestGNUExtensions tests GNU extensions to POSIX.
 func TestGNUExtensions(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -433,64 +378,29 @@ func TestGNUExtensions(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetOpt failed: %v", err)
 			}
-
-			var options []Option
-			for opt, err := range parser.Options() {
-				if err != nil {
-					t.Fatalf("Options iteration failed: %v", err)
-				}
-				options = append(options, opt)
-			}
-
-			if len(options) != len(tt.expected) {
-				t.Fatalf("Expected %d options, got %d", len(tt.expected), len(options))
-			}
-
-			for i, expected := range tt.expected {
-				if options[i].Name != expected.Name {
-					t.Errorf("Option %d: expected name %s, got %s", i, expected.Name, options[i].Name)
-				}
-				if options[i].HasArg != expected.HasArg {
-					t.Errorf("Option %d: expected HasArg %t, got %t", i, expected.HasArg, options[i].HasArg)
-				}
-				if options[i].Arg != expected.Arg {
-					t.Errorf("Option %d: expected arg %s, got %s", i, expected.Arg, options[i].Arg)
-				}
-			}
+			assertOptions(t, requireParsedOptions(t, parser), tt.expected)
 		})
 	}
 }
 
-// TestPOSIXCharacterValidation tests POSIX character validation rules
+// TestPOSIXCharacterValidation tests POSIX character validation rules.
 func TestPOSIXCharacterValidation(t *testing.T) {
 	// Test valid printable ASCII characters (excluding reserved ones)
 	for i := 33; i <= 126; i++ { // printable ASCII range
 		c := byte(i)
-		// Skip reserved characters and prefix characters
 		if c == ':' || c == ';' || c == '-' || c == '+' {
 			continue
 		}
 
-		optstring := string(c)
-		args := []string{"-" + string(c)}
-
-		parser, err := GetOpt(args, optstring)
+		parser, err := GetOpt([]string{"-" + string(c)}, string(c))
 		if err != nil {
-			t.Errorf("Valid character %c should be accepted, got error: %v", c, err)
+			t.Errorf("valid character %c should be accepted, got error: %v", c, err)
 			continue
 		}
 
-		var options []Option
-		for opt, err := range parser.Options() {
-			if err != nil {
-				t.Errorf("Valid character %c parsing failed: %v", c, err)
-				break
-			}
-			options = append(options, opt)
-		}
-
+		options := requireParsedOptions(t, parser)
 		if len(options) != 1 || options[0].Name != string(c) {
-			t.Errorf("Valid character %c not parsed correctly", c)
+			t.Errorf("valid character %c not parsed correctly", c)
 		}
 	}
 
@@ -520,7 +430,8 @@ func TestPOSIXCharacterValidation(t *testing.T) {
 	}
 }
 
-// TestPOSIXLYCORRECTEnvironmentVariable tests POSIXLY_CORRECT environment variable behavior
+// TestPOSIXLYCORRECTEnvironmentVariable tests POSIXLY_CORRECT environment
+// variable behavior.
 func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -535,7 +446,7 @@ func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 			optstring:     "a",
 			args:          []string{"file1", "-a", "file2"},
 			envValue:      "",
-			expected:      []Option{{Name: "a", HasArg: false, Arg: ""}},
+			expected:      []Option{{Name: "a"}},
 			remainingArgs: []string{"file1", "file2"},
 		},
 		{
@@ -552,8 +463,8 @@ func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 			args:      []string{"-a", "-b", "file1", "-a"},
 			envValue:  "1",
 			expected: []Option{
-				{Name: "a", HasArg: false, Arg: ""},
-				{Name: "b", HasArg: false, Arg: ""},
+				{Name: "a"},
+				{Name: "b"},
 			},
 			remainingArgs: []string{"file1", "-a"},
 		},
@@ -569,7 +480,6 @@ func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save original environment variable
 			originalValue := os.Getenv("POSIXLY_CORRECT")
 			defer func() {
 				if originalValue == "" {
@@ -579,7 +489,6 @@ func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 				}
 			}()
 
-			// Set test environment variable
 			if tt.envValue == "" {
 				_ = os.Unsetenv("POSIXLY_CORRECT")
 			} else {
@@ -590,40 +499,8 @@ func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetOpt failed: %v", err)
 			}
-
-			var options []Option
-			for opt, err := range parser.Options() {
-				if err != nil {
-					t.Fatalf("Options iteration failed: %v", err)
-				}
-				options = append(options, opt)
-			}
-
-			if len(options) != len(tt.expected) {
-				t.Fatalf("Expected %d options, got %d", len(tt.expected), len(options))
-			}
-
-			for i, expected := range tt.expected {
-				if options[i].Name != expected.Name {
-					t.Errorf("Option %d: expected name %s, got %s", i, expected.Name, options[i].Name)
-				}
-				if options[i].HasArg != expected.HasArg {
-					t.Errorf("Option %d: expected HasArg %t, got %t", i, expected.HasArg, options[i].HasArg)
-				}
-				if options[i].Arg != expected.Arg {
-					t.Errorf("Option %d: expected arg %s, got %s", i, expected.Arg, options[i].Arg)
-				}
-			}
-
-			if len(parser.Args) != len(tt.remainingArgs) {
-				t.Fatalf("Expected %d remaining args, got %d", len(tt.remainingArgs), len(parser.Args))
-			}
-
-			for i, expected := range tt.remainingArgs {
-				if parser.Args[i] != expected {
-					t.Errorf("Remaining arg %d: expected %s, got %s", i, expected, parser.Args[i])
-				}
-			}
+			assertOptions(t, requireParsedOptions(t, parser), tt.expected)
+			assertArgs(t, parser.Args, tt.remainingArgs)
 		})
 	}
 }
