@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// Validate that we can insantiate the parser with no short or long options.
+// Validate that we can instantiate the parser with no short or long options.
 func TestLongOptsNone(t *testing.T) {
 	_, err := GetOptLong(nil, "", nil)
 	if err != nil {
@@ -30,9 +30,14 @@ func TestLongOnlyNoShortFallback(t *testing.T) {
 		t.Fatalf("Unexpected parser creation error: %v", err)
 	}
 
+	got := 0
 	for _, err := range parser.Options() {
+		got++
 		if err == nil {
 			t.Error("Expected error for unrecognized long-only option with no short fallback")
 		}
+	}
+	if got == 0 {
+		t.Error("Expected at least one iteration from Options()")
 	}
 }
