@@ -482,3 +482,58 @@ func (p *Parser) HasCommands() bool {
 func (p *Parser) GetAliases(targetParser *Parser) []string {
 	return p.Commands.GetAliases(targetParser)
 }
+
+// SetShortHandler attaches a handler to a short option registered on this
+// parser. Returns an error if no matching short option is found.
+//
+// SetShortHandler only modifies options on this parser — it does not walk
+// the parent chain.
+func (p *Parser) SetShortHandler(c byte, handler func(string, string) error) error {
+	f, ok := p.shortOpts[c]
+	if !ok {
+		return fmt.Errorf("unknown option: -%c", c)
+	}
+	f.Handle = handler
+	return nil
+}
+
+// SetLongHandler attaches a handler to a long option registered on this
+// parser. Returns an error if no matching long option is found.
+//
+// Long option names may be single characters (e.g., "v" for --v). Use
+// SetLongHandler for long options and SetShortHandler for short options —
+// the two namespaces are independent.
+//
+// SetLongHandler only modifies options on this parser — it does not walk
+// the parent chain.
+func (p *Parser) SetLongHandler(name string, handler func(string, string) error) error {
+	f, ok := p.longOpts[name]
+	if !ok {
+		return fmt.Errorf("unknown option: --%s", name)
+	}
+	f.Handle = handler
+	return nil
+}
+
+// SetHandler is a convenience method that attaches a handler to a matching
+// option using command-line prefix syntax. Pass "--name" for long options
+// or "-c" for short options. Returns an error if the prefix is missing or
+// no matching option is found.
+//
+// Examples:
+//
+//	parser.SetHandler("--verbose", handler)  // calls SetLongHandler("verbose", handler)
+//	parser.SetHandler("-v", handler)          // calls SetShortHandler('v', handler)
+//	parser.SetHandler("--v", handler)         // calls SetLongHandler("v", handler)
+//
+// SetHandler only modifies options on this parser — it does not walk the
+// parent chain.
+func (p *Parser) SetHandler(name string, handler func(string, string) error) error {
+	if strings.HasPrefix(name, "--") {
+		return p.SetLongHandler(name[2:], handler)
+	}
+	if strings.HasPrefix(name, "-") {
+		return p.SetShortHandler(name[1], handler)
+	}
+	return fmt.Errorf("invalid option name: %s", name)
+}

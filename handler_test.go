@@ -667,3 +667,422 @@ func TestPropertyMixedHandledAndNonHandled(t *testing.T) {
 		t.Errorf("Property 8 (Mixed handled and non-handled dispatch) failed: %v", err)
 	}
 }
+
+// Feature: option-handlers, Property 9: SetShortHandler/SetLongHandler/SetHandler name matching
+// For any parser with registered options, SetShortHandler with a byte matching
+// a registered short option sets the handler, SetLongHandler with a name matching
+// a registered long option sets the handler (including single-character names),
+// and SetHandler parses the dash prefix (-- for long, - for short) and delegates.
+// Validates: Requirements 5.1, 5.2, 5.3
+func TestPropertySetHandlerNameMatching(t *testing.T) {
+	property := func(seed int64) bool {
+		rng := rand.New(rand.NewSource(seed))
+
+		// Generate 1–4 short options (NoArgument for simplicity).
+		nShort := 1 + rng.Intn(4)
+		shortPerm := rng.Perm(len(validShortChars))
+		chars := make([]byte, nShort)
+		for i := range chars {
+			chars[i] = validShortChars[shortPerm[i]]
+		}
+
+		// Generate 1–4 long options (NoArgument for simplicity).
+		nLong := 1 + rng.Intn(4)
+		longPerm := rng.Perm(len(validLongNames))
+		longNames := make([]string, nLong)
+		for i := range longNames {
+			longNames[i] = validLongNames[longPerm[i]]
+		}
+
+		// Build parser with nil handlers on all options.
+		shortMap := make(map[byte]*Flag)
+		for _, c := range chars {
+			shortMap[c] = &Flag{Name: string(c), HasArg: NoArgument}
+		}
+		longMap := make(map[string]*Flag)
+		for _, name := range longNames {
+			longMap[name] = &Flag{Name: name, HasArg: NoArgument}
+		}
+
+		// Build args: one of each short, then one of each long.
+		var args []string
+		for _, c := range chars {
+			args = append(args, "-"+string(c))
+		}
+		for _, name := range longNames {
+			args = append(args, "--"+name)
+		}
+
+		cfg := ParserConfig{enableErrors: true, longCaseIgnore: true}
+		p, err := NewParser(cfg, shortMap, longMap, args)
+		if err != nil {
+			return true
+		}
+
+		// --- Test SetShortHandler ---
+		type call struct{ name, arg string }
+		var shortCalls []call
+		shortHandler := func(name string, arg string) error {
+			shortCalls = append(shortCalls, call{name, arg})
+			return nil
+		}
+		for _, c := range chars {
+			if err := p.SetShortHandler(c, shortHandler); err != nil {
+				t.Logf("seed=%d SetShortHandler(%c) unexpected error: %v", seed, c, err)
+				return false
+			}
+		}
+
+		// --- Test SetLongHandler ---
+		var longCalls []call
+		longHandler := func(name string, arg string) error {
+			longCalls = append(longCalls, call{name, arg})
+			return nil
+		}
+		for _, name := range longNames {
+			if err := p.SetLongHandler(name, longHandler); err != nil {
+				t.Logf("seed=%d SetLongHandler(%q) unexpected error: %v", seed, name, err)
+				return false
+			}
+		}
+
+		// Parse and verify all handlers are invoked (no Options yielded).
+		for _, err := range p.Options() {
+			if err != nil {
+				t.Logf("seed=%d unexpected parse error: %v", seed, err)
+				return false
+			}
+		}
+
+		if len(shortCalls) != nShort {
+			t.Logf("seed=%d short handler calls: got %d, want %d", seed, len(shortCalls), nShort)
+			return false
+		}
+		if len(longCalls) != nLong {
+			t.Logf("seed=%d long handler calls: got %d, want %d", seed, len(longCalls), nLong)
+			return false
+		}
+
+		// Verify each short handler received the correct name.
+		for i, c := range chars {
+			if shortCalls[i].name != string(c) {
+				t.Logf("seed=%d short call[%d] name: got %q, want %q", seed, i, shortCalls[i].name, string(c))
+				return false
+			}
+		}
+		// Verify each long handler received the correct name.
+		for i, name := range longNames {
+			if longCalls[i].name != name {
+				t.Logf("seed=%d long call[%d] name: got %q, want %q", seed, i, longCalls[i].name, name)
+				return false
+			}
+		}
+
+		// --- Test SetHandler with dash-prefix delegation ---
+		// Build a fresh parser to test SetHandler.
+		shortMap2 := make(map[byte]*Flag)
+		for _, c := range chars {
+			shortMap2[c] = &Flag{Name: string(c), HasArg: NoArgument}
+		}
+		longMap2 := make(map[string]*Flag)
+		for _, name := range longNames {
+			longMap2[name] = &Flag{Name: name, HasArg: NoArgument}
+		}
+
+		args2 := make([]string, len(args))
+		copy(args2, args)
+		p2, err := NewParser(cfg, shortMap2, longMap2, args2)
+		if err != nil {
+			return true
+		}
+
+		var setHandlerCalls []call
+		setHandlerFn := func(name string, arg string) error {
+			setHandlerCalls = append(setHandlerCalls, call{name, arg})
+			return nil
+		}
+
+		// SetHandler("--name") should delegate to SetLongHandler.
+		for _, name := range longNames {
+			if err := p2.SetHandler("--"+name, setHandlerFn); err != nil {
+				t.Logf("seed=%d SetHandler(--%s) unexpected error: %v", seed, name, err)
+				return false
+			}
+		}
+		// SetHandler("-c") should delegate to SetShortHandler.
+		for _, c := range chars {
+			if err := p2.SetHandler("-"+string(c), setHandlerFn); err != nil {
+				t.Logf("seed=%d SetHandler(-%c) unexpected error: %v", seed, c, err)
+				return false
+			}
+		}
+
+		// Parse and verify all handlers are invoked via SetHandler.
+		for _, err := range p2.Options() {
+			if err != nil {
+				t.Logf("seed=%d unexpected parse error (SetHandler path): %v", seed, err)
+				return false
+			}
+		}
+
+		if len(setHandlerCalls) != nShort+nLong {
+			t.Logf("seed=%d SetHandler calls: got %d, want %d", seed, len(setHandlerCalls), nShort+nLong)
+			return false
+		}
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 9 (SetShortHandler/SetLongHandler/SetHandler name matching) failed: %v", err)
+	}
+}
+
+// Feature: option-handlers, Property 10: Reject unknown names
+// For any byte not matching a registered short option, SetShortHandler returns
+// non-nil error. For any name not matching a registered long option, SetLongHandler
+// returns non-nil error. For any name not matching via SetHandler lookup, SetHandler
+// returns non-nil error.
+// Validates: Requirements 5.4, 5.5, 5.6
+func TestPropertySetHandlerRejectUnknown(t *testing.T) {
+	property := func(seed int64) bool {
+		rng := rand.New(rand.NewSource(seed))
+
+		// Generate 1–4 short options.
+		nShort := 1 + rng.Intn(4)
+		shortPerm := rng.Perm(len(validShortChars))
+		chars := make([]byte, nShort)
+		for i := range chars {
+			chars[i] = validShortChars[shortPerm[i]]
+		}
+		registered := make(map[byte]bool)
+		for _, c := range chars {
+			registered[c] = true
+		}
+
+		// Generate 1–4 long options.
+		nLong := 1 + rng.Intn(4)
+		longPerm := rng.Perm(len(validLongNames))
+		longNames := make([]string, nLong)
+		for i := range longNames {
+			longNames[i] = validLongNames[longPerm[i]]
+		}
+		registeredLong := make(map[string]bool)
+		for _, name := range longNames {
+			registeredLong[name] = true
+		}
+
+		// Build parser.
+		shortMap := make(map[byte]*Flag)
+		for _, c := range chars {
+			shortMap[c] = &Flag{Name: string(c), HasArg: NoArgument}
+		}
+		longMap := make(map[string]*Flag)
+		for _, name := range longNames {
+			longMap[name] = &Flag{Name: name, HasArg: NoArgument}
+		}
+
+		p, err := NewParser(ParserConfig{enableErrors: true}, shortMap, longMap, nil)
+		if err != nil {
+			return true
+		}
+
+		dummy := func(string, string) error { return nil }
+
+		// Pick a short option byte NOT in the registered set.
+		var unknownShort byte
+		for _, idx := range shortPerm[nShort:] {
+			c := validShortChars[idx]
+			if !registered[c] {
+				unknownShort = c
+				break
+			}
+		}
+		if unknownShort != 0 {
+			if err := p.SetShortHandler(unknownShort, dummy); err == nil {
+				t.Logf("seed=%d SetShortHandler(%c) expected error, got nil", seed, unknownShort)
+				return false
+			}
+		}
+
+		// Pick a long option name NOT in the registered set.
+		var unknownLong string
+		for _, idx := range longPerm[nLong:] {
+			name := validLongNames[idx]
+			if !registeredLong[name] {
+				unknownLong = name
+				break
+			}
+		}
+		if unknownLong != "" {
+			if err := p.SetLongHandler(unknownLong, dummy); err == nil {
+				t.Logf("seed=%d SetLongHandler(%q) expected error, got nil", seed, unknownLong)
+				return false
+			}
+		}
+
+		// SetHandler with "--unknownname" should return error.
+		if unknownLong != "" {
+			if err := p.SetHandler("--"+unknownLong, dummy); err == nil {
+				t.Logf("seed=%d SetHandler(--%s) expected error, got nil", seed, unknownLong)
+				return false
+			}
+		}
+
+		// SetHandler with "-X" where X is not registered should return error.
+		if unknownShort != 0 {
+			if err := p.SetHandler("-"+string(unknownShort), dummy); err == nil {
+				t.Logf("seed=%d SetHandler(-%c) expected error, got nil", seed, unknownShort)
+				return false
+			}
+		}
+
+		// SetHandler with no dash prefix should return error.
+		// Generate a random prefix-less name from the seed.
+		prefixlessNames := []string{"noprefixname", "bare", "plain", "nodash", "raw"}
+		prefixless := prefixlessNames[rng.Intn(len(prefixlessNames))]
+		if err := p.SetHandler(prefixless, dummy); err == nil {
+			t.Logf("seed=%d SetHandler(%q) expected error for no-prefix name, got nil", seed, prefixless)
+			return false
+		}
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 10 (Reject unknown names) failed: %v", err)
+	}
+}
+
+// Feature: option-handlers, Property 11: SetHandler variants do not walk parent chain
+// Calling Set*Handler on child with name matching only a parent option returns
+// error; parent Flag unmodified.
+// Validates: Requirements 5.7
+func TestPropertySetHandlerNoParentWalk(t *testing.T) {
+	property := func(seed int64) bool {
+		rng := rand.New(rand.NewSource(seed))
+
+		// Shuffle valid short chars and split between parent and child.
+		shortPerm := rng.Perm(len(validShortChars))
+		nParentShort := 1 + rng.Intn(4) // 1–4 parent short opts
+		nChildShort := 1 + rng.Intn(4)  // 1–4 child short opts
+		if nParentShort+nChildShort > len(validShortChars) {
+			nChildShort = len(validShortChars) - nParentShort
+		}
+
+		parentShortChars := make([]byte, nParentShort)
+		for i := range parentShortChars {
+			parentShortChars[i] = validShortChars[shortPerm[i]]
+		}
+		childShortChars := make([]byte, nChildShort)
+		for i := range childShortChars {
+			childShortChars[i] = validShortChars[shortPerm[nParentShort+i]]
+		}
+
+		// Shuffle valid long names and split between parent and child.
+		longPerm := rng.Perm(len(validLongNames))
+		nParentLong := 1 + rng.Intn(3) // 1–3 parent long opts
+		nChildLong := 1 + rng.Intn(3)  // 1–3 child long opts
+		if nParentLong+nChildLong > len(validLongNames) {
+			nChildLong = len(validLongNames) - nParentLong
+		}
+
+		parentLongNames := make([]string, nParentLong)
+		for i := range parentLongNames {
+			parentLongNames[i] = validLongNames[longPerm[i]]
+		}
+		childLongNames := make([]string, nChildLong)
+		for i := range childLongNames {
+			childLongNames[i] = validLongNames[longPerm[nParentLong+i]]
+		}
+
+		// Build parent parser with nil Handle on all options.
+		parentShortMap := make(map[byte]*Flag)
+		for _, c := range parentShortChars {
+			parentShortMap[c] = &Flag{Name: string(c), HasArg: NoArgument}
+		}
+		parentLongMap := make(map[string]*Flag)
+		for _, name := range parentLongNames {
+			parentLongMap[name] = &Flag{Name: name, HasArg: NoArgument}
+		}
+
+		cfg := ParserConfig{enableErrors: true}
+		parent, err := NewParser(cfg, parentShortMap, parentLongMap, nil)
+		if err != nil {
+			return true
+		}
+
+		// Build child parser with its own disjoint options.
+		childShortMap := make(map[byte]*Flag)
+		for _, c := range childShortChars {
+			childShortMap[c] = &Flag{Name: string(c), HasArg: NoArgument}
+		}
+		childLongMap := make(map[string]*Flag)
+		for _, name := range childLongNames {
+			childLongMap[name] = &Flag{Name: name, HasArg: NoArgument}
+		}
+
+		child, err := NewParser(cfg, childShortMap, childLongMap, nil)
+		if err != nil {
+			return true
+		}
+
+		// Link child to parent.
+		parent.AddCmd("sub", child)
+
+		dummy := func(string, string) error { return nil }
+
+		// SetShortHandler on child for parent-only short options must fail.
+		for _, c := range parentShortChars {
+			if err := child.SetShortHandler(c, dummy); err == nil {
+				t.Logf("seed=%d child.SetShortHandler(%c) expected error, got nil", seed, c)
+				return false
+			}
+		}
+
+		// SetLongHandler on child for parent-only long options must fail.
+		for _, name := range parentLongNames {
+			if err := child.SetLongHandler(name, dummy); err == nil {
+				t.Logf("seed=%d child.SetLongHandler(%q) expected error, got nil", seed, name)
+				return false
+			}
+		}
+
+		// SetHandler on child for parent-only options must fail.
+		for _, c := range parentShortChars {
+			if err := child.SetHandler("-"+string(c), dummy); err == nil {
+				t.Logf("seed=%d child.SetHandler(-%c) expected error, got nil", seed, c)
+				return false
+			}
+		}
+		for _, name := range parentLongNames {
+			if err := child.SetHandler("--"+name, dummy); err == nil {
+				t.Logf("seed=%d child.SetHandler(--%s) expected error, got nil", seed, name)
+				return false
+			}
+		}
+
+		// Verify parent Flags still have nil Handle (unmodified).
+		for _, c := range parentShortChars {
+			if parentShortMap[c].Handle != nil {
+				t.Logf("seed=%d parent short flag %c Handle was modified", seed, c)
+				return false
+			}
+		}
+		for _, name := range parentLongNames {
+			if parentLongMap[name].Handle != nil {
+				t.Logf("seed=%d parent long flag %q Handle was modified", seed, name)
+				return false
+			}
+		}
+
+		return true
+	}
+
+	config := &quick.Config{MaxCount: 100}
+	if err := quick.Check(property, config); err != nil {
+		t.Errorf("Property 11 (SetHandler variants do not walk parent chain) failed: %v", err)
+	}
+}
