@@ -5,316 +5,198 @@ import (
 	"testing"
 )
 
-// TestAPIStability validates that the public API remains stable and backward compatible
+// reference types used across multiple reflection checks.
+var (
+	stringSliceType = reflect.TypeOf([]string{})
+	argTypeType     = reflect.TypeOf(ArgType(0))
+	parserPtrType   = reflect.TypeOf(&Parser{})
+	flagSliceType   = reflect.TypeOf([]Flag{})
+	stringType      = reflect.TypeOf("")
+)
+
+// TestAPIStability validates that the public API remains stable and backward compatible.
 func TestAPIStability(t *testing.T) {
-	// Test that all expected public types exist and have the correct structure
-	t.Run("public_types_exist", func(t *testing.T) {
-		// Test ArgType enum
-		var argType ArgType
-		if reflect.TypeOf(argType).Kind() != reflect.Int {
-			t.Error("ArgType should be an int type")
-		}
-
-		// Test that ArgType constants exist
-		if NoArgument != 0 {
-			t.Error("NoArgument should be 0")
-		}
-		if RequiredArgument != 1 {
-			t.Error("RequiredArgument should be 1")
-		}
-		if OptionalArgument != 2 {
-			t.Error("OptionalArgument should be 2")
-		}
-
-		// Test ParseMode enum
-		var parseMode ParseMode
-		if reflect.TypeOf(parseMode).Kind() != reflect.Int {
-			t.Error("ParseMode should be an int type")
-		}
-
-		// Test that ParseMode constants exist
-		if ParseDefault != 0 {
-			t.Error("ParseDefault should be 0")
-		}
-		if ParseNonOpts != 1 {
-			t.Error("ParseNonOpts should be 1")
-		}
-		if ParsePosixlyCorrect != 2 {
-			t.Error("ParsePosixlyCorrect should be 2")
-		}
-
-		// Test Flag struct
-		flag := Flag{}
-		flagType := reflect.TypeOf(flag)
-		if flagType.Kind() != reflect.Struct {
-			t.Error("Flag should be a struct")
-		}
-
-		// Check Flag fields
-		nameField, hasName := flagType.FieldByName("Name")
-		if !hasName || nameField.Type.Kind() != reflect.String {
-			t.Error("Flag should have a Name field of type string")
-		}
-
-		hasArgField, hasHasArg := flagType.FieldByName("HasArg")
-		if !hasHasArg || hasArgField.Type != reflect.TypeOf(argType) {
-			t.Error("Flag should have a HasArg field of type ArgType")
-		}
-
-		// Test Option struct
-		option := Option{}
-		optionType := reflect.TypeOf(option)
-		if optionType.Kind() != reflect.Struct {
-			t.Error("Option should be a struct")
-		}
-
-		// Check Option fields
-		optNameField, hasOptName := optionType.FieldByName("Name")
-		if !hasOptName || optNameField.Type.Kind() != reflect.String {
-			t.Error("Option should have a Name field of type string")
-		}
-
-		optHasArgField, hasOptHasArg := optionType.FieldByName("HasArg")
-		if !hasOptHasArg || optHasArgField.Type.Kind() != reflect.Bool {
-			t.Error("Option should have a HasArg field of type bool")
-		}
-
-		optArgField, hasOptArg := optionType.FieldByName("Arg")
-		if !hasOptArg || optArgField.Type.Kind() != reflect.String {
-			t.Error("Option should have an Arg field of type string")
-		}
-
-		// Test Parser struct
-		parser := Parser{}
-		parserType := reflect.TypeOf(parser)
-		if parserType.Kind() != reflect.Struct {
-			t.Error("Parser should be a struct")
-		}
-
-		// Check Parser fields
-		argsField, hasArgs := parserType.FieldByName("Args")
-		if !hasArgs || argsField.Type != reflect.TypeOf([]string{}) {
-			t.Error("Parser should have an Args field of type []string")
-		}
+	t.Run("public_types", func(t *testing.T) {
+		assertKind(t, ArgType(0), reflect.Int, "ArgType")
+		assertKind(t, ParseMode(0), reflect.Int, "ParseMode")
+		assertKind(t, Flag{}, reflect.Struct, "Flag")
+		assertKind(t, Option{}, reflect.Struct, "Option")
+		assertKind(t, Parser{}, reflect.Struct, "Parser")
 	})
 
-	// Test that all expected public functions exist with correct signatures
-	t.Run("public_functions_exist", func(t *testing.T) {
-		// Test GetOpt function
-		getOptType := reflect.TypeOf(GetOpt)
-		if getOptType.Kind() != reflect.Func {
-			t.Error("GetOpt should be a function")
+	t.Run("enum_values", func(t *testing.T) {
+		argTypes := []struct {
+			name string
+			got  ArgType
+			want int
+		}{
+			{"NoArgument", NoArgument, 0},
+			{"RequiredArgument", RequiredArgument, 1},
+			{"OptionalArgument", OptionalArgument, 2},
 		}
-		if getOptType.NumIn() != 2 {
-			t.Error("GetOpt should take 2 parameters")
-		}
-		if getOptType.In(0) != reflect.TypeOf([]string{}) {
-			t.Error("GetOpt first parameter should be []string")
-		}
-		if getOptType.In(1) != reflect.TypeOf("") {
-			t.Error("GetOpt second parameter should be string")
-		}
-		if getOptType.NumOut() != 2 {
-			t.Error("GetOpt should return 2 values")
-		}
-		if getOptType.Out(0) != reflect.TypeOf(&Parser{}) {
-			t.Error("GetOpt first return value should be *Parser")
-		}
-		if getOptType.Out(1).String() != "error" {
-			t.Error("GetOpt second return value should be error")
-		}
-
-		// Test GetOptLong function
-		getOptLongType := reflect.TypeOf(GetOptLong)
-		if getOptLongType.Kind() != reflect.Func {
-			t.Error("GetOptLong should be a function")
-		}
-		if getOptLongType.NumIn() != 3 {
-			t.Error("GetOptLong should take 3 parameters")
-		}
-		if getOptLongType.In(0) != reflect.TypeOf([]string{}) {
-			t.Error("GetOptLong first parameter should be []string")
-		}
-		if getOptLongType.In(1) != reflect.TypeOf("") {
-			t.Error("GetOptLong second parameter should be string")
-		}
-		if getOptLongType.In(2) != reflect.TypeOf([]Flag{}) {
-			t.Error("GetOptLong third parameter should be []Flag")
-		}
-
-		// Test GetOptLongOnly function
-		getOptLongOnlyType := reflect.TypeOf(GetOptLongOnly)
-		if getOptLongOnlyType.Kind() != reflect.Func {
-			t.Error("GetOptLongOnly should be a function")
-		}
-		if getOptLongOnlyType.NumIn() != 3 {
-			t.Error("GetOptLongOnly should take 3 parameters")
-		}
-	})
-
-	// Test backward compatibility with existing usage patterns
-	t.Run("backward_compatibility", func(t *testing.T) {
-		// Test basic GetOpt usage
-		parser, err := GetOpt([]string{"-a", "-b", "value"}, "ab:")
-		if err != nil {
-			t.Fatalf("Basic GetOpt usage should work: %v", err)
-		}
-
-		var options []Option
-		for opt, err := range parser.Options() {
-			if err != nil {
-				t.Fatalf("Options iteration should work: %v", err)
+		for _, tt := range argTypes {
+			if int(tt.got) != tt.want {
+				t.Errorf("%s = %d, want %d", tt.name, tt.got, tt.want)
 			}
-			options = append(options, opt)
 		}
 
-		if len(options) != 2 {
-			t.Errorf("Expected 2 options, got %d", len(options))
+		parseModes := []struct {
+			name string
+			got  ParseMode
+			want int
+		}{
+			{"ParseDefault", ParseDefault, 0},
+			{"ParseNonOpts", ParseNonOpts, 1},
+			{"ParsePosixlyCorrect", ParsePosixlyCorrect, 2},
+		}
+		for _, tt := range parseModes {
+			if int(tt.got) != tt.want {
+				t.Errorf("%s = %d, want %d", tt.name, tt.got, tt.want)
+			}
+		}
+	})
+
+	t.Run("struct_fields", func(t *testing.T) {
+		assertField(t, Flag{}, "Name", reflect.String)
+		assertFieldType(t, Flag{}, "HasArg", argTypeType)
+		assertField(t, Option{}, "Name", reflect.String)
+		assertField(t, Option{}, "HasArg", reflect.Bool)
+		assertField(t, Option{}, "Arg", reflect.String)
+		assertFieldType(t, Parser{}, "Args", stringSliceType)
+	})
+
+	t.Run("function_signatures", func(t *testing.T) {
+		assertSignature(t, "GetOpt", GetOpt,
+			[]reflect.Type{stringSliceType, stringType},
+			[]reflect.Type{parserPtrType})
+		assertSignature(t, "GetOptLong", GetOptLong,
+			[]reflect.Type{stringSliceType, stringType, flagSliceType},
+			[]reflect.Type{parserPtrType})
+		assertSignature(t, "GetOptLongOnly", GetOptLongOnly,
+			[]reflect.Type{stringSliceType, stringType, flagSliceType},
+			[]reflect.Type{parserPtrType})
+	})
+
+	t.Run("backward_compatibility", func(t *testing.T) {
+		// Basic GetOpt usage
+		p, err := GetOpt([]string{"-a", "-b", "value"}, "ab:")
+		if err != nil {
+			t.Fatalf("GetOpt: %v", err)
+		}
+		opts := collectOpts(p)
+		if len(opts) != 2 {
+			t.Errorf("GetOpt options: got %d, want 2", len(opts))
 		}
 
-		// Test GetOptLong usage
+		// GetOptLong usage
 		longOpts := []Flag{
 			{Name: "verbose", HasArg: NoArgument},
 			{Name: "output", HasArg: RequiredArgument},
 		}
-		parser2, err := GetOptLong([]string{"--verbose", "--output", "file.txt"}, "vo:", longOpts)
+		p, err = GetOptLong([]string{"--verbose", "--output", "file.txt"}, "vo:", longOpts)
 		if err != nil {
-			t.Fatalf("Basic GetOptLong usage should work: %v", err)
+			t.Fatalf("GetOptLong: %v", err)
+		}
+		opts = collectOpts(p)
+		if len(opts) != 2 {
+			t.Errorf("GetOptLong options: got %d, want 2", len(opts))
 		}
 
-		var longOptions []Option
-		for opt, err := range parser2.Options() {
-			if err != nil {
-				t.Fatalf("Long options iteration should work: %v", err)
-			}
-			longOptions = append(longOptions, opt)
-		}
-
-		if len(longOptions) != 2 {
-			t.Errorf("Expected 2 long options, got %d", len(longOptions))
-		}
-
-		// Test GetOptLongOnly usage
-		parser3, err := GetOptLongOnly([]string{"-verbose"}, "", longOpts)
+		// GetOptLongOnly usage
+		p, err = GetOptLongOnly([]string{"-verbose"}, "", longOpts)
 		if err != nil {
-			t.Fatalf("Basic GetOptLongOnly usage should work: %v", err)
+			t.Fatalf("GetOptLongOnly: %v", err)
 		}
-
-		var longOnlyOptions []Option
-		for opt, err := range parser3.Options() {
-			if err != nil {
-				t.Fatalf("Long-only options iteration should work: %v", err)
-			}
-			longOnlyOptions = append(longOnlyOptions, opt)
-		}
-
-		if len(longOnlyOptions) != 1 {
-			t.Errorf("Expected 1 long-only option, got %d", len(longOnlyOptions))
+		opts = collectOpts(p)
+		if len(opts) != 1 {
+			t.Errorf("GetOptLongOnly options: got %d, want 1", len(opts))
 		}
 	})
 
-	// Test that POSIXLY_CORRECT environment variable behavior is preserved
 	t.Run("posixly_correct_compatibility", func(t *testing.T) {
-		// This test ensures that the new environment variable support
-		// doesn't break existing behavior
-
-		// Test without environment variable
-		parser1, err := GetOpt([]string{"-a", "file", "-b"}, "ab")
+		// Default mode processes all options
+		p, err := GetOpt([]string{"-a", "file", "-b"}, "ab")
 		if err != nil {
-			t.Fatalf("GetOpt should work without POSIXLY_CORRECT: %v", err)
+			t.Fatalf("default mode: %v", err)
+		}
+		if n := len(collectOpts(p)); n != 2 {
+			t.Errorf("default mode options: got %d, want 2", n)
 		}
 
-		var options1 []Option
-		for opt, err := range parser1.Options() {
-			if err != nil {
-				t.Fatalf("Options iteration should work: %v", err)
-			}
-			options1 = append(options1, opt)
-		}
-
-		// Should process both -a and -b in default mode
-		if len(options1) != 2 {
-			t.Errorf("Expected 2 options in default mode, got %d", len(options1))
-		}
-
-		// Test with + prefix (existing behavior)
-		parser2, err := GetOpt([]string{"-a", "file", "-b"}, "+ab")
+		// + prefix stops at first non-option
+		p, err = GetOpt([]string{"-a", "file", "-b"}, "+ab")
 		if err != nil {
-			t.Fatalf("GetOpt should work with + prefix: %v", err)
+			t.Fatalf("POSIX mode: %v", err)
 		}
-
-		var options2 []Option
-		for opt, err := range parser2.Options() {
-			if err != nil {
-				t.Fatalf("Options iteration should work: %v", err)
-			}
-			options2 = append(options2, opt)
-		}
-
-		// Should stop at first non-option in POSIX mode
-		if len(options2) != 1 {
-			t.Errorf("Expected 1 option in POSIX mode, got %d", len(options2))
+		if n := len(collectOpts(p)); n != 1 {
+			t.Errorf("POSIX mode options: got %d, want 1", n)
 		}
 	})
 }
 
-// TestAPIDocumentationStability ensures that the public API is properly documented
-func TestAPIDocumentationStability(t *testing.T) {
-	// This test ensures that all public functions and types have proper documentation
-	// and that the API surface remains stable
+// assertKind checks that a value's reflect.Kind matches want.
+func assertKind(t *testing.T, v interface{}, want reflect.Kind, name string) {
+	t.Helper()
+	if got := reflect.TypeOf(v).Kind(); got != want {
+		t.Errorf("%s kind = %v, want %v", name, got, want)
+	}
+}
 
-	t.Run("required_exports_exist", func(t *testing.T) {
-		// Ensure all required exports are available
-		requiredFunctions := []interface{}{
-			GetOpt,
-			GetOptLong,
-			GetOptLongOnly,
-		}
+// assertField checks that a struct has a field with the given kind.
+func assertField(t *testing.T, v interface{}, field string, want reflect.Kind) {
+	t.Helper()
+	f, ok := reflect.TypeOf(v).FieldByName(field)
+	if !ok {
+		t.Errorf("missing field %s", field)
+		return
+	}
+	if f.Type.Kind() != want {
+		t.Errorf("field %s kind = %v, want %v", field, f.Type.Kind(), want)
+	}
+}
 
-		for _, fn := range requiredFunctions {
-			if reflect.ValueOf(fn).Kind() != reflect.Func {
-				t.Errorf("Required function is not exported or not a function: %T", fn)
-			}
-		}
+// assertFieldType checks that a struct field has an exact reflect.Type.
+func assertFieldType(t *testing.T, v interface{}, field string, want reflect.Type) {
+	t.Helper()
+	f, ok := reflect.TypeOf(v).FieldByName(field)
+	if !ok {
+		t.Errorf("missing field %s", field)
+		return
+	}
+	if f.Type != want {
+		t.Errorf("field %s type = %v, want %v", field, f.Type, want)
+	}
+}
 
-		// Ensure all required types are available
-		requiredTypes := []interface{}{
-			ArgType(0),
-			Flag{},
-			Option{},
-			Parser{},
-			ParseMode(0),
+// assertSignature checks that fn has the expected parameter types and that
+// each return type in wantOut matches (error return is checked by name).
+func assertSignature(t *testing.T, name string, fn interface{}, wantIn, wantOut []reflect.Type) {
+	t.Helper()
+	ft := reflect.TypeOf(fn)
+	if ft.Kind() != reflect.Func {
+		t.Errorf("%s is not a function", name)
+		return
+	}
+	if ft.NumIn() != len(wantIn) {
+		t.Errorf("%s params: got %d, want %d", name, ft.NumIn(), len(wantIn))
+		return
+	}
+	for i, want := range wantIn {
+		if ft.In(i) != want {
+			t.Errorf("%s param %d: got %v, want %v", name, i, ft.In(i), want)
 		}
-
-		for _, typ := range requiredTypes {
-			if reflect.TypeOf(typ).Name() == "" {
-				t.Errorf("Required type is not properly exported: %T", typ)
-			}
+	}
+	// Check non-error return types; last return is always error.
+	if ft.NumOut() != len(wantOut)+1 {
+		t.Errorf("%s returns: got %d, want %d", name, ft.NumOut(), len(wantOut)+1)
+		return
+	}
+	for i, want := range wantOut {
+		if ft.Out(i) != want {
+			t.Errorf("%s return %d: got %v, want %v", name, i, ft.Out(i), want)
 		}
-
-		// Ensure all required constants are available
-		requiredConstants := []ArgType{
-			NoArgument,
-			RequiredArgument,
-			OptionalArgument,
-		}
-
-		for i, constant := range requiredConstants {
-			if constant != ArgType(i) {
-				t.Errorf("Required constant has wrong value: %v should be %d", constant, i)
-			}
-		}
-
-		requiredParseModes := []ParseMode{
-			ParseDefault,
-			ParseNonOpts,
-			ParsePosixlyCorrect,
-		}
-
-		for i, mode := range requiredParseModes {
-			if mode != ParseMode(i) {
-				t.Errorf("Required ParseMode has wrong value: %v should be %d", mode, i)
-			}
-		}
-	})
+	}
+	if ft.Out(len(wantOut)).String() != "error" {
+		t.Errorf("%s last return: got %v, want error", name, ft.Out(len(wantOut)))
+	}
 }
