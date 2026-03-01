@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestGNULongOptionSyntax tests GNU long option syntax compliance
+// TestGNULongOptionSyntax tests GNU long option syntax compliance.
 func TestGNULongOptionSyntax(t *testing.T) {
 	longOpts := []Flag{
 		{Name: "verbose", HasArg: NoArgument},
@@ -67,35 +67,12 @@ func TestGNULongOptionSyntax(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetOptLong failed: %v", err)
 			}
-
-			var options []Option
-			for opt, err := range parser.Options() {
-				if err != nil {
-					t.Fatalf("Options iteration failed: %v", err)
-				}
-				options = append(options, opt)
-			}
-
-			if len(options) != len(tt.expected) {
-				t.Fatalf("Expected %d options, got %d", len(tt.expected), len(options))
-			}
-
-			for i, expected := range tt.expected {
-				if options[i].Name != expected.Name {
-					t.Errorf("Option %d: expected name %s, got %s", i, expected.Name, options[i].Name)
-				}
-				if options[i].HasArg != expected.HasArg {
-					t.Errorf("Option %d: expected HasArg %t, got %t", i, expected.HasArg, options[i].HasArg)
-				}
-				if options[i].Arg != expected.Arg {
-					t.Errorf("Option %d: expected arg %s, got %s", i, expected.Arg, options[i].Arg)
-				}
-			}
+			assertOptions(t, requireParsedOptions(t, parser), tt.expected)
 		})
 	}
 }
 
-// TestGNULongOptionPartialMatching tests that partial matching is not supported (current behavior)
+// TestGNULongOptionPartialMatching tests that partial matching is not supported.
 func TestGNULongOptionPartialMatching(t *testing.T) {
 	longOpts := []Flag{
 		{Name: "verbose", HasArg: NoArgument},
@@ -109,12 +86,12 @@ func TestGNULongOptionPartialMatching(t *testing.T) {
 		expectErr bool
 	}{
 		{
-			name:      "partial match should fail (not supported)",
+			name:      "partial match hel fails",
 			args:      []string{"--hel"},
 			expectErr: true,
 		},
 		{
-			name:      "partial match should fail (not supported)",
+			name:      "partial match ver fails",
 			args:      []string{"--ver"},
 			expectErr: true,
 		},
@@ -150,7 +127,7 @@ func TestGNULongOptionPartialMatching(t *testing.T) {
 	}
 }
 
-// TestGNULongOptionCaseSensitivity tests case sensitivity handling (current behavior has bugs)
+// TestGNULongOptionCaseSensitivity tests case-insensitive long option matching.
 func TestGNULongOptionCaseSensitivity(t *testing.T) {
 	longOpts := []Flag{
 		{Name: "Verbose", HasArg: NoArgument},
@@ -161,25 +138,21 @@ func TestGNULongOptionCaseSensitivity(t *testing.T) {
 		name      string
 		args      []string
 		expectErr bool
-		desc      string
 	}{
 		{
-			name:      "case insensitive match for different case",
+			name:      "lowercase matches Verbose",
 			args:      []string{"--verbose"},
 			expectErr: false,
-			desc:      "lowercase match for Verbose",
 		},
 		{
-			name:      "case insensitive match works for some cases",
+			name:      "lowercase matches OUTPUT",
 			args:      []string{"--output=file.txt"},
-			expectErr: false, // This actually works
-			desc:      "lowercase match for OUTPUT",
+			expectErr: false,
 		},
 		{
-			name:      "exact case match works",
+			name:      "exact case matches Verbose",
 			args:      []string{"--Verbose"},
 			expectErr: false,
-			desc:      "exact case match",
 		},
 	}
 
@@ -199,16 +172,16 @@ func TestGNULongOptionCaseSensitivity(t *testing.T) {
 			}
 
 			if tt.expectErr && optErr == nil {
-				t.Errorf("%s: Expected error but got none", tt.desc)
+				t.Fatal("Expected error but got none")
 			}
 			if !tt.expectErr && optErr != nil {
-				t.Errorf("%s: Unexpected error: %v", tt.desc, optErr)
+				t.Fatalf("Unexpected error: %v", optErr)
 			}
 		})
 	}
 }
 
-// TestGNULongOnlyMode tests getopt_long_only functionality
+// TestGNULongOnlyMode tests getopt_long_only functionality.
 func TestGNULongOnlyMode(t *testing.T) {
 	longOpts := []Flag{
 		{Name: "verbose", HasArg: NoArgument},
@@ -224,7 +197,7 @@ func TestGNULongOnlyMode(t *testing.T) {
 	}{
 		{
 			name:      "single dash long option",
-			optstring: "", // Long-only mode requires empty optstring
+			optstring: "",
 			args:      []string{"-verbose"},
 			expected: []Option{
 				{Name: "verbose", HasArg: false, Arg: ""},
@@ -265,39 +238,15 @@ func TestGNULongOnlyMode(t *testing.T) {
 				}
 				return
 			}
-
 			if err != nil {
 				t.Fatalf("GetOptLongOnly failed: %v", err)
 			}
-
-			var options []Option
-			for opt, err := range parser.Options() {
-				if err != nil {
-					t.Fatalf("Options iteration failed: %v", err)
-				}
-				options = append(options, opt)
-			}
-
-			if len(options) != len(tt.expected) {
-				t.Fatalf("Expected %d options, got %d", len(tt.expected), len(options))
-			}
-
-			for i, expected := range tt.expected {
-				if options[i].Name != expected.Name {
-					t.Errorf("Option %d: expected name %s, got %s", i, expected.Name, options[i].Name)
-				}
-				if options[i].HasArg != expected.HasArg {
-					t.Errorf("Option %d: expected HasArg %t, got %t", i, expected.HasArg, options[i].HasArg)
-				}
-				if options[i].Arg != expected.Arg {
-					t.Errorf("Option %d: expected arg %s, got %s", i, expected.Arg, options[i].Arg)
-				}
-			}
+			assertOptions(t, requireParsedOptions(t, parser), tt.expected)
 		})
 	}
 }
 
-// TestGNULongOptionComplexNames tests long options with complex names
+// TestGNULongOptionComplexNames tests long options with complex names.
 func TestGNULongOptionComplexNames(t *testing.T) {
 	longOpts := []Flag{
 		{Name: "foo=bar", HasArg: NoArgument},
@@ -347,35 +296,12 @@ func TestGNULongOptionComplexNames(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetOptLong failed: %v", err)
 			}
-
-			var options []Option
-			for opt, err := range parser.Options() {
-				if err != nil {
-					t.Fatalf("Options iteration failed: %v", err)
-				}
-				options = append(options, opt)
-			}
-
-			if len(options) != len(tt.expected) {
-				t.Fatalf("Expected %d options, got %d", len(tt.expected), len(options))
-			}
-
-			for i, expected := range tt.expected {
-				if options[i].Name != expected.Name {
-					t.Errorf("Option %d: expected name %s, got %s", i, expected.Name, options[i].Name)
-				}
-				if options[i].HasArg != expected.HasArg {
-					t.Errorf("Option %d: expected HasArg %t, got %t", i, expected.HasArg, options[i].HasArg)
-				}
-				if options[i].Arg != expected.Arg {
-					t.Errorf("Option %d: expected arg %s, got %s", i, expected.Arg, options[i].Arg)
-				}
-			}
+			assertOptions(t, requireParsedOptions(t, parser), tt.expected)
 		})
 	}
 }
 
-// TestGNUMixedShortLongOptions tests mixing short and long options
+// TestGNUMixedShortLongOptions tests mixing short and long options.
 func TestGNUMixedShortLongOptions(t *testing.T) {
 	longOpts := []Flag{
 		{Name: "verbose", HasArg: NoArgument},
@@ -417,30 +343,7 @@ func TestGNUMixedShortLongOptions(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetOptLong failed: %v", err)
 			}
-
-			var options []Option
-			for opt, err := range parser.Options() {
-				if err != nil {
-					t.Fatalf("Options iteration failed: %v", err)
-				}
-				options = append(options, opt)
-			}
-
-			if len(options) != len(tt.expected) {
-				t.Fatalf("Expected %d options, got %d", len(tt.expected), len(options))
-			}
-
-			for i, expected := range tt.expected {
-				if options[i].Name != expected.Name {
-					t.Errorf("Option %d: expected name %s, got %s", i, expected.Name, options[i].Name)
-				}
-				if options[i].HasArg != expected.HasArg {
-					t.Errorf("Option %d: expected HasArg %t, got %t", i, expected.HasArg, options[i].HasArg)
-				}
-				if options[i].Arg != expected.Arg {
-					t.Errorf("Option %d: expected arg %s, got %s", i, expected.Arg, options[i].Arg)
-				}
-			}
+			assertOptions(t, requireParsedOptions(t, parser), tt.expected)
 		})
 	}
 }
