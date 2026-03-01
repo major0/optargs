@@ -344,10 +344,11 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 
 				// iterate over each character in the word looking
 				// for short options
-				remainingArgs := p.Args[1:]
-				for word := p.Args[0][1:]; len(word) > 0; {
+				word := p.Args[0][1:]
+				p.Args = p.Args[1:]
+				for len(word) > 0 {
 					slog.Debug("Options", "word", word)
-					p.Args, word, option, err = p.findShortOpt(word[0], word[1:], remainingArgs)
+					p.Args, word, option, err = p.findShortOpt(word[0], word[1:], p.Args)
 
 					// Transform usages such as `-W foo` into `--foo`
 					if option.Name == "W" && p.config.gnuWords {

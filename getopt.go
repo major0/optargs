@@ -224,7 +224,7 @@ optPrefix:
 			hasArg = RequiredArgument
 			optstring = optstring[1:]
 		case c == 'W' && len(optstring) > 0 && optstring[0] == ';':
-			slog.Debug("GetOpt", "c", c, "gnuWords", true)
+			slog.Debug("GetOpt", "c", string(c), "gnuWords", true)
 			config.gnuWords = true
 			hasArg = RequiredArgument
 			optstring = optstring[1:]
