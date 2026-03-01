@@ -203,13 +203,13 @@ optPrefix:
 		c := optstring[0]
 		optstring = optstring[1:]
 		if !isGraph(c) {
-			return nil, errors.New("invalid option character: " + string(c))
+			return nil, errors.New("invalid short option: " + string(c))
 		}
 
 		slog.Debug("GetOpt", "c", string(c), "optstring", optstring, "len", len(optstring))
 		switch c {
 		case ':', '-', ';': // Disallowed by the spec
-			return nil, errors.New("invalid option character: " + string(c))
+			return nil, errors.New("prohibited short option: " + string(c))
 		}
 
 		// look ahead to see if c is followed by ":" or "::"
