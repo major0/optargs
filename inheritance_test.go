@@ -20,7 +20,7 @@ func TestFindShortOptCoverage(t *testing.T) {
 
 		parentParser.AddCmd("child", childParser)
 
-		args, word, option, err := childParser.findShortOpt('v', "", []string{})
+		args, word, _, option, err := childParser.findShortOpt('v', "", []string{})
 		if err != nil {
 			t.Errorf("Expected no error, got: %v", err)
 		}
@@ -51,7 +51,7 @@ func TestFindShortOptCoverage(t *testing.T) {
 
 		parentParser.AddCmd("child", childParser)
 
-		args, word, option, err := childParser.findShortOpt('f', "filename.txt", []string{})
+		args, word, _, option, err := childParser.findShortOpt('f', "filename.txt", []string{})
 		if err != nil {
 			t.Errorf("Expected no error, got: %v", err)
 		}
@@ -83,7 +83,7 @@ func TestFindShortOptCoverage(t *testing.T) {
 
 		parentParser.AddCmd("child", childParser)
 
-		args, word, option, err := childParser.findShortOpt('f', "", []string{"filename.txt", "other"})
+		args, word, _, option, err := childParser.findShortOpt('f', "", []string{"filename.txt", "other"})
 		if err != nil {
 			t.Errorf("Expected no error, got: %v", err)
 		}
@@ -117,7 +117,7 @@ func TestFindShortOptCoverage(t *testing.T) {
 
 		parentParser.AddCmd("child", childParser)
 
-		_, _, _, err = childParser.findShortOpt('f', "", []string{})
+		_, _, _, _, err = childParser.findShortOpt('f', "", []string{})
 		if err == nil {
 			t.Errorf("Expected error for missing required argument, got nil")
 		}
@@ -139,7 +139,7 @@ func TestFindShortOptCoverage(t *testing.T) {
 
 		parentParser.AddCmd("child", childParser)
 
-		args, word, option, err := childParser.findShortOpt('f', "filename.txt", []string{})
+		args, word, _, option, err := childParser.findShortOpt('f', "filename.txt", []string{})
 		if err != nil {
 			t.Errorf("Expected no error, got: %v", err)
 		}
@@ -171,7 +171,7 @@ func TestFindShortOptCoverage(t *testing.T) {
 
 		parentParser.AddCmd("child", childParser)
 
-		args, word, option, err := childParser.findShortOpt('f', "", []string{"filename.txt", "other"})
+		args, word, _, option, err := childParser.findShortOpt('f', "", []string{"filename.txt", "other"})
 		if err != nil {
 			t.Errorf("Expected no error, got: %v", err)
 		}
@@ -205,7 +205,7 @@ func TestFindShortOptCoverage(t *testing.T) {
 
 		parentParser.AddCmd("child", childParser)
 
-		args, word, option, err := childParser.findShortOpt('f', "", []string{})
+		args, word, _, option, err := childParser.findShortOpt('f', "", []string{})
 		if err != nil {
 			t.Errorf("Expected no error, got: %v", err)
 		}
@@ -244,7 +244,7 @@ func TestFindShortOptCoverage(t *testing.T) {
 		}
 		parentParser.AddCmd("child", childParser)
 
-		args, word, option, err := childParser.findShortOpt('g', "", []string{})
+		args, word, _, option, err := childParser.findShortOpt('g', "", []string{})
 		if err != nil {
 			t.Errorf("Expected no error, got: %v", err)
 		}
@@ -270,7 +270,7 @@ func TestFindShortOptCoverage(t *testing.T) {
 		}
 		parentParser.AddCmd("child", childParser)
 
-		_, _, _, err = childParser.findShortOpt('x', "", []string{})
+		_, _, _, _, err = childParser.findShortOpt('x', "", []string{})
 		if err == nil {
 			t.Errorf("Expected error for unknown option, got nil")
 		}
@@ -288,7 +288,7 @@ func TestFindShortOptDirectCoverage(t *testing.T) {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
 
-		_, _, _, err = parser.findShortOpt('-', "", []string{})
+		_, _, _, _, err = parser.findShortOpt('-', "", []string{})
 		if err == nil {
 			t.Errorf("Expected error for invalid option character '-', got nil")
 		}
@@ -303,7 +303,7 @@ func TestFindShortOptDirectCoverage(t *testing.T) {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
 
-		_, _, _, err = parser.findShortOpt('z', "", []string{})
+		_, _, _, _, err = parser.findShortOpt('z', "", []string{})
 		if err == nil {
 			t.Errorf("Expected error for unknown option character 'z', got nil")
 		}
@@ -318,7 +318,7 @@ func TestFindShortOptDirectCoverage(t *testing.T) {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
 
-		_, _, _, err = parser.findShortOpt('f', "", []string{})
+		_, _, _, _, err = parser.findShortOpt('f', "", []string{})
 		if err == nil {
 			t.Errorf("Expected error for missing required argument, got nil")
 		}
@@ -346,7 +346,7 @@ func TestFindShortOptEdgeCases(t *testing.T) {
 		// Corrupt the parent's flag to have an invalid HasArg value
 		parentParser.shortOpts['f'] = &Flag{Name: "f", HasArg: ArgType(999)}
 
-		_, _, _, err = childParser.findShortOpt('f', "", []string{})
+		_, _, _, _, err = childParser.findShortOpt('f', "", []string{})
 		if err == nil {
 			t.Errorf("Expected error for unknown argument type, got nil")
 		}
@@ -373,7 +373,7 @@ func TestFindShortOptEdgeCases(t *testing.T) {
 		}
 		parentParser.AddCmd("child", childParser)
 
-		args, word, option, err := childParser.findShortOpt('g', "", []string{})
+		args, word, _, option, err := childParser.findShortOpt('g', "", []string{})
 		if err != nil {
 			t.Errorf("Expected no error, got: %v", err)
 		}

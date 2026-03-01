@@ -120,7 +120,7 @@ type longOptCandidate struct {
 	flag *Flag  // option definition
 }
 
-func (p *Parser) findLongOpt(name string, args []string) ([]string, Option, error) {
+func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Option, error) {
 	// Phase 1: Walk self + all ancestors, collecting every registered
 	// option whose name is a prefix of (or equal to) the input.
 	var candidates []longOptCandidate
@@ -137,7 +137,7 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, Option, erro
 	}
 
 	if len(candidates) == 0 {
-		return args, Option{}, p.optError("unknown option: " + name)
+		return args, nil, Option{}, p.optError("unknown option: " + name)
 	}
 
 	// Phase 2: Sort candidates by name length, longest first.
@@ -154,18 +154,18 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, Option, erro
 			// Exact match — argument comes from the next element in args.
 			option := Option{Name: c.name}
 			if c.flag.HasArg == NoArgument {
-				return args, option, nil
+				return args, c.flag, option, nil
 			}
 			if len(args) > 0 {
 				option.Arg = args[0]
 				option.HasArg = true
-				return args[1:], option, nil
+				return args[1:], c.flag, option, nil
 			}
 			if c.flag.HasArg == RequiredArgument {
-				return args, option, p.optError("option requires an argument: " + name)
+				return args, nil, option, p.optError("option requires an argument: " + name)
 			}
 			// OptionalArgument with no arg available
-			return args, option, nil
+			return args, c.flag, option, nil
 		}
 
 		// Partial match — check for '=' boundary.
@@ -178,21 +178,21 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, Option, erro
 			}
 			option.Arg = name[len(c.name)+1:]
 			option.HasArg = true
-			return args, option, nil
+			return args, c.flag, option, nil
 		}
 		// No '=' at boundary — this candidate doesn't match at a
 		// valid split point. Try next-shortest.
 	}
 
-	return args, Option{}, p.optError("unknown option: " + name)
+	return args, nil, Option{}, p.optError("unknown option: " + name)
 }
 
-func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, string, Option, error) {
+func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, string, *Flag, Option, error) {
 	slog.Debug("findShortOpt", "c", string(c), "word", word, "args", args)
 
 	// POSIX disallows `-` as a short-opt option.
 	if c == '-' {
-		return args, word, Option{}, p.optError("invalid option: " + string(c))
+		return args, word, nil, Option{}, p.optError("invalid option: " + string(c))
 	}
 
 	// Walk the parser chain: self first, then ancestors.
@@ -214,7 +214,7 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 				option.Arg = word
 				word = ""
 			} else if len(args) == 0 {
-				return args, word, option, p.optError("option requires an argument: " + string(c))
+				return args, word, nil, option, p.optError("option requires an argument: " + string(c))
 			} else {
 				option.Arg = args[0]
 				args = args[1:]
@@ -234,14 +234,14 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 			}
 
 		default:
-			return args, word, option, p.optErrorf("unknown argument type: %d", flag.HasArg)
+			return args, word, nil, option, p.optErrorf("unknown argument type: %d", flag.HasArg)
 		}
 
 		slog.Debug("findShortOpt", "args", args, "word", word, "option", option, "err", "yield")
-		return args, word, option, nil
+		return args, word, flag, option, nil
 	}
 
-	return args, word, Option{}, p.optError("unknown option: " + string(c))
+	return args, word, nil, Option{}, p.optError("unknown option: " + string(c))
 }
 
 // lookupShortOpt finds a short option in this parser's shortOpts map,
@@ -273,27 +273,27 @@ func (p *Parser) lookupShortOpt(c byte) (byte, *Flag) {
 // per getopt_long_only(3). Returns (true, option, err) on match or when
 // no short-option fallback is possible. Returns (false, ...) when the
 // caller should fall through to short option parsing.
-func (p *Parser) tryLongOnly(word string, remaining []string) (matched bool, args []string, option Option, err error) {
+func (p *Parser) tryLongOnly(word string, remaining []string) (matched bool, args []string, flag *Flag, option Option, err error) {
 	// Suppress error logging during the long option probe —
 	// we may fall back to short options.
 	savedErrors := p.config.enableErrors
 	p.config.enableErrors = false
-	args, option, err = p.findLongOpt(word, remaining)
+	args, flag, option, err = p.findLongOpt(word, remaining)
 	p.config.enableErrors = savedErrors
 
 	if err == nil {
-		return true, args, option, nil
+		return true, args, flag, option, nil
 	}
 
 	// Long match failed — fall back to short options per getopt_long_only(3).
 	if len(p.shortOpts) == 0 {
 		err = p.optError(err.Error())
-		return true, remaining, option, err
+		return true, remaining, nil, option, err
 	}
 
 	// Has short opts — restore the original arg for short option parsing.
 	restored := append([]string{"-" + word}, remaining...)
-	return false, restored, Option{}, nil
+	return false, restored, nil, Option{}, nil
 }
 
 // Options returns an iterator over parsed options. Each iteration yields
@@ -324,7 +324,9 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 
 			case strings.HasPrefix(p.Args[0], "--"):
 				slog.Debug("Options", "prefix", "--")
-				p.Args, option, err = p.findLongOpt(p.Args[0][2:], p.Args[1:])
+				var flag *Flag
+				p.Args, flag, option, err = p.findLongOpt(p.Args[0][2:], p.Args[1:])
+				_ = flag
 				if !yield(option, err) {
 					return
 				}
@@ -333,7 +335,9 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				slog.Debug("Options", "prefix", "-")
 				if p.config.longOptsOnly {
 					var matched bool
-					matched, p.Args, option, err = p.tryLongOnly(p.Args[0][1:], p.Args[1:])
+					var flag *Flag
+					matched, p.Args, flag, option, err = p.tryLongOnly(p.Args[0][1:], p.Args[1:])
+					_ = flag
 					if matched {
 						if !yield(option, err) {
 							return
@@ -348,7 +352,9 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				p.Args = p.Args[1:]
 				for len(word) > 0 {
 					slog.Debug("Options", "word", word)
-					p.Args, word, option, err = p.findShortOpt(word[0], word[1:], p.Args)
+					var flag *Flag
+					p.Args, word, flag, option, err = p.findShortOpt(word[0], word[1:], p.Args)
+					_ = flag
 
 					// Transform usages such as `-W foo` into `--foo`
 					if option.Name == "W" && p.config.gnuWords {

@@ -84,7 +84,7 @@ func TestNativeSubcommandDispatch(t *testing.T) {
 
 		// Child should have received remaining args: nothing beyond "sub"
 		// Now test that child can resolve parent's option via fallback
-		_, opt, err := child.findLongOpt("verbose", []string{})
+		_, _, opt, err := child.findLongOpt("verbose", []string{})
 		if err != nil {
 			t.Errorf("Child couldn't resolve parent's verbose: %v", err)
 		}
@@ -158,7 +158,7 @@ func TestNativeSubcommandDispatch(t *testing.T) {
 		}
 
 		// Verify migrate can resolve root's verbose via parent chain
-		_, opt, err := migrate.findLongOpt("verbose", []string{})
+		_, _, opt, err := migrate.findLongOpt("verbose", []string{})
 		if err != nil {
 			t.Errorf("Migrate couldn't resolve root's verbose: %v", err)
 		}

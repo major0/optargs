@@ -99,7 +99,7 @@ func TestParentOptionInheritance(t *testing.T) {
 	rootParser.AddCmd("server", serverParser)
 
 	// Test that subcommand can find parent's verbose option
-	args, option, err := serverParser.findLongOpt("verbose", []string{})
+	args, _, option, err := serverParser.findLongOpt("verbose", []string{})
 	if err != nil {
 		t.Errorf("Failed to find verbose option in parent: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestShortOptionInheritance(t *testing.T) {
 	rootParser.AddCmd("server", serverParser)
 
 	// Test that subcommand can find parent's short option
-	args, word, option, err := serverParser.findShortOpt('v', "", []string{})
+	args, word, _, option, err := serverParser.findShortOpt('v', "", []string{})
 	if err != nil {
 		t.Errorf("Failed to find 'v' option in parent: %v", err)
 	}
@@ -448,7 +448,7 @@ func TestRealWorldCommandHierarchy(t *testing.T) {
 	})
 
 	t.Run("multi_level_long_opt_inheritance", func(t *testing.T) {
-		_, option, err := migrateParser.findLongOpt("config", []string{"test.conf"})
+		_, _, option, err := migrateParser.findLongOpt("config", []string{"test.conf"})
 		if err != nil {
 			t.Errorf("Migrate couldn't inherit config option: %v", err)
 		}

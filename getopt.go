@@ -102,10 +102,12 @@ const (
 
 // Flag describes a single option definition for long option parsing.
 // Name is the option name (without leading dashes) and HasArg specifies
-// the argument requirement.
+// the argument requirement. Handle, when non-nil, is invoked instead of
+// yielding an Option through the iterator.
 type Flag struct {
 	Name   string
 	HasArg ArgType
+	Handle func(name string, arg string) error
 }
 
 // Option represents a parsed option yielded by the iterator.

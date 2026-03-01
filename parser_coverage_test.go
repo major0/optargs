@@ -21,7 +21,7 @@ func TestCoverageCompletion(t *testing.T) {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
 
-		_, _, _, err = parser.findShortOpt('x', "", []string{})
+		_, _, _, _, err = parser.findShortOpt('x', "", []string{})
 		if err == nil {
 			t.Error("Expected error for unknown argument type")
 		}
@@ -47,7 +47,7 @@ func TestCoverageCompletion(t *testing.T) {
 		}
 
 		// Test case insensitive NoArgument
-		_, _, option, err := parser.findShortOpt('V', "", []string{})
+		_, _, _, option, err := parser.findShortOpt('V', "", []string{})
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -56,7 +56,7 @@ func TestCoverageCompletion(t *testing.T) {
 		}
 
 		// Test case insensitive RequiredArgument from word
-		_, _, option, err = parser.findShortOpt('F', "value", []string{})
+		_, _, _, option, err = parser.findShortOpt('F', "value", []string{})
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -68,7 +68,7 @@ func TestCoverageCompletion(t *testing.T) {
 		}
 
 		// Test case insensitive OptionalArgument from args
-		_, _, option, err = parser.findShortOpt('O', "", []string{"value"})
+		_, _, _, option, err = parser.findShortOpt('O', "", []string{"value"})
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
