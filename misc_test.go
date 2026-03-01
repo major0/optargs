@@ -6,7 +6,7 @@ import (
 	"unicode"
 )
 
-// Generate tessts for all 255 8-bit ANSI characters. We want the same
+// Generate tests for all 255 8-bit ANSI characters. We want the same
 // behavior from our 'isGraph()' as the libc `isgraph()`.
 func isGraphTests() []bool {
 	tests := make([]bool, 255)
@@ -54,28 +54,28 @@ func BenchmarkIsGraphSpace(b *testing.B) {
 var hasPrefixTests = []struct {
 	s, prefix  string
 	ignoreCase bool
-	b          bool
+	want       bool
 }{
-	{s: "abc123", prefix: "a", ignoreCase: false, b: true},
-	{s: "abc123", prefix: "ab", ignoreCase: false, b: true},
-	{s: "abc123", prefix: "abc", ignoreCase: false, b: true},
-	{s: "abc123", prefix: "A", ignoreCase: false, b: false},
-	{s: "abc123", prefix: "aB", ignoreCase: false, b: false},
-	{s: "abc123", prefix: "abC", ignoreCase: false, b: false},
-	{s: "abc123", prefix: "A", ignoreCase: true, b: true},
-	{s: "abc123", prefix: "aB", ignoreCase: true, b: true},
-	{s: "abc123", prefix: "abC", ignoreCase: true, b: true},
-	{s: "abc123", prefix: "a", ignoreCase: true, b: true},
-	{s: "abc123", prefix: "ab", ignoreCase: true, b: true},
-	{s: "abc123", prefix: "abc", ignoreCase: true, b: true},
+	{s: "abc123", prefix: "a", ignoreCase: false, want: true},
+	{s: "abc123", prefix: "ab", ignoreCase: false, want: true},
+	{s: "abc123", prefix: "abc", ignoreCase: false, want: true},
+	{s: "abc123", prefix: "A", ignoreCase: false, want: false},
+	{s: "abc123", prefix: "aB", ignoreCase: false, want: false},
+	{s: "abc123", prefix: "abC", ignoreCase: false, want: false},
+	{s: "abc123", prefix: "A", ignoreCase: true, want: true},
+	{s: "abc123", prefix: "aB", ignoreCase: true, want: true},
+	{s: "abc123", prefix: "abC", ignoreCase: true, want: true},
+	{s: "abc123", prefix: "a", ignoreCase: true, want: true},
+	{s: "abc123", prefix: "ab", ignoreCase: true, want: true},
+	{s: "abc123", prefix: "abc", ignoreCase: true, want: true},
 }
 
 func TestHasPrefix(t *testing.T) {
 	for _, test := range hasPrefixTests {
 		got := hasPrefix(test.s, test.prefix, test.ignoreCase)
 		slog.Debug("TestHasPrefix", "string", test.s, "prefix", test.prefix, "ignoreCase", test.ignoreCase, "got", got)
-		if got != test.b {
-			t.Errorf("hasPrefix(%q, %q, %v) = %v, want %v", test.s, test.prefix, test.ignoreCase, got, test.b)
+		if got != test.want {
+			t.Errorf("hasPrefix(%q, %q, %v) = %v, want %v", test.s, test.prefix, test.ignoreCase, got, test.want)
 		}
 	}
 }
@@ -113,73 +113,33 @@ func FuzzHasPrefix(f *testing.F) {
 var trimPrefixTests = []struct {
 	s, prefix  string
 	ignoreCase bool
-	b          string
+	want       string
 }{
-	{s: "abc123", prefix: "a", ignoreCase: false, b: "bc123"},
-	{s: "abc123", prefix: "ab", ignoreCase: false, b: "c123"},
-	{s: "abc123", prefix: "abc", ignoreCase: false, b: "123"},
-	{s: "abc123", prefix: "a", ignoreCase: true, b: "bc123"},
-	{s: "abc123", prefix: "ab", ignoreCase: true, b: "c123"},
-	{s: "abc123", prefix: "abc", ignoreCase: true, b: "123"},
-	{s: "Abc123", prefix: "a", ignoreCase: false, b: "Abc123"},
-	{s: "aBc123", prefix: "ab", ignoreCase: false, b: "aBc123"},
-	{s: "abC123", prefix: "abc", ignoreCase: false, b: "abC123"},
-	{s: "Abc123", prefix: "a", ignoreCase: true, b: "bc123"},
-	{s: "aBc123", prefix: "ab", ignoreCase: true, b: "c123"},
-	{s: "abC123", prefix: "abc", ignoreCase: true, b: "123"},
+	{s: "abc123", prefix: "a", ignoreCase: false, want: "bc123"},
+	{s: "abc123", prefix: "ab", ignoreCase: false, want: "c123"},
+	{s: "abc123", prefix: "abc", ignoreCase: false, want: "123"},
+	{s: "abc123", prefix: "a", ignoreCase: true, want: "bc123"},
+	{s: "abc123", prefix: "ab", ignoreCase: true, want: "c123"},
+	{s: "abc123", prefix: "abc", ignoreCase: true, want: "123"},
+	{s: "Abc123", prefix: "a", ignoreCase: false, want: "Abc123"},
+	{s: "aBc123", prefix: "ab", ignoreCase: false, want: "aBc123"},
+	{s: "abC123", prefix: "abc", ignoreCase: false, want: "abC123"},
+	{s: "Abc123", prefix: "a", ignoreCase: true, want: "bc123"},
+	{s: "aBc123", prefix: "ab", ignoreCase: true, want: "c123"},
+	{s: "abC123", prefix: "abc", ignoreCase: true, want: "123"},
+	{s: "", prefix: "a", ignoreCase: false, want: ""},
+	{s: "", prefix: "a", ignoreCase: true, want: ""},
+	{s: "a", prefix: "", ignoreCase: false, want: "a"},
+	{s: "a", prefix: "", ignoreCase: true, want: "a"},
 }
 
 func TestTrimPrefix(t *testing.T) {
 	for _, test := range trimPrefixTests {
 		got := trimPrefix(test.s, test.prefix, test.ignoreCase)
 		slog.Debug("TestTrimPrefix", "string", test.s, "prefix", test.prefix, "ignoreCase", test.ignoreCase, "got", got)
-		if got != test.b {
-			t.Errorf("trimPrefix(%q, %q, %v) = %q, want %q", test.s, test.prefix, test.ignoreCase, got, test.b)
+		if got != test.want {
+			t.Errorf("trimPrefix(%q, %q, %v) = %q, want %q", test.s, test.prefix, test.ignoreCase, got, test.want)
 		}
-	}
-}
-
-func TestTrimPrefixEmpty(t *testing.T) {
-	s := ""
-	prefix := "a"
-	ignoreCase := false
-	got := trimPrefix(s, prefix, ignoreCase)
-	slog.Debug("TestTrimPrefixEmpty", "string", s, "prefix", prefix, "ignoreCase", ignoreCase, "got", got)
-	if got != s {
-		t.Errorf("trimPrefix(%q, %q, %v) = %q, want %q", s, prefix, ignoreCase, got, s)
-	}
-}
-
-func TestTrimPrefixEmptyCaseIgnore(t *testing.T) {
-	s := ""
-	prefix := "a"
-	ignoreCase := true
-	got := trimPrefix(s, prefix, ignoreCase)
-	slog.Debug("TestTrimPrefixEmpty", "string", s, "prefix", prefix, "ignoreCase", ignoreCase, "got", got)
-	if got != s {
-		t.Errorf("trimPrefix(%q, %q, %v) = %q, want %q", s, prefix, ignoreCase, got, s)
-	}
-}
-
-func TestTrimPrefixEmptyPrefix(t *testing.T) {
-	s := "a"
-	prefix := ""
-	ignoreCase := false
-	got := trimPrefix(s, prefix, ignoreCase)
-	slog.Debug("TestTrimPrefixEmptyPrefix", "string", s, "prefix", prefix, "ignoreCase", ignoreCase, "got", got)
-	if got != s {
-		t.Errorf("trimPrefix(%q, %q, %v) = %q, want %q", s, prefix, ignoreCase, got, s)
-	}
-}
-
-func TestTrimPrefixEmptyPrefixCaseIgnore(t *testing.T) {
-	s := "a"
-	prefix := ""
-	ignoreCase := true
-	got := trimPrefix(s, prefix, ignoreCase)
-	slog.Debug("TestTrimPrefixEmptyPrefix", "string", s, "prefix", prefix, "ignoreCase", ignoreCase, "got", got)
-	if got != s {
-		t.Errorf("trimPrefix(%q, %q, %v) = %q, want %q", s, prefix, ignoreCase, got, s)
 	}
 }
 
