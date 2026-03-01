@@ -326,8 +326,21 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				slog.Debug("Options", "prefix", "--")
 				var flag *Flag
 				p.Args, flag, option, err = p.findLongOpt(p.Args[0][2:], p.Args[1:])
-				_ = flag
-				if !yield(option, err) {
+				if err != nil {
+					if !yield(option, err) {
+						return
+					}
+					continue
+				}
+				if flag != nil && flag.Handle != nil {
+					if herr := flag.Handle(option.Name, option.Arg); herr != nil {
+						if !yield(Option{}, herr) {
+							return
+						}
+					}
+					continue
+				}
+				if !yield(option, nil) {
 					return
 				}
 
@@ -337,9 +350,22 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 					var matched bool
 					var flag *Flag
 					matched, p.Args, flag, option, err = p.tryLongOnly(p.Args[0][1:], p.Args[1:])
-					_ = flag
 					if matched {
-						if !yield(option, err) {
+						if err != nil {
+							if !yield(option, err) {
+								return
+							}
+							continue
+						}
+						if flag != nil && flag.Handle != nil {
+							if herr := flag.Handle(option.Name, option.Arg); herr != nil {
+								if !yield(Option{}, herr) {
+									return
+								}
+							}
+							continue
+						}
+						if !yield(option, nil) {
 							return
 						}
 						continue
@@ -354,14 +380,28 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 					slog.Debug("Options", "word", word)
 					var flag *Flag
 					p.Args, word, flag, option, err = p.findShortOpt(word[0], word[1:], p.Args)
-					_ = flag
 
 					// Transform usages such as `-W foo` into `--foo`
 					if option.Name == "W" && p.config.gnuWords {
 						option.Name = option.Arg
 					}
 
-					if !yield(option, err) {
+					if err != nil {
+						if !yield(option, err) {
+							return
+						}
+						break
+					}
+					if flag != nil && flag.Handle != nil {
+						if herr := flag.Handle(option.Name, option.Arg); herr != nil {
+							if !yield(Option{}, herr) {
+								return
+							}
+							break
+						}
+						continue
+					}
+					if !yield(option, nil) {
 						return
 					}
 				}
