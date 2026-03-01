@@ -15,11 +15,9 @@ func TestMain(m *testing.M) {
 	flag.BoolVar(&debug, "debug", false, "Enable debug logging")
 	flag.Parse()
 	if debug {
-		var logopts = &slog.HandlerOptions{
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelDebug,
-		}
-		var logger = slog.New(slog.NewTextHandler(os.Stdout, logopts))
-		slog.SetDefault(logger)
+		})))
 	}
 
 	exitCode := m.Run()
