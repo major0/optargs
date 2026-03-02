@@ -93,6 +93,83 @@ func TestCommandExecution(t *testing.T) {
 	}
 }
 
+// executeCommandErrorTests consolidates error cases from command execution,
+// including unknown commands and nil-parser commands.
+var executeCommandErrorTests = []struct {
+	name    string
+	setup   func(*Parser)
+	cmd     string
+	args    []string
+	wantErr string
+}{
+	{
+		name:    "unknown_command",
+		setup:   func(*Parser) {},
+		cmd:     "nonexistent",
+		args:    []string{},
+		wantErr: "unknown command: nonexistent",
+	},
+	{
+		name:    "nil_parser",
+		setup:   func(p *Parser) { p.AddCmd("help", nil) },
+		cmd:     "help",
+		args:    []string{},
+		wantErr: "command help has no parser",
+	},
+	{
+		name:    "registry_unknown_command",
+		setup:   func(*Parser) {},
+		cmd:     "missing",
+		args:    []string{"a"},
+		wantErr: "unknown command: missing",
+	},
+	{
+		name:    "registry_nil_parser",
+		setup:   func(p *Parser) { p.AddCmd("nil", nil) },
+		cmd:     "nil",
+		args:    []string{"a"},
+		wantErr: "command nil has no parser",
+	},
+}
+
+func TestExecuteCommandErrors(t *testing.T) {
+	for _, tt := range executeCommandErrorTests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := newMinimalParser(t)
+			tt.setup(root)
+
+			_, err := root.ExecuteCommand(tt.cmd, tt.args)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if got := err.Error(); got != tt.wantErr {
+				t.Errorf("error = %q, want %q", got, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestExecuteCommandSuccess(t *testing.T) {
+	cr := NewCommandRegistry()
+	sub := newMinimalParser(t)
+	sub.nonOpts = []string{"stale"}
+	cr.AddCmd("run", sub)
+
+	got, err := cr.ExecuteCommand("run", []string{"x", "y"})
+	if err != nil {
+		t.Fatalf("ExecuteCommand: %v", err)
+	}
+	if got != sub {
+		t.Error("returned parser should match registered parser")
+	}
+	if len(got.Args) != 2 || got.Args[0] != "x" || got.Args[1] != "y" {
+		t.Errorf("Args = %v, want [x y]", got.Args)
+	}
+	if len(got.nonOpts) != 0 {
+		t.Errorf("nonOpts = %v, want empty", got.nonOpts)
+	}
+}
+
 func TestParentOptionInheritance(t *testing.T) {
 	rootParser := newCmdRootParser(t)
 	serverParser := newCmdServerParser(t)
@@ -130,18 +207,6 @@ func TestShortOptionInheritance(t *testing.T) {
 	}
 }
 
-func TestCommandNotFound(t *testing.T) {
-	rootParser := newMinimalParser(t)
-
-	_, err := rootParser.ExecuteCommand("nonexistent", []string{})
-	if err == nil {
-		t.Fatal("expected error for non-existent command")
-	}
-	if got := err.Error(); got != "unknown command: nonexistent" {
-		t.Errorf("error = %q, want %q", got, "unknown command: nonexistent")
-	}
-}
-
 func TestMultipleCommands(t *testing.T) {
 	rootParser := newCmdRootParser(t)
 	serverParser := newCmdServerParser(t)
@@ -159,19 +224,6 @@ func TestMultipleCommands(t *testing.T) {
 	}
 	if parser, exists := commands["client"]; !exists || parser != clientParser {
 		t.Error("client command not found or incorrect parser")
-	}
-}
-
-func TestCommandWithoutParser(t *testing.T) {
-	rootParser := newMinimalParser(t)
-	rootParser.AddCmd("help", nil)
-
-	_, err := rootParser.ExecuteCommand("help", []string{})
-	if err == nil {
-		t.Fatal("expected error for command without parser")
-	}
-	if got := err.Error(); got != "command help has no parser" {
-		t.Errorf("error = %q, want %q", got, "command help has no parser")
 	}
 }
 
@@ -273,6 +325,96 @@ func TestCommandInspection(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// --- Case-insensitive command tests ---
+
+func TestNewParserWithCaseInsensitiveCommands(t *testing.T) {
+	parser, err := NewParserWithCaseInsensitiveCommands(
+		map[byte]*Flag{}, map[string]*Flag{}, []string{"a", "b"},
+	)
+	if err != nil {
+		t.Fatalf("NewParserWithCaseInsensitiveCommands: %v", err)
+	}
+	if !parser.config.commandCaseIgnore {
+		t.Error("commandCaseIgnore should be true")
+	}
+	if len(parser.Args) != 2 || parser.Args[0] != "a" || parser.Args[1] != "b" {
+		t.Errorf("Args = %v, want [a b]", parser.Args)
+	}
+}
+
+func TestNewParserWithCaseInsensitiveCommandsParent(t *testing.T) {
+	parent := newMinimalParser(t)
+	child, err := NewParserWithCaseInsensitiveCommands(
+		map[byte]*Flag{}, map[string]*Flag{}, []string{},
+	)
+	if err != nil {
+		t.Fatalf("NewParserWithCaseInsensitiveCommands: %v", err)
+	}
+
+	parent.AddCmd("child", child)
+
+	if child.parent != parent {
+		t.Error("child should reference parent")
+	}
+	if !child.config.commandCaseIgnore {
+		t.Error("commandCaseIgnore should be true")
+	}
+}
+
+// caseInsensitiveLookupTests drives case-insensitive and case-sensitive
+// command lookup subtests.
+var caseInsensitiveLookupTests = []struct {
+	name       string
+	caseIgnore bool
+	lookup     string
+	wantFound  bool
+}{
+	// Case-insensitive mode: all casings match.
+	{"insensitive_exact", true, "server", true},
+	{"insensitive_upper", true, "SERVER", true},
+	{"insensitive_mixed", true, "SeRvEr", true},
+	{"insensitive_miss", true, "nonexistent", false},
+
+	// Case-sensitive mode: only exact match works.
+	{"sensitive_exact", false, "server", true},
+	{"sensitive_upper", false, "SERVER", false},
+	{"sensitive_mixed", false, "SeRvEr", false},
+}
+
+func TestCommandCaseInsensitiveLookup(t *testing.T) {
+	for _, tt := range caseInsensitiveLookupTests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := newMinimalParser(t)
+			sub := newMinimalParser(t)
+			root.config.commandCaseIgnore = tt.caseIgnore
+			root.AddCmd("server", sub)
+
+			got, exists := root.GetCommand(tt.lookup)
+			if exists != tt.wantFound {
+				t.Fatalf("GetCommand(%q) exists = %v, want %v", tt.lookup, exists, tt.wantFound)
+			}
+			if tt.wantFound && got != sub {
+				t.Error("GetCommand returned wrong parser")
+			}
+		})
+	}
+}
+
+func TestExecuteCommandCaseInsensitive(t *testing.T) {
+	root := newMinimalParser(t)
+	sub := newMinimalParser(t)
+	root.config.commandCaseIgnore = true
+	root.AddCmd("server", sub)
+
+	got, err := root.ExecuteCommand("SERVER", []string{"--help"})
+	if err != nil {
+		t.Fatalf("ExecuteCommand(SERVER): %v", err)
+	}
+	if got != sub {
+		t.Error("ExecuteCommand returned wrong parser")
 	}
 }
 
