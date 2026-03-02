@@ -42,6 +42,26 @@
 //   - long-options that may look similar, but behave differently, from
 //     short options. E.g. `-c` and `--c` are allowed to behave
 //     differently.
+//   - short-option toggles. Because any `isgraph()` character is a valid
+//     short option, `-a` and `-A` can be distinct options that toggle the
+//     same field via their respective [Flag.Handle] callbacks. The parser
+//     processes options left-to-right, so the last occurrence wins
+//     naturally. This is required for tools that pull options from the
+//     environment and allow CLI overrides — contradictory sequences like
+//     `-aAaAa` must be handled correctly, with the final `-a` or `-A`
+//     determining the result.
+//   - multiple short-options that perform the same action. Useful for
+//     deprecating a short option while still supporting it: both `-s`
+//     (deprecated) and `-S` (current) can map to the same [Flag.Handle]
+//     callback. The wrapper controls which options appear in `--help`
+//     output, so deprecated aliases can be hidden without removing
+//     functionality.
+//   - left-to-right, last-occurrence-wins processing. The iterator yields
+//     each option in the order it appears on the command line. When the
+//     same option or contradictory options appear multiple times, the
+//     handler or application overwrites the value on each encounter. The
+//     parser does not accumulate, deduplicate, or reject repeated options
+//     — that policy belongs to the handler layer.
 //
 // It is always possible to implement a Flag handler which imposes
 // opinionated rules atop a non-opinionated parser, but it is not possible
