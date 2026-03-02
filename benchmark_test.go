@@ -2,10 +2,25 @@ package optargs
 
 import (
 	"fmt"
-	"runtime"
 	"strconv"
 	"testing"
 )
+
+// benchParse creates a parser and consumes all options, failing the
+// benchmark on any unexpected error.
+func benchParse(b *testing.B, args []string, optstring string, longopts []Flag) {
+	b.Helper()
+	parser, err := GetOptLong(args, optstring, longopts)
+	if err != nil {
+		b.Fatal(err)
+	}
+	for option, err := range parser.Options() {
+		if err != nil {
+			b.Fatal(err)
+		}
+		_ = option
+	}
+}
 
 // BenchmarkGetOpt benchmarks the core GetOpt function with various scenarios
 func BenchmarkGetOpt(b *testing.B) {
@@ -50,17 +65,7 @@ func BenchmarkGetOpt(b *testing.B) {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				parser, err := GetOpt(tc.args, tc.optstring)
-				if err != nil {
-					b.Fatal(err)
-				}
-				// Consume all options to ensure complete parsing
-				for option, err := range parser.Options() {
-					if err != nil {
-						b.Fatal(err)
-					}
-					_ = option
-				}
+				benchParse(b, tc.args, tc.optstring, nil)
 			}
 		})
 	}
@@ -112,17 +117,7 @@ func BenchmarkGetOptLong(b *testing.B) {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				parser, err := GetOptLong(tc.args, tc.optstring, longOpts)
-				if err != nil {
-					b.Fatal(err)
-				}
-				// Consume all options to ensure complete parsing
-				for option, err := range parser.Options() {
-					if err != nil {
-						b.Fatal(err)
-					}
-					_ = option
-				}
+				benchParse(b, tc.args, tc.optstring, longOpts)
 			}
 		})
 	}
@@ -168,7 +163,6 @@ func BenchmarkGetOptLongOnly(b *testing.B) {
 				if err != nil {
 					b.Fatal(err)
 				}
-				// Consume all options to ensure complete parsing
 				for option, err := range parser.Options() {
 					if err != nil {
 						b.Fatal(err)
@@ -186,7 +180,6 @@ func BenchmarkLargeArgumentLists(b *testing.B) {
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("Size%d", size), func(b *testing.B) {
-			// Generate large argument list
 			args := make([]string, 0, size+1)
 			args = append(args, "prog")
 			for i := 1; i <= size; i++ {
@@ -204,17 +197,7 @@ func BenchmarkLargeArgumentLists(b *testing.B) {
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				parser, err := GetOpt(args, "ab:c")
-				if err != nil {
-					b.Fatal(err)
-				}
-				// Consume all options
-				for option, err := range parser.Options() {
-					if err != nil {
-						b.Fatal(err)
-					}
-					_ = option
-				}
+				benchParse(b, args, "ab:c", nil)
 			}
 		})
 	}
@@ -233,16 +216,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			parser, err := GetOpt(shortArgs, "a:b:c:")
-			if err != nil {
-				b.Fatal(err)
-			}
-			for option, err := range parser.Options() {
-				if err != nil {
-					b.Fatal(err)
-				}
-				_ = option
-			}
+			benchParse(b, shortArgs, "a:b:c:", nil)
 		}
 	})
 
@@ -250,16 +224,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			parser, err := GetOptLong(longArgs, "a:b:c:", longOpts)
-			if err != nil {
-				b.Fatal(err)
-			}
-			for option, err := range parser.Options() {
-				if err != nil {
-					b.Fatal(err)
-				}
-				_ = option
-			}
+			benchParse(b, longArgs, "a:b:c:", longOpts)
 		}
 	})
 }
@@ -272,19 +237,7 @@ func BenchmarkIteratorEfficiency(b *testing.B) {
 	b.Run("IteratorConsumption", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			parser, err := GetOpt(args, optstring)
-			if err != nil {
-				b.Fatal(err)
-			}
-
-			count := 0
-			for option, err := range parser.Options() {
-				if err != nil {
-					b.Fatal(err)
-				}
-				count++
-				_ = option
-			}
+			benchParse(b, args, optstring, nil)
 		}
 	})
 
@@ -296,7 +249,6 @@ func BenchmarkIteratorEfficiency(b *testing.B) {
 				b.Fatal(err)
 			}
 
-			// Only consume first 3 options
 			count := 0
 			for option, err := range parser.Options() {
 				if err != nil {
@@ -314,7 +266,6 @@ func BenchmarkIteratorEfficiency(b *testing.B) {
 
 // BenchmarkComplexScenarios benchmarks complex real-world scenarios
 func BenchmarkComplexScenarios(b *testing.B) {
-	// Simulate complex command-line scenarios
 	longOpts := []Flag{
 		{Name: "verbose", HasArg: NoArgument},
 		{Name: "output", HasArg: RequiredArgument},
@@ -352,16 +303,7 @@ func BenchmarkComplexScenarios(b *testing.B) {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				parser, err := GetOptLong(tc.args, "O:Wgo:czfitv:", longOpts)
-				if err != nil {
-					b.Fatal(err)
-				}
-				for option, err := range parser.Options() {
-					if err != nil {
-						b.Fatal(err)
-					}
-					_ = option
-				}
+				benchParse(b, tc.args, "O:Wgo:czfitv:", longOpts)
 			}
 		})
 	}
@@ -378,16 +320,7 @@ func BenchmarkGNUExtensions(b *testing.B) {
 		args := []string{"prog", "-W", "word-option=value", "-W", "another-word"}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			parser, err := GetOptLong(args, "W;", longOpts)
-			if err != nil {
-				b.Fatal(err)
-			}
-			for option, err := range parser.Options() {
-				if err != nil {
-					b.Fatal(err)
-				}
-				_ = option
-			}
+			benchParse(b, args, "W;", longOpts)
 		}
 	})
 
@@ -395,16 +328,7 @@ func BenchmarkGNUExtensions(b *testing.B) {
 		args := []string{"prog", "--WORD-OPTION", "value", "--Another-Word"}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			parser, err := GetOptLong(args, "", longOpts)
-			if err != nil {
-				b.Fatal(err)
-			}
-			for option, err := range parser.Options() {
-				if err != nil {
-					b.Fatal(err)
-				}
-				_ = option
-			}
+			benchParse(b, args, "", longOpts)
 		}
 	})
 }
@@ -420,12 +344,11 @@ func BenchmarkErrorHandling(b *testing.B) {
 				b.Fatal(err)
 			}
 			for option, err := range parser.Options() {
-				// Expect error for unknown option
 				if err == nil {
 					b.Fatal("Expected error for unknown option")
 				}
 				_ = option
-				break // Only check first error
+				break
 			}
 		}
 	})
@@ -439,48 +362,12 @@ func BenchmarkErrorHandling(b *testing.B) {
 				b.Fatal(err)
 			}
 			for option, err := range parser.Options() {
-				// Expect error for missing argument
 				if err == nil {
 					b.Fatal("Expected error for missing argument")
 				}
 				_ = option
-				break // Only check first error
+				break
 			}
 		}
-	})
-}
-
-// BenchmarkMemoryUsage provides detailed memory usage analysis
-func BenchmarkMemoryUsage(b *testing.B) {
-	args := []string{"prog", "-a", "arg1", "-b", "arg2", "--long", "longarg"}
-	longOpts := []Flag{
-		{Name: "long", HasArg: RequiredArgument},
-		{Name: "verbose", HasArg: NoArgument},
-	}
-
-	b.Run("MemoryFootprint", func(b *testing.B) {
-		var m1, m2 runtime.MemStats
-		runtime.GC()
-		runtime.ReadMemStats(&m1)
-
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			parser, err := GetOptLong(args, "a:b:", longOpts)
-			if err != nil {
-				b.Fatal(err)
-			}
-			for option, err := range parser.Options() {
-				if err != nil {
-					b.Fatal(err)
-				}
-				_ = option
-			}
-		}
-
-		runtime.GC()
-		runtime.ReadMemStats(&m2)
-
-		b.ReportMetric(float64(m2.TotalAlloc-m1.TotalAlloc)/float64(b.N), "bytes/op")
-		b.ReportMetric(float64(m2.Mallocs-m1.Mallocs)/float64(b.N), "allocs/op")
 	})
 }
