@@ -976,7 +976,6 @@ func TestProperty17_AmbiguityResolution(t *testing.T) {
 }
 
 // Property 18: Native Subcommand Dispatch
-// **Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.5**
 // For any parser with registered subcommands, the iterator dispatches to the
 // correct child parser when a non-option argument matches a subcommand name,
 // and unknown options in child parsers are resolved by walking the parent chain.
