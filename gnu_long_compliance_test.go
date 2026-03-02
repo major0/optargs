@@ -72,6 +72,25 @@ func TestGNULongOptionSyntax(t *testing.T) {
 	}
 }
 
+// requireFirstOptError iterates parser options and returns the first error, if
+// any. It fails the test only when the error expectation is violated.
+func requireFirstOptError(t *testing.T, parser *Parser, expectErr bool) {
+	t.Helper()
+	var optErr error
+	for _, err := range parser.Options() {
+		if err != nil {
+			optErr = err
+			break
+		}
+	}
+	if expectErr && optErr == nil {
+		t.Fatal("expected error but got none")
+	}
+	if !expectErr && optErr != nil {
+		t.Fatalf("unexpected error: %v", optErr)
+	}
+}
+
 // TestGNULongOptionPartialMatching tests that partial matching is not supported.
 func TestGNULongOptionPartialMatching(t *testing.T) {
 	longOpts := []Flag{
@@ -108,21 +127,7 @@ func TestGNULongOptionPartialMatching(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetOptLong failed: %v", err)
 			}
-
-			var optErr error
-			for _, err := range parser.Options() {
-				if err != nil {
-					optErr = err
-					break
-				}
-			}
-
-			if tt.expectErr && optErr == nil {
-				t.Fatal("expected error but got none")
-			}
-			if !tt.expectErr && optErr != nil {
-				t.Fatalf("unexpected error: %v", optErr)
-			}
+			requireFirstOptError(t, parser, tt.expectErr)
 		})
 	}
 }
@@ -162,21 +167,7 @@ func TestGNULongOptionCaseSensitivity(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetOptLong failed: %v", err)
 			}
-
-			var optErr error
-			for _, err := range parser.Options() {
-				if err != nil {
-					optErr = err
-					break
-				}
-			}
-
-			if tt.expectErr && optErr == nil {
-				t.Fatal("expected error but got none")
-			}
-			if !tt.expectErr && optErr != nil {
-				t.Fatalf("unexpected error: %v", optErr)
-			}
+			requireFirstOptError(t, parser, tt.expectErr)
 		})
 	}
 }
