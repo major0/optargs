@@ -32,6 +32,19 @@ func newCmdServerParser(t *testing.T) *Parser {
 	return p
 }
 
+// newCmdClientParser creates a subcommand parser with --url (-u).
+// Reduces boilerplate in command tests that need a client parser.
+func newCmdClientParser(t *testing.T) *Parser {
+	t.Helper()
+	p, err := GetOptLong([]string{}, "u:", []Flag{
+		{Name: "url", HasArg: RequiredArgument},
+	})
+	if err != nil {
+		t.Fatalf("newCmdClientParser: %v", err)
+	}
+	return p
+}
+
 // newMinimalParser creates a parser with no options. Useful for tests that
 // only need a bare registry.
 func newMinimalParser(t *testing.T) *Parser {
@@ -132,13 +145,7 @@ func TestCommandNotFound(t *testing.T) {
 func TestMultipleCommands(t *testing.T) {
 	rootParser := newCmdRootParser(t)
 	serverParser := newCmdServerParser(t)
-
-	clientParser, err := GetOptLong([]string{}, "u:", []Flag{
-		{Name: "url", HasArg: RequiredArgument},
-	})
-	if err != nil {
-		t.Fatalf("GetOptLong(client): %v", err)
-	}
+	clientParser := newCmdClientParser(t)
 
 	rootParser.AddCmd("server", serverParser)
 	rootParser.AddCmd("client", clientParser)
@@ -247,12 +254,7 @@ func TestCommandInspection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rootParser := newCmdRootParser(t)
 			serverParser := newCmdServerParser(t)
-			clientParser, err := GetOptLong([]string{}, "u:", []Flag{
-				{Name: "url", HasArg: RequiredArgument},
-			})
-			if err != nil {
-				t.Fatalf("GetOptLong(client): %v", err)
-			}
+			clientParser := newCmdClientParser(t)
 
 			parsersByLabel := map[string]*Parser{
 				"server": serverParser,
