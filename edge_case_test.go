@@ -30,6 +30,18 @@ func requireParseError(t *testing.T, args []string, optstring string, longOpts [
 	return nil
 }
 
+// checkExpectedError fails the test if expectErr does not match whether err
+// is nil.
+func checkExpectedError(t *testing.T, err error, expectErr bool) {
+	t.Helper()
+	if expectErr && err == nil {
+		t.Fatal("expected error but got none")
+	}
+	if !expectErr && err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 // TestEdgeCaseEmptyInputs tests edge cases with empty inputs.
 func TestEdgeCaseEmptyInputs(t *testing.T) {
 	tests := []struct {
@@ -72,13 +84,7 @@ func TestEdgeCaseEmptyInputs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := requireParseError(t, tt.args, tt.optstring, tt.longOpts)
-
-			if tt.expectErr && err == nil {
-				t.Fatal("expected error but got none")
-			}
-			if !tt.expectErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			checkExpectedError(t, err, tt.expectErr)
 		})
 	}
 }
@@ -113,13 +119,7 @@ func TestEdgeCaseMalformedOptions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := requireParseError(t, tt.args, tt.optstring, nil)
-
-			if tt.expectErr && err == nil {
-				t.Fatal("expected error but got none")
-			}
-			if !tt.expectErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			checkExpectedError(t, err, tt.expectErr)
 		})
 	}
 }
@@ -157,13 +157,7 @@ func TestEdgeCaseBoundaryValues(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := GetOpt(nil, tt.optstring)
-
-			if tt.expectErr && err == nil {
-				t.Fatal("expected error but got none")
-			}
-			if !tt.expectErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			checkExpectedError(t, err, tt.expectErr)
 		})
 	}
 }
@@ -212,13 +206,7 @@ func TestEdgeCaseArgumentHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := requireParseError(t, tt.args, tt.optstring, nil)
-
-			if tt.expectErr && err == nil {
-				t.Fatal("expected error but got none")
-			}
-			if !tt.expectErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			checkExpectedError(t, err, tt.expectErr)
 		})
 	}
 }
@@ -281,13 +269,7 @@ func TestEdgeCaseLongOptionHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := requireParseError(t, tt.args, "", longOpts)
-
-			if tt.expectErr && err == nil {
-				t.Fatal("expected error but got none")
-			}
-			if !tt.expectErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			checkExpectedError(t, err, tt.expectErr)
 		})
 	}
 }
@@ -325,13 +307,7 @@ func TestEdgeCaseErrorPropagation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := requireParseError(t, tt.args, tt.optstring, tt.longOpts)
-
-			if tt.expectErr && err == nil {
-				t.Fatal("expected error but got none")
-			}
-			if !tt.expectErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			checkExpectedError(t, err, tt.expectErr)
 		})
 	}
 }
