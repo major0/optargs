@@ -55,7 +55,7 @@ func TestRoundTripShortOptions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parse := func(a []string) (*Parser, error) { return GetOpt(a, tt.optstring) }
-			roundTrip(t, parse, tt.args, optionsEqual)
+			roundTrip(t, parse, tt.args, slices.Equal)
 		})
 	}
 }
@@ -80,7 +80,7 @@ func TestRoundTripLongOptions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parse := func(a []string) (*Parser, error) { return GetOptLong(a, "", longOpts) }
-			roundTrip(t, parse, tt.args, optionsEqual)
+			roundTrip(t, parse, tt.args, slices.Equal)
 		})
 	}
 }
@@ -137,7 +137,7 @@ func TestRoundTripOptionCompaction(t *testing.T) {
 			}
 			opts2 := collectOpts(p2)
 
-			if !optionsEqual(opts1, opts2) {
+			if !slices.Equal(opts1, opts2) {
 				t.Errorf("options differ\n  original:  %+v\n  compacted: %+v", opts1, opts2)
 			}
 			if !slices.Equal(p1.Args, p2.Args) {
