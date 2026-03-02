@@ -20,6 +20,24 @@ func childOf(t *testing.T, parentOpts, childOpts string) (*Parser, *Parser) {
 	return parent, child
 }
 
+// childErr drains root.Options() (failing on error), then returns the
+// first error from child.Options().
+func childErr(t *testing.T, root, child *Parser) error {
+	t.Helper()
+	for _, err := range root.Options() {
+		if err != nil {
+			t.Fatalf("root error: %v", err)
+		}
+	}
+	var first error
+	for _, err := range child.Options() {
+		if err != nil && first == nil {
+			first = err
+		}
+	}
+	return first
+}
+
 // TestFindShortOptCoverage tests all code paths in findShortOpt via
 // parent-chain inheritance.
 func TestFindShortOptCoverage(t *testing.T) {
@@ -607,19 +625,7 @@ func TestParentChainMissingArgDeferral(t *testing.T) {
 		}
 		root.AddCmd("sub", child)
 
-		for _, err := range root.Options() {
-			if err != nil {
-				t.Fatalf("root error: %v", err)
-			}
-		}
-
-		var foundErr error
-		for _, err := range child.Options() {
-			if err != nil {
-				foundErr = err
-			}
-		}
-
+		foundErr := childErr(t, root, child)
 		if foundErr == nil {
 			t.Fatal("expected error for missing long option argument via parent chain")
 		}
@@ -640,19 +646,7 @@ func TestParentChainMissingArgDeferral(t *testing.T) {
 		}
 		root.AddCmd("sub", child)
 
-		for _, err := range root.Options() {
-			if err != nil {
-				t.Fatalf("root error: %v", err)
-			}
-		}
-
-		var foundErr error
-		for _, err := range child.Options() {
-			if err != nil {
-				foundErr = err
-			}
-		}
-
+		foundErr := childErr(t, root, child)
 		if foundErr == nil {
 			t.Fatal("expected error for missing short option argument via parent chain")
 		}
@@ -680,20 +674,7 @@ func TestChildOwnOptionMissingArgWithParent(t *testing.T) {
 		}
 		root.AddCmd("sub", child)
 
-		for _, err := range root.Options() {
-			if err != nil {
-				t.Fatalf("root error: %v", err)
-			}
-		}
-
-		var foundErr error
-		for _, err := range child.Options() {
-			if err != nil {
-				foundErr = err
-			}
-		}
-
-		if foundErr == nil {
+		if childErr(t, root, child) == nil {
 			t.Fatal("expected error for missing argument on child's own long option")
 		}
 	})
@@ -710,20 +691,7 @@ func TestChildOwnOptionMissingArgWithParent(t *testing.T) {
 		}
 		root.AddCmd("sub", child)
 
-		for _, err := range root.Options() {
-			if err != nil {
-				t.Fatalf("root error: %v", err)
-			}
-		}
-
-		var foundErr error
-		for _, err := range child.Options() {
-			if err != nil {
-				foundErr = err
-			}
-		}
-
-		if foundErr == nil {
+		if childErr(t, root, child) == nil {
 			t.Fatal("expected error for missing argument on child's own short option")
 		}
 	})
