@@ -97,7 +97,7 @@ func TestShortOptsDisableErrors(t *testing.T) {
 			t.Errorf("unexpected error: %s", err)
 		}
 
-		if getopt.config.enableErrors != false {
+		if getopt.config.enableErrors {
 			t.Errorf("Expected enableErrors to be false, got true")
 		}
 	}
@@ -168,7 +168,7 @@ func TestShortOptsGnuWords(t *testing.T) {
 			t.Errorf("unexpected error: %s", err)
 		}
 
-		if getopt.config.gnuWords != true {
+		if !getopt.config.gnuWords {
 			t.Errorf("Expected gnuWords to be true, got false")
 		}
 	}
@@ -223,37 +223,40 @@ func TestShortOptNoArgIntegration(t *testing.T) {
 func TestShortOptOptionalIntegration(t *testing.T) {
 	optstring := "a::"
 	tests := []struct {
+		label  string
 		args   []string
 		name   string
 		arg    string
 		hasArg bool
 	}{
-		{[]string{"-afoo"}, "a", "foo", true},
-		{[]string{"-a", "bar"}, "a", "bar", true},
-		{[]string{"-a", "-1"}, "a", "-1", true},
-		{[]string{"-a"}, "a", "", false},
+		{"inline arg", []string{"-afoo"}, "a", "foo", true},
+		{"separate arg", []string{"-a", "bar"}, "a", "bar", true},
+		{"negative arg", []string{"-a", "-1"}, "a", "-1", true},
+		{"no arg", []string{"-a"}, "a", "", false},
 	}
 
 	for _, tt := range tests {
-		getopt, err := GetOpt(tt.args, optstring)
-		if err != nil {
-			t.Errorf("unexpected error: %s", err)
-		}
-
-		for opt, err := range getopt.Options() {
+		t.Run(tt.label, func(t *testing.T) {
+			getopt, err := GetOpt(tt.args, optstring)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}
-			if opt.Name != tt.name {
-				t.Errorf("Expected option %s, got %s", tt.name, opt.Name)
+
+			for opt, err := range getopt.Options() {
+				if err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
+				if opt.Name != tt.name {
+					t.Errorf("Expected option %s, got %s", tt.name, opt.Name)
+				}
+				if opt.HasArg != tt.hasArg {
+					t.Errorf("Expected HasArg to be %t, got %t", tt.hasArg, opt.HasArg)
+				}
+				if opt.Arg != tt.arg {
+					t.Errorf("Expected Arg to be %s, got %s", tt.arg, opt.Arg)
+				}
 			}
-			if opt.HasArg != tt.hasArg {
-				t.Errorf("Expected HasArg to be %t, got %t", tt.hasArg, opt.HasArg)
-			}
-			if opt.Arg != tt.arg {
-				t.Errorf("Expected Arg to be %s, got %s", tt.arg, opt.Arg)
-			}
-		}
+		})
 	}
 }
 
@@ -261,41 +264,44 @@ func TestShortOptRequiredIntegration(t *testing.T) {
 	// Disable automatic error reporting to avoid polluting test output
 	optstring := ":a:"
 	tests := []struct {
+		label     string
 		args      []string
 		name      string
 		arg       string
 		hasArg    bool
 		expectErr bool
 	}{
-		{[]string{"-afoo"}, "a", "foo", true, false},
-		{[]string{"-a", "bar"}, "a", "bar", true, false},
-		{[]string{"-a", "-1"}, "a", "-1", true, false},
-		{[]string{"-a"}, "a", "", false, true},
+		{"inline arg", []string{"-afoo"}, "a", "foo", true, false},
+		{"separate arg", []string{"-a", "bar"}, "a", "bar", true, false},
+		{"negative arg", []string{"-a", "-1"}, "a", "-1", true, false},
+		{"missing required arg", []string{"-a"}, "a", "", false, true},
 	}
 
 	for _, tt := range tests {
-		getopt, err := GetOpt(tt.args, optstring)
-		if err != nil {
-			t.Errorf("unexpected error: %s", err)
-		}
-
-		for opt, err := range getopt.Options() {
-			if tt.expectErr && err == nil {
-				t.Errorf("Expected an error for args %v", tt.args)
-			}
-			if !tt.expectErr && err != nil {
+		t.Run(tt.label, func(t *testing.T) {
+			getopt, err := GetOpt(tt.args, optstring)
+			if err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}
-			if opt.Name != tt.name {
-				t.Errorf("Expected option %s, got %s", tt.name, opt.Name)
+
+			for opt, err := range getopt.Options() {
+				if tt.expectErr && err == nil {
+					t.Errorf("Expected an error for args %v", tt.args)
+				}
+				if !tt.expectErr && err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
+				if opt.Name != tt.name {
+					t.Errorf("Expected option %s, got %s", tt.name, opt.Name)
+				}
+				if opt.HasArg != tt.hasArg {
+					t.Errorf("Expected HasArg to be %t, got %t", tt.hasArg, opt.HasArg)
+				}
+				if opt.Arg != tt.arg {
+					t.Errorf("Expected Arg to be %s, got %s", tt.arg, opt.Arg)
+				}
 			}
-			if opt.HasArg != tt.hasArg {
-				t.Errorf("Expected HasArg to be %t, got %t", tt.hasArg, opt.HasArg)
-			}
-			if opt.Arg != tt.arg {
-				t.Errorf("Expected Arg to be %s, got %s", tt.arg, opt.Arg)
-			}
-		}
+		})
 	}
 }
 
