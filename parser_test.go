@@ -7,7 +7,7 @@ import (
 // graphChars returns every byte value for which isGraph reports true.
 var graphChars = func() []byte {
 	var out []byte
-	for i := 0; i < 255; i++ {
+	for i := 0; i <= 255; i++ {
 		if isGraph(byte(i)) {
 			out = append(out, byte(i))
 		}
