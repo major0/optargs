@@ -23,19 +23,20 @@ func benchStdFlag(b *testing.B, args []string, setup func(*flag.FlagSet)) {
 
 // BenchmarkComparisonWithStdFlag compares performance with Go's standard flag package
 func BenchmarkComparisonWithStdFlag(b *testing.B) {
-	args := []string{"-a", "arg1", "-b", "arg2", "-c"}
+	stdArgs := []string{"-a", "arg1", "-b", "arg2", "-c"}
+	optArgs := append([]string{"prog"}, stdArgs...)
 
 	b.Run("OptArgs", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchParse(b, GetOptLong, append([]string{"prog"}, args...), "a:b:c", nil)
+			benchParse(b, GetOptLong, optArgs, "a:b:c", nil)
 		}
 	})
 
 	b.Run("StdFlag", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchStdFlag(b, args, func(fs *flag.FlagSet) {
+			benchStdFlag(b, stdArgs, func(fs *flag.FlagSet) {
 				_ = fs.String("a", "", "a flag")
 				_ = fs.String("b", "", "b flag")
 				_ = fs.Bool("c", false, "c flag")
@@ -46,7 +47,8 @@ func BenchmarkComparisonWithStdFlag(b *testing.B) {
 
 // BenchmarkComparisonLongOptions compares long option performance
 func BenchmarkComparisonLongOptions(b *testing.B) {
-	args := []string{"--verbose", "--output", "file.txt", "--config", "cfg.ini"}
+	stdArgs := []string{"--verbose", "--output", "file.txt", "--config", "cfg.ini"}
+	optArgs := append([]string{"prog"}, stdArgs...)
 	longOpts := []Flag{
 		{Name: "verbose", HasArg: NoArgument},
 		{Name: "output", HasArg: RequiredArgument},
@@ -56,14 +58,14 @@ func BenchmarkComparisonLongOptions(b *testing.B) {
 	b.Run("OptArgs", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchParse(b, GetOptLong, append([]string{"prog"}, args...), "", longOpts)
+			benchParse(b, GetOptLong, optArgs, "", longOpts)
 		}
 	})
 
 	b.Run("StdFlag", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchStdFlag(b, args, func(fs *flag.FlagSet) {
+			benchStdFlag(b, stdArgs, func(fs *flag.FlagSet) {
 				_ = fs.Bool("verbose", false, "verbose flag")
 				_ = fs.String("output", "", "output flag")
 				_ = fs.String("config", "", "config flag")
@@ -74,7 +76,8 @@ func BenchmarkComparisonLongOptions(b *testing.B) {
 
 // BenchmarkComparisonComplexScenarios compares complex parsing scenarios
 func BenchmarkComparisonComplexScenarios(b *testing.B) {
-	args := []string{"-abc", "arg1", "--verbose", "--output=file.txt", "-d", "arg2"}
+	stdArgs := []string{"-abc", "arg1", "--verbose", "--output=file.txt", "-d", "arg2"}
+	optArgs := append([]string{"prog"}, stdArgs...)
 	longOpts := []Flag{
 		{Name: "verbose", HasArg: NoArgument},
 		{Name: "output", HasArg: RequiredArgument},
@@ -83,7 +86,7 @@ func BenchmarkComparisonComplexScenarios(b *testing.B) {
 	b.Run("OptArgs", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchParse(b, GetOptLong, append([]string{"prog"}, args...), "abc:d:", longOpts)
+			benchParse(b, GetOptLong, optArgs, "abc:d:", longOpts)
 		}
 	})
 
@@ -107,7 +110,8 @@ func BenchmarkComparisonComplexScenarios(b *testing.B) {
 
 // BenchmarkComparisonMemoryUsage compares memory allocation patterns
 func BenchmarkComparisonMemoryUsage(b *testing.B) {
-	args := []string{"-a", "arg1", "-b", "arg2", "--verbose"}
+	stdArgs := []string{"-a", "arg1", "-b", "arg2", "--verbose"}
+	optArgs := append([]string{"prog"}, stdArgs...)
 	longOpts := []Flag{
 		{Name: "verbose", HasArg: NoArgument},
 	}
@@ -116,7 +120,7 @@ func BenchmarkComparisonMemoryUsage(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchParse(b, GetOptLong, append([]string{"prog"}, args...), "a:b:", longOpts)
+			benchParse(b, GetOptLong, optArgs, "a:b:", longOpts)
 		}
 	})
 
@@ -124,7 +128,7 @@ func BenchmarkComparisonMemoryUsage(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchStdFlag(b, args, func(fs *flag.FlagSet) {
+			benchStdFlag(b, stdArgs, func(fs *flag.FlagSet) {
 				_ = fs.String("a", "", "a flag")
 				_ = fs.String("b", "", "b flag")
 				_ = fs.Bool("verbose", false, "verbose flag")
