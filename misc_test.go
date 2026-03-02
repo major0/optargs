@@ -6,18 +6,18 @@ import (
 	"unicode"
 )
 
-// Generate tests for all 255 8-bit ANSI characters. We want the same
+// Generate tests for all 256 8-bit values. We want the same
 // behavior from our 'isGraph()' as the libc `isgraph()`.
 func isGraphTests() []bool {
-	tests := make([]bool, 255)
-	for i := 0; i < 255; i++ {
+	tests := make([]bool, 256)
+	for i := 0; i < 256; i++ {
 		slog.Debug("isGraphTests", "i", i)
 		tests[i] = unicode.IsGraphic(rune(i)) && !unicode.IsSpace(rune(i))
 	}
 	return tests
 }
 
-// Test our `IsGraph()` against all 255 8-bit ANSI characters
+// Test our `IsGraph()` against all 256 8-bit values
 func TestIsGraph(t *testing.T) {
 	for c, expect := range isGraphTests() {
 		slog.Debug("TestIsGraph", "c", c, "expect", expect)
