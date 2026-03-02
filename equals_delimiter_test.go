@@ -583,14 +583,10 @@ func TestObscureLongOptCharacters(t *testing.T) {
 // obscure-character option names overlap with shorter prefixes.
 func TestObscureCharOverlappingPrefixes(t *testing.T) {
 	tests := []struct {
-		name      string
-		gpOpts    []Flag   // nil means 2-level chain; non-nil means flat (no chain)
-		parOpts   []Flag   // parent opts for chain tests; nil means flat test
-		childOpts []Flag   // child opts for chain tests
-		childArgs []string // child args for chain tests
-		longOpts  []Flag   // for flat (non-chain) tests
-		args      []string // for flat (non-chain) tests
-		expected  []Option
+		name     string
+		longOpts []Flag
+		args     []string
+		expected []Option
 	}{
 		{
 			// "config" and "config[key]" both registered.
