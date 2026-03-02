@@ -1490,3 +1490,165 @@ func TestObscureCharOverlappingPrefixes(t *testing.T) {
 		})
 	})
 }
+
+// TestEdgeCaseMalformedOptions tests malformed option inputs.
+func TestEdgeCaseMalformedOptions(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		optstring string
+		expectErr bool
+	}{
+		{
+			name:      "double dash terminates parsing",
+			args:      []string{"--"},
+			optstring: "a",
+		},
+		{
+			name:      "triple dash errors on invalid dash character",
+			args:      []string{"---"},
+			optstring: "a",
+			expectErr: true,
+		},
+		{
+			name:      "unknown long option with equals but no value",
+			args:      []string{"--opt="},
+			optstring: "",
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := requireParseError(t, tt.args, tt.optstring, nil)
+			if tt.expectErr && err == nil {
+				t.Fatal("expected error but got none")
+			}
+			if !tt.expectErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// TestEdgeCaseArgumentHandling tests edge cases in argument handling.
+func TestEdgeCaseArgumentHandling(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		optstring string
+		expectErr bool
+	}{
+		{
+			name:      "missing required argument at end of args",
+			args:      []string{"-a"},
+			optstring: ":a:",
+			expectErr: true,
+		},
+		{
+			name:      "empty string is valid argument",
+			args:      []string{"-a", ""},
+			optstring: "a:",
+		},
+		{
+			name:      "whitespace is valid argument",
+			args:      []string{"-a", "   "},
+			optstring: "a:",
+		},
+		{
+			name:      "special characters are valid arguments",
+			args:      []string{"-a", "!@#$%^&*()"},
+			optstring: "a:",
+		},
+		{
+			name:      "unicode is valid argument",
+			args:      []string{"-a", "café"},
+			optstring: "a:",
+		},
+		{
+			name:      "very long argument",
+			args:      []string{"-a", string(make([]byte, 10000))},
+			optstring: "a:",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := requireParseError(t, tt.args, tt.optstring, nil)
+			if tt.expectErr && err == nil {
+				t.Fatal("expected error but got none")
+			}
+			if !tt.expectErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// TestEdgeCaseLongOptionHandling tests edge cases in long option handling.
+func TestEdgeCaseLongOptionHandling(t *testing.T) {
+	longOpts := []Flag{
+		{Name: "verbose", HasArg: NoArgument},
+		{Name: "output", HasArg: RequiredArgument},
+		{Name: "config", HasArg: OptionalArgument},
+		{Name: "a", HasArg: NoArgument},
+		{Name: "123", HasArg: NoArgument},
+		{Name: "foo-bar", HasArg: NoArgument},
+		{Name: "foo_bar", HasArg: NoArgument},
+		{Name: "foo=bar", HasArg: NoArgument},
+	}
+
+	tests := []struct {
+		name      string
+		args      []string
+		expectErr bool
+	}{
+		{
+			name: "single character long option",
+			args: []string{"--a"},
+		},
+		{
+			name: "numeric long option",
+			args: []string{"--123"},
+		},
+		{
+			name: "hyphenated long option",
+			args: []string{"--foo-bar"},
+		},
+		{
+			name: "underscored long option",
+			args: []string{"--foo_bar"},
+		},
+		{
+			name: "long option with equals in name",
+			args: []string{"--foo=bar"},
+		},
+		{
+			name:      "unknown long option with multiple equals",
+			args:      []string{"--foo=bar=baz"},
+			expectErr: true,
+		},
+		{
+			name:      "empty long option name with value",
+			args:      []string{"--=value"},
+			expectErr: true,
+		},
+		{
+			name:      "long option with only equals",
+			args:      []string{"--="},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := requireParseError(t, tt.args, "", longOpts)
+			if tt.expectErr && err == nil {
+				t.Fatal("expected error but got none")
+			}
+			if !tt.expectErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}

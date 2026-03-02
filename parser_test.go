@@ -513,3 +513,104 @@ func TestOptionsCommandExecutionError(t *testing.T) {
 		break
 	}
 }
+
+// TestEdgeCaseErrorPropagation tests error propagation paths.
+func TestEdgeCaseErrorPropagation(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		optstring string
+		longOpts  []Flag
+		expectErr bool
+	}{
+		{
+			name:      "null character in optstring rejected",
+			args:      []string{},
+			optstring: "a\x00b",
+			expectErr: true,
+		},
+		{
+			name:      "null character in long option name rejected",
+			args:      []string{},
+			optstring: "",
+			longOpts:  []Flag{{Name: "test\x00", HasArg: NoArgument}},
+			expectErr: true,
+		},
+		{
+			name:      "short and long options coexist",
+			args:      []string{"-v", "--verbose"},
+			optstring: "v",
+			longOpts:  []Flag{{Name: "verbose", HasArg: NoArgument}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := requireParseError(t, tt.args, tt.optstring, tt.longOpts)
+			if tt.expectErr && err == nil {
+				t.Fatal("expected error but got none")
+			}
+			if !tt.expectErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// TestEdgeCaseMemoryAndPerformance tests allocation patterns with large inputs.
+func TestEdgeCaseMemoryAndPerformance(t *testing.T) {
+	t.Run("large argument list", func(t *testing.T) {
+		args := make([]string, 1000)
+		for i := range args {
+			args[i] = "-a"
+		}
+
+		parser, err := GetOpt(args, "a")
+		if err != nil {
+			t.Fatalf("GetOpt: %v", err)
+		}
+
+		count := 0
+		for _, err := range parser.Options() {
+			if err != nil {
+				t.Fatalf("Options iteration: %v", err)
+			}
+			count++
+		}
+
+		if count != 1000 {
+			t.Errorf("expected 1000 options, got %d", count)
+		}
+	})
+
+	t.Run("large optstring", func(t *testing.T) {
+		buf := make([]byte, 0, 62)
+		for c := byte('a'); c <= 'z'; c++ {
+			buf = append(buf, c)
+		}
+		for c := byte('A'); c <= 'Z'; c++ {
+			buf = append(buf, c)
+		}
+		for c := byte('0'); c <= '9'; c++ {
+			buf = append(buf, c)
+		}
+
+		if _, err := GetOpt(nil, string(buf)); err != nil {
+			t.Fatalf("GetOpt: %v", err)
+		}
+	})
+
+	t.Run("many long options", func(t *testing.T) {
+		longOpts := make([]Flag, 100)
+		for i := range longOpts {
+			longOpts[i] = Flag{
+				Name:   string(rune('a'+i%26)) + string(rune('a'+(i/26)%26)),
+				HasArg: NoArgument,
+			}
+		}
+
+		if _, err := GetOptLong(nil, "", longOpts); err != nil {
+			t.Fatalf("GetOptLong: %v", err)
+		}
+	})
+}
