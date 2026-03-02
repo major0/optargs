@@ -154,7 +154,7 @@ func TestIntegrationWithExistingCodebase(t *testing.T) {
 
 		for _, err := range parser.Options() {
 			if err == nil {
-				t.Error("Expected error for unknown option, got nil")
+				t.Error("expected error for unknown option, got nil")
 			}
 			if err.Error() == "" {
 				t.Error("Error message should not be empty")

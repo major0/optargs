@@ -176,7 +176,7 @@ func TestDispatchErrorModes(t *testing.T) {
 		}
 
 		if foundErr == nil {
-			t.Fatal("Expected error for unknown option -x")
+			t.Fatal("expected error for unknown option -x")
 		}
 		if !strings.Contains(foundErr.Error(), "unknown option: x") {
 			t.Errorf("Expected 'unknown option: x', got '%s'", foundErr.Error())
@@ -205,7 +205,7 @@ func TestDispatchErrorModes(t *testing.T) {
 		}
 
 		if foundErr == nil {
-			t.Fatal("Expected error for missing argument")
+			t.Fatal("expected error for missing argument")
 		}
 		if !strings.Contains(foundErr.Error(), "option requires an argument: f") {
 			t.Errorf("Expected 'option requires an argument: f', got '%s'", foundErr.Error())
@@ -256,7 +256,7 @@ func TestDispatchErrorModes(t *testing.T) {
 			t.Error("Expected leaf to find mid's -m")
 		}
 		if lastErr == nil {
-			t.Error("Expected error for unknown -z")
+			t.Error("expected error for unknown -z")
 		}
 	})
 }

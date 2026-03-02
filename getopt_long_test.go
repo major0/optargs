@@ -8,7 +8,7 @@ import (
 func TestLongOptsNone(t *testing.T) {
 	_, err := GetOptLong(nil, "", nil)
 	if err != nil {
-		t.Errorf("Unexpected error: %s", err)
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
@@ -16,7 +16,7 @@ func TestLongOptsNone(t *testing.T) {
 func TestLongOnlyOptstringError(t *testing.T) {
 	_, err := GetOptLongOnly(nil, "a-b", nil)
 	if err == nil {
-		t.Error("Expected error for invalid optstring, got nil")
+		t.Error("expected error for invalid optstring, got nil")
 	}
 }
 
@@ -34,7 +34,7 @@ func TestLongOnlyNoShortFallback(t *testing.T) {
 	for _, err := range parser.Options() {
 		got++
 		if err == nil {
-			t.Error("Expected error for unrecognized long-only option with no short fallback")
+			t.Error("expected error for unrecognized long-only option with no short fallback")
 		}
 	}
 	if got == 0 {

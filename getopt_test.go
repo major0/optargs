@@ -50,7 +50,7 @@ func TestShortOptsGraph(t *testing.T) {
 		args := []string{"-" + string(byte(i))}
 		getopt, err := GetOpt(args, optstring)
 		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
+			t.Errorf("unexpected error: %s", err)
 		}
 
 		shortOpt, ok := getopt.shortOpts[byte(i)]
@@ -68,7 +68,7 @@ func TestShortOpts(t *testing.T) {
 	for _, opts := range allShortOptPermutations("ab") {
 		getopt, err := GetOpt(nil, opts)
 		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
+			t.Errorf("unexpected error: %s", err)
 		}
 
 		if getopt.config.parseMode != ParseDefault {
@@ -81,7 +81,7 @@ func TestShortOpts(t *testing.T) {
 func TestShortOptsNone(t *testing.T) {
 	_, err := GetOpt(nil, "")
 	if err != nil {
-		t.Errorf("Unexpected error: %s", err)
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
@@ -94,7 +94,7 @@ func TestShortOptsDisableErrors(t *testing.T) {
 		optstring := ":" + opts
 		getopt, err := GetOpt(nil, optstring)
 		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
+			t.Errorf("unexpected error: %s", err)
 		}
 
 		if getopt.config.enableErrors != false {
@@ -125,7 +125,7 @@ func TestShortOptsParseMode(t *testing.T) {
 				optstring := tt.prefix + opts
 				getopt, err := GetOpt(nil, optstring)
 				if err != nil {
-					t.Errorf("Unexpected error: %s", err)
+					t.Errorf("unexpected error: %s", err)
 				}
 				if getopt.config.parseMode != tt.mode {
 					t.Errorf("optstring %q: expected parseMode %d, got %d", optstring, tt.mode, getopt.config.parseMode)
@@ -152,7 +152,7 @@ func TestShortOptsInvalid(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := GetOpt(nil, tt.optstring)
 			if err == nil {
-				t.Errorf("Expected error for optstring %q, got nil", tt.optstring)
+				t.Errorf("expected error for optstring %q, got nil", tt.optstring)
 			}
 		})
 	}
@@ -165,7 +165,7 @@ func TestShortOptsGnuWords(t *testing.T) {
 		optstring := opts + "W;"
 		getopt, err := GetOpt(nil, optstring)
 		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
+			t.Errorf("unexpected error: %s", err)
 		}
 
 		if getopt.config.gnuWords != true {
@@ -177,7 +177,7 @@ func TestShortOptsGnuWords(t *testing.T) {
 func TestShortOptsFlags(t *testing.T) {
 	getopt, err := GetOpt(nil, "ab:c::")
 	if err != nil {
-		t.Errorf("Unexpected error: %s", err)
+		t.Errorf("unexpected error: %s", err)
 	}
 
 	if len(getopt.shortOpts) != 3 {
@@ -207,12 +207,12 @@ func TestShortOptNoArgIntegration(t *testing.T) {
 	args := []string{"-c"}
 	getopt, err := GetOpt(args, "abc")
 	if err != nil {
-		t.Errorf("Unexpected error: %s", err)
+		t.Errorf("unexpected error: %s", err)
 	}
 
 	for opt, err := range getopt.Options() {
 		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
+			t.Errorf("unexpected error: %s", err)
 		}
 		if opt.Name != "c" {
 			t.Errorf("Expected option %c, got %s", 'c', opt.Name)
@@ -237,12 +237,12 @@ func TestShortOptOptionalIntegration(t *testing.T) {
 	for _, tt := range tests {
 		getopt, err := GetOpt(tt.args, optstring)
 		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
+			t.Errorf("unexpected error: %s", err)
 		}
 
 		for opt, err := range getopt.Options() {
 			if err != nil {
-				t.Errorf("Unexpected error: %s", err)
+				t.Errorf("unexpected error: %s", err)
 			}
 			if opt.Name != tt.name {
 				t.Errorf("Expected option %s, got %s", tt.name, opt.Name)
@@ -276,7 +276,7 @@ func TestShortOptRequiredIntegration(t *testing.T) {
 	for _, tt := range tests {
 		getopt, err := GetOpt(tt.args, optstring)
 		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
+			t.Errorf("unexpected error: %s", err)
 		}
 
 		for opt, err := range getopt.Options() {
@@ -284,7 +284,7 @@ func TestShortOptRequiredIntegration(t *testing.T) {
 				t.Errorf("Expected an error for args %v", tt.args)
 			}
 			if !tt.expectErr && err != nil {
-				t.Errorf("Unexpected error: %s", err)
+				t.Errorf("unexpected error: %s", err)
 			}
 			if opt.Name != tt.name {
 				t.Errorf("Expected option %s, got %s", tt.name, opt.Name)
@@ -303,7 +303,7 @@ func BenchmarkShortOpts(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := GetOpt(nil, ":-+ab:c::W;")
 		if err != nil {
-			b.Errorf("Unexpected error: %s", err)
+			b.Errorf("unexpected error: %s", err)
 		}
 	}
 }

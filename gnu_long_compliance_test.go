@@ -118,10 +118,10 @@ func TestGNULongOptionPartialMatching(t *testing.T) {
 			}
 
 			if tt.expectErr && optErr == nil {
-				t.Fatal("Expected error but got none")
+				t.Fatal("expected error but got none")
 			}
 			if !tt.expectErr && optErr != nil {
-				t.Fatalf("Unexpected error: %v", optErr)
+				t.Fatalf("unexpected error: %v", optErr)
 			}
 		})
 	}
@@ -172,10 +172,10 @@ func TestGNULongOptionCaseSensitivity(t *testing.T) {
 			}
 
 			if tt.expectErr && optErr == nil {
-				t.Fatal("Expected error but got none")
+				t.Fatal("expected error but got none")
 			}
 			if !tt.expectErr && optErr != nil {
-				t.Fatalf("Unexpected error: %v", optErr)
+				t.Fatalf("unexpected error: %v", optErr)
 			}
 		})
 	}
@@ -234,7 +234,7 @@ func TestGNULongOnlyMode(t *testing.T) {
 			parser, err := GetOptLongOnly(tt.args, tt.optstring, longOpts)
 			if tt.expectErr {
 				if err == nil {
-					t.Fatal("Expected error but got none")
+					t.Fatal("expected error but got none")
 				}
 				return
 			}

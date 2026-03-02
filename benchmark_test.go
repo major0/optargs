@@ -345,7 +345,7 @@ func BenchmarkErrorHandling(b *testing.B) {
 			}
 			for option, err := range parser.Options() {
 				if err == nil {
-					b.Fatal("Expected error for unknown option")
+					b.Fatal("expected error for unknown option")
 				}
 				_ = option
 				break
@@ -363,7 +363,7 @@ func BenchmarkErrorHandling(b *testing.B) {
 			}
 			for option, err := range parser.Options() {
 				if err == nil {
-					b.Fatal("Expected error for missing argument")
+					b.Fatal("expected error for missing argument")
 				}
 				_ = option
 				break
