@@ -30,14 +30,14 @@ func TestLongOnlyNoShortFallback(t *testing.T) {
 		t.Fatalf("Unexpected parser creation error: %v", err)
 	}
 
-	got := 0
+	count := 0
 	for _, err := range parser.Options() {
-		got++
+		count++
 		if err == nil {
 			t.Error("expected error for unrecognized long-only option with no short fallback")
 		}
 	}
-	if got == 0 {
-		t.Error("Expected at least one iteration from Options()")
+	if count == 0 {
+		t.Error("expected at least one iteration from Options()")
 	}
 }
