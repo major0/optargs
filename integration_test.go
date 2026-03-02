@@ -17,6 +17,22 @@ func collectNamedOptions(t *testing.T, p *Parser) map[string]string {
 	return result
 }
 
+// assertNamedOptions compares a got map against expected option name → arg pairs.
+func assertNamedOptions(t *testing.T, got, expected map[string]string) {
+	t.Helper()
+	if len(got) != len(expected) {
+		t.Fatalf("Expected %d options, got %d: %v", len(expected), len(got), got)
+	}
+	for name, wantArg := range expected {
+		gotArg, ok := got[name]
+		if !ok {
+			t.Errorf("Expected option '%s' not found", name)
+		} else if gotArg != wantArg {
+			t.Errorf("Option '%s': expected arg '%s', got '%s'", name, wantArg, gotArg)
+		}
+	}
+}
+
 // TestIntegrationWithExistingCodebase validates that the library works correctly
 // with typical usage patterns that existing applications might use.
 func TestIntegrationWithExistingCodebase(t *testing.T) {
@@ -32,37 +48,12 @@ func TestIntegrationWithExistingCodebase(t *testing.T) {
 			t.Fatalf("Failed to create parser: %v", err)
 		}
 
-		optionCount := 0
-		for opt, err := range parser.Options() {
-			if err != nil {
-				t.Fatalf("Error during option iteration: %v", err)
-			}
-			optionCount++
-
-			switch opt.Name {
-			case "v", "verbose":
-				if opt.HasArg {
-					t.Error("verbose option should not have argument")
-				}
-			case "o", "output":
-				if !opt.HasArg {
-					t.Error("output option should have argument")
-				}
-				if opt.Arg != "file.txt" {
-					t.Errorf("Expected output argument 'file.txt', got '%s'", opt.Arg)
-				}
-			case "h", "help":
-				if opt.HasArg {
-					t.Error("help option should not have argument")
-				}
-			default:
-				t.Errorf("Unexpected option: %s", opt.Name)
-			}
-		}
-
-		if optionCount != 3 {
-			t.Errorf("Expected 3 options, got %d", optionCount)
-		}
+		got := collectNamedOptions(t, parser)
+		assertNamedOptions(t, got, map[string]string{
+			"v":      "",
+			"output": "file.txt",
+			"help":   "",
+		})
 
 		if len(parser.Args) != 1 || parser.Args[0] != "input.txt" {
 			t.Errorf("Expected remaining args ['input.txt'], got %v", parser.Args)
@@ -76,22 +67,11 @@ func TestIntegrationWithExistingCodebase(t *testing.T) {
 		}
 
 		got := collectNamedOptions(t, parser)
-
-		expected := map[string]string{
+		assertNamedOptions(t, got, map[string]string{
 			"x": "",
 			"v": "",
 			"f": "archive.tar",
-		}
-		if len(got) != len(expected) {
-			t.Fatalf("Expected %d options, got %d", len(expected), len(got))
-		}
-		for name, wantArg := range expected {
-			if gotArg, ok := got[name]; !ok {
-				t.Errorf("Expected option '%s' not found", name)
-			} else if gotArg != wantArg {
-				t.Errorf("Option '%s': expected arg '%s', got '%s'", name, wantArg, gotArg)
-			}
-		}
+		})
 
 		if len(parser.Args) != 0 {
 			t.Errorf("Expected 0 remaining args, got %d: %v", len(parser.Args), parser.Args)
@@ -107,12 +87,9 @@ func TestIntegrationWithExistingCodebase(t *testing.T) {
 		}
 
 		got := collectNamedOptions(t, parser)
-		if len(got) != 1 {
-			t.Errorf("Expected 1 option with POSIXLY_CORRECT, got %d", len(got))
-		}
-		if _, ok := got["a"]; !ok {
-			t.Error("Expected option 'a' to be parsed")
-		}
+		assertNamedOptions(t, got, map[string]string{
+			"a": "",
+		})
 
 		expectedArgs := []string{"file", "-b"}
 		if len(parser.Args) != len(expectedArgs) {
@@ -132,18 +109,10 @@ func TestIntegrationWithExistingCodebase(t *testing.T) {
 		}
 
 		got := collectNamedOptions(t, parser)
-
-		expected := map[string]string{
+		assertNamedOptions(t, got, map[string]string{
 			"verbose": "",
 			"output":  "file.txt",
-		}
-		for name, wantArg := range expected {
-			if gotArg, ok := got[name]; !ok {
-				t.Errorf("Expected option '%s' not found", name)
-			} else if gotArg != wantArg {
-				t.Errorf("Option '%s': expected arg '%s', got '%s'", name, wantArg, gotArg)
-			}
-		}
+		})
 	})
 
 	t.Run("error_handling", func(t *testing.T) {
