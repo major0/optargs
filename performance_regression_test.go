@@ -174,7 +174,7 @@ func TestPerformanceRegression_GetOpt(t *testing.T) {
 			name: "GetOpt_SimpleShortOptions",
 			benchFunc: func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					benchParse(b, []string{"prog", "-a", "-b", "-c"}, "abc", nil)
+					benchParse(b, GetOptLong, []string{"prog", "-a", "-b", "-c"}, "abc", nil)
 				}
 			},
 		},
@@ -182,7 +182,7 @@ func TestPerformanceRegression_GetOpt(t *testing.T) {
 			name: "GetOpt_CompactedOptions",
 			benchFunc: func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					benchParse(b, []string{"prog", "-abc"}, "abc", nil)
+					benchParse(b, GetOptLong, []string{"prog", "-abc"}, "abc", nil)
 				}
 			},
 		},
@@ -190,7 +190,7 @@ func TestPerformanceRegression_GetOpt(t *testing.T) {
 			name: "GetOpt_WithArguments",
 			benchFunc: func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					benchParse(b, []string{"prog", "-a", "arg1", "-b", "arg2"}, "a:b:", nil)
+					benchParse(b, GetOptLong, []string{"prog", "-a", "arg1", "-b", "arg2"}, "a:b:", nil)
 				}
 			},
 		},
@@ -219,7 +219,7 @@ func TestPerformanceRegression_GetOptLong(t *testing.T) {
 			name: "GetOptLong_LongOptionsOnly",
 			benchFunc: func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					benchParse(b, []string{"prog", "--verbose", "--output", "file.txt"}, "", longOpts)
+					benchParse(b, GetOptLong, []string{"prog", "--verbose", "--output", "file.txt"}, "", longOpts)
 				}
 			},
 		},
@@ -227,7 +227,7 @@ func TestPerformanceRegression_GetOptLong(t *testing.T) {
 			name: "GetOptLong_EqualsForm",
 			benchFunc: func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					benchParse(b, []string{"prog", "--output=file.txt", "--config=cfg.ini"}, "", longOpts)
+					benchParse(b, GetOptLong, []string{"prog", "--output=file.txt", "--config=cfg.ini"}, "", longOpts)
 				}
 			},
 		},
@@ -235,7 +235,7 @@ func TestPerformanceRegression_GetOptLong(t *testing.T) {
 			name: "GetOptLong_MixedShortLong",
 			benchFunc: func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					benchParse(b, []string{"prog", "-v", "--output", "file.txt", "-h"}, "vh", longOpts)
+					benchParse(b, GetOptLong, []string{"prog", "-v", "--output", "file.txt", "-h"}, "vh", longOpts)
 				}
 			},
 		},
@@ -307,7 +307,7 @@ func TestIteratorEfficiencyRegression(t *testing.T) {
 			name: "Iterator_FullConsumption",
 			benchFunc: func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					benchParse(b, []string{"prog", "-a", "-b", "-c", "-d", "-e"}, "abcde", nil)
+					benchParse(b, GetOptLong, []string{"prog", "-a", "-b", "-c", "-d", "-e"}, "abcde", nil)
 				}
 			},
 		},
@@ -315,7 +315,7 @@ func TestIteratorEfficiencyRegression(t *testing.T) {
 			name: "Iterator_PartialConsumption",
 			benchFunc: func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					benchParse(b, []string{"prog", "-a", "-b"}, "ab", nil)
+					benchParse(b, GetOptLong, []string{"prog", "-a", "-b"}, "ab", nil)
 				}
 			},
 		},

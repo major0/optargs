@@ -28,7 +28,7 @@ func BenchmarkComparisonWithStdFlag(b *testing.B) {
 	b.Run("OptArgs", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchParse(b, append([]string{"prog"}, args...), "a:b:c", nil)
+			benchParse(b, GetOptLong, append([]string{"prog"}, args...), "a:b:c", nil)
 		}
 	})
 
@@ -56,7 +56,7 @@ func BenchmarkComparisonLongOptions(b *testing.B) {
 	b.Run("OptArgs", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchParse(b, append([]string{"prog"}, args...), "", longOpts)
+			benchParse(b, GetOptLong, append([]string{"prog"}, args...), "", longOpts)
 		}
 	})
 
@@ -83,7 +83,7 @@ func BenchmarkComparisonComplexScenarios(b *testing.B) {
 	b.Run("OptArgs", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchParse(b, append([]string{"prog"}, args...), "abc:d:", longOpts)
+			benchParse(b, GetOptLong, append([]string{"prog"}, args...), "abc:d:", longOpts)
 		}
 	})
 
@@ -116,7 +116,7 @@ func BenchmarkComparisonMemoryUsage(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchParse(b, append([]string{"prog"}, args...), "a:b:", longOpts)
+			benchParse(b, GetOptLong, append([]string{"prog"}, args...), "a:b:", longOpts)
 		}
 	})
 
@@ -151,7 +151,7 @@ func BenchmarkScalability(b *testing.B) {
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				benchParse(b, args, "a:", nil)
+				benchParse(b, GetOptLong, args, "a:", nil)
 			}
 		})
 
@@ -179,7 +179,7 @@ func BenchmarkFeatureComparison(b *testing.B) {
 		args := []string{"prog", "-abcdef"}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchParse(b, args, "abcdef", nil)
+			benchParse(b, GetOptLong, args, "abcdef", nil)
 		}
 	})
 
@@ -192,7 +192,7 @@ func BenchmarkFeatureComparison(b *testing.B) {
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchParse(b, args, "", longOpts)
+			benchParse(b, GetOptLong, args, "", longOpts)
 		}
 	})
 
@@ -205,7 +205,7 @@ func BenchmarkFeatureComparison(b *testing.B) {
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			benchParse(b, args, "W;", longOpts)
+			benchParse(b, GetOptLong, args, "W;", longOpts)
 		}
 	})
 }
