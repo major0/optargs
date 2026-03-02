@@ -78,10 +78,28 @@ func TestShortOpts(t *testing.T) {
 }
 
 // An empty optstring is required to be supported for POSIX compatibility.
-func TestShortOptsNone(t *testing.T) {
-	_, err := GetOpt(nil, "")
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
+// TestNoOptions validates that each constructor accepts empty/no options.
+func TestNoOptions(t *testing.T) {
+	tests := []struct {
+		name string
+		fn   func() error
+	}{
+		{"GetOpt empty optstring", func() error {
+			_, err := GetOpt(nil, "")
+			return err
+		}},
+		{"GetOptLong no short or long", func() error {
+			_, err := GetOptLong(nil, "", nil)
+			return err
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.fn(); err != nil {
+				t.Errorf("unexpected error: %s", err)
+			}
+		})
 	}
 }
 
@@ -147,14 +165,26 @@ var invalidOptstrings = []struct {
 }
 
 // TestShortOptsInvalid validates that prohibited optstrings produce errors.
-func TestShortOptsInvalid(t *testing.T) {
+// TestOptstringInvalid validates that prohibited optstrings produce errors
+// across all constructors that accept an optstring.
+func TestOptstringInvalid(t *testing.T) {
+	type constructor struct {
+		name string
+		fn   func(optstring string) error
+	}
+	constructors := []constructor{
+		{"GetOpt", func(s string) error { _, err := GetOpt(nil, s); return err }},
+		{"GetOptLongOnly", func(s string) error { _, err := GetOptLongOnly(nil, s, nil); return err }},
+	}
+
 	for _, tt := range invalidOptstrings {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := GetOpt(nil, tt.optstring)
-			if err == nil {
-				t.Errorf("expected error for optstring %q, got nil", tt.optstring)
-			}
-		})
+		for _, ctor := range constructors {
+			t.Run(ctor.name+"/"+tt.name, func(t *testing.T) {
+				if err := ctor.fn(tt.optstring); err == nil {
+					t.Errorf("expected error for optstring %q, got nil", tt.optstring)
+				}
+			})
+		}
 	}
 }
 
@@ -311,5 +341,28 @@ func BenchmarkShortOpts(b *testing.B) {
 		if err != nil {
 			b.Errorf("unexpected error: %s", err)
 		}
+	}
+}
+
+// TestLongOnlyNoShortFallback validates that long-only mode with no short
+// options falls back to error on unknown option.
+func TestLongOnlyNoShortFallback(t *testing.T) {
+	longopts := []Flag{
+		{Name: "verbose", HasArg: NoArgument},
+	}
+	parser, err := GetOptLongOnly([]string{"-unknown"}, ":", longopts)
+	if err != nil {
+		t.Fatalf("Unexpected parser creation error: %v", err)
+	}
+
+	count := 0
+	for _, err := range parser.Options() {
+		count++
+		if err == nil {
+			t.Error("expected error for unrecognized long-only option with no short fallback")
+		}
+	}
+	if count == 0 {
+		t.Error("expected at least one iteration from Options()")
 	}
 }
