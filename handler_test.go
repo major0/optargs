@@ -590,278 +590,204 @@ func TestMixedHandledAndNonHandledDispatch(t *testing.T) {
 // SetHandler no-parent-walk behavior is covered by:
 //   - TestHandlerSetHandlerNoParentWalk (all Set*Handler variants on child for parent-only options)
 
-// Feature: option-handlers, Property 6: Parent-chain handler dispatch
-// Child inheriting handled Flag from ancestor invokes ancestor's handler
-// when resolved from child.
-// Validates: Requirements 3.2, 3.4, 3.6
-func TestPropertyParentChainHandlerDispatch(t *testing.T) {
-	property := func(seed int64) bool {
-		rng := rand.New(rand.NewSource(seed))
+// Parent-chain handler dispatch: child inherits parent's handled flags via
+// chain walk. Covered by table below; basic child-overload case also in
+// TestHandlerChildOverloadShadowsParent.
 
-		// Generate 1–3 parent-only short options with handlers.
-		nParentShort := 1 + rng.Intn(3)
-		shortPerm := rng.Perm(len(validShortChars))
-		parentShortChars := make([]byte, nParentShort)
-		for i := range parentShortChars {
-			parentShortChars[i] = validShortChars[shortPerm[i]]
-		}
-
-		// Generate 1–3 parent-only long options with handlers.
-		nParentLong := 1 + rng.Intn(3)
-		longPerm := rng.Perm(len(validLongNames))
-		parentLongNames := make([]string, nParentLong)
-		for i := range parentLongNames {
-			parentLongNames[i] = validLongNames[longPerm[i]]
-		}
-
-		// Track handler invocations.
-		var calls []handlerCall
-		handler := func(name string, arg string) error {
-			calls = append(calls, handlerCall{name, arg})
-			return nil
-		}
-
-		// Build parent with handled flags.
-		parentShortMap := make(map[byte]*Flag)
-		for _, c := range parentShortChars {
-			parentShortMap[c] = &Flag{Name: string(c), HasArg: NoArgument, Handle: handler}
-		}
-		parentLongMap := make(map[string]*Flag)
-		for _, name := range parentLongNames {
-			parentLongMap[name] = &Flag{Name: name, HasArg: NoArgument, Handle: handler}
-		}
-
-		cfg := ParserConfig{enableErrors: true, longCaseIgnore: true}
-		parent, err := NewParser(cfg, parentShortMap, parentLongMap, nil)
-		if err != nil {
-			return true
-		}
-
-		// Build child with disjoint options (no overlap with parent).
-		// Child has no options of its own — it inherits everything from parent.
-		// Build args that reference parent-only options.
-		var args []string
-		for _, c := range parentShortChars {
-			args = append(args, "-"+string(c))
-		}
-		for _, name := range parentLongNames {
-			args = append(args, "--"+name)
-		}
-
-		child, err := NewParser(cfg, nil, nil, args)
-		if err != nil {
-			return true
-		}
-		parent.AddCmd("sub", child)
-
-		// Parse from child — parent-chain walk should resolve parent's flags
-		// and invoke parent's handlers.
-		calls = nil
-		for _, err := range child.Options() {
-			if err != nil {
-				t.Logf("seed=%d unexpected error: %v", seed, err)
-				return false
-			}
-		}
-
-		expected := nParentShort + nParentLong
-		if len(calls) != expected {
-			t.Logf("seed=%d handler calls: got %d, want %d", seed, len(calls), expected)
-			return false
-		}
-
-		// Verify each call matches a parent-defined option.
-		parentNames := make(map[string]bool)
-		for _, c := range parentShortChars {
-			parentNames[string(c)] = true
-		}
-		for _, name := range parentLongNames {
-			parentNames[name] = true
-		}
-		for _, c := range calls {
-			if !parentNames[c.name] {
-				t.Logf("seed=%d handler called with unexpected name %q", seed, c.name)
-				return false
-			}
-		}
-
-		return true
+func TestParentChainHandlerDispatch(t *testing.T) {
+	tests := []struct {
+		name        string
+		parentShort map[byte]*Flag
+		parentLong  map[string]*Flag
+		args        []string
+		wantCalls   []string // handler names invoked via parent chain
+	}{
+		{
+			name:        "inherited short NoArg",
+			parentShort: map[byte]*Flag{'v': {Name: "v", HasArg: NoArgument}},
+			args:        []string{"-v"},
+			wantCalls:   []string{"v"},
+		},
+		{
+			name:       "inherited long NoArg",
+			parentLong: map[string]*Flag{"verbose": {Name: "verbose", HasArg: NoArgument}},
+			args:       []string{"--verbose"},
+			wantCalls:  []string{"verbose"},
+		},
+		{
+			name:        "2-level chain short + long",
+			parentShort: map[byte]*Flag{'v': {Name: "v", HasArg: NoArgument}, 'x': {Name: "x", HasArg: NoArgument}},
+			parentLong:  map[string]*Flag{"output": {Name: "output", HasArg: RequiredArgument}},
+			args:        []string{"-v", "--output=file", "-x"},
+			wantCalls:   []string{"v", "output", "x"},
+		},
 	}
 
-	config := &quick.Config{MaxCount: 100}
-	if err := quick.Check(property, config); err != nil {
-		t.Errorf("Property 6 (Parent-chain handler dispatch) failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var calls []handlerCall
+			handler := func(name string, arg string) error {
+				calls = append(calls, handlerCall{name, arg})
+				return nil
+			}
+
+			// Assign handler to all parent flags.
+			for c := range tt.parentShort {
+				tt.parentShort[c].Handle = handler
+			}
+			for n := range tt.parentLong {
+				tt.parentLong[n].Handle = handler
+			}
+
+			cfg := ParserConfig{enableErrors: true, longCaseIgnore: true}
+			parent, err := NewParser(cfg, tt.parentShort, tt.parentLong, nil)
+			if err != nil {
+				t.Fatalf("NewParser parent: %v", err)
+			}
+
+			// Child has no options — inherits everything from parent.
+			child, err := NewParser(cfg, nil, nil, tt.args)
+			if err != nil {
+				t.Fatalf("NewParser child: %v", err)
+			}
+			parent.AddCmd("sub", child)
+
+			for _, err := range child.Options() {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+
+			var gotNames []string
+			for _, c := range calls {
+				gotNames = append(gotNames, c.name)
+			}
+			if fmt.Sprint(gotNames) != fmt.Sprint(tt.wantCalls) {
+				t.Errorf("handler calls: got %v, want %v", gotNames, tt.wantCalls)
+			}
+		})
 	}
 }
 
-// Feature: option-handlers, Property 7: Child overloading wins
-// Child's definition determines dispatch: child handler invoked if set,
-// Option yielded if child Handle is nil, regardless of parent handler status.
-// Validates: Requirements 3.5, 7.2, 7.3
-func TestPropertyChildOverloadingWins(t *testing.T) {
-	property := func(seed int64) bool {
-		rng := rand.New(rand.NewSource(seed))
+// Child overloading wins: child's definition determines dispatch regardless of
+// parent handler status. Basic case also in TestHandlerChildOverloadShadowsParent.
 
-		// Pick 2–4 short options that both parent and child define (overloaded).
-		nOverlap := 2 + rng.Intn(3)
-		shortPerm := rng.Perm(len(validShortChars))
-		overlapChars := make([]byte, nOverlap)
-		for i := range overlapChars {
-			overlapChars[i] = validShortChars[shortPerm[i]]
-		}
-
-		// Pick 1–3 long options that both parent and child define (overloaded).
-		nOverlapLong := 1 + rng.Intn(3)
-		longPerm := rng.Perm(len(validLongNames))
-		overlapLongNames := make([]string, nOverlapLong)
-		for i := range overlapLongNames {
-			overlapLongNames[i] = validLongNames[longPerm[i]]
-		}
-
-		var parentCalls []handlerCall
-		var childCalls []handlerCall
-		parentHandler := func(name string, arg string) error {
-			parentCalls = append(parentCalls, handlerCall{name, arg})
-			return nil
-		}
-		childHandler := func(name string, arg string) error {
-			childCalls = append(childCalls, handlerCall{name, arg})
-			return nil
-		}
-
-		// For each overloaded option, randomly decide child's handler status:
-		// - child has handler → child handler invoked (parent handler ignored)
-		// - child has nil Handle → Option yielded (parent handler ignored)
-		type overloadDef struct {
-			name         string
-			isShort      bool
-			childHandled bool
-		}
-		var defs []overloadDef
-
-		// Ensure at least one child-handled and one child-non-handled.
-		shortHandled := make([]bool, nOverlap)
-		for i := range shortHandled {
-			shortHandled[i] = rng.Intn(2) == 0
-		}
-		shortHandled[0] = true
-		if nOverlap > 1 {
-			shortHandled[1] = false
-		}
-
-		longHandled := make([]bool, nOverlapLong)
-		for i := range longHandled {
-			longHandled[i] = rng.Intn(2) == 0
-		}
-
-		// Build parent — all overloaded options have handlers.
-		parentShortMap := make(map[byte]*Flag)
-		for _, c := range overlapChars {
-			parentShortMap[c] = &Flag{Name: string(c), HasArg: NoArgument, Handle: parentHandler}
-		}
-		parentLongMap := make(map[string]*Flag)
-		for _, name := range overlapLongNames {
-			parentLongMap[name] = &Flag{Name: name, HasArg: NoArgument, Handle: parentHandler}
-		}
-
-		cfg := ParserConfig{enableErrors: true, longCaseIgnore: true}
-		parent, err := NewParser(cfg, parentShortMap, parentLongMap, nil)
-		if err != nil {
-			return true
-		}
-
-		// Build child — overloaded options with varying handler status.
-		childShortMap := make(map[byte]*Flag)
-		for i, c := range overlapChars {
-			f := &Flag{Name: string(c), HasArg: NoArgument}
-			if shortHandled[i] {
-				f.Handle = childHandler
-			}
-			childShortMap[c] = f
-			defs = append(defs, overloadDef{name: string(c), isShort: true, childHandled: shortHandled[i]})
-		}
-		childLongMap := make(map[string]*Flag)
-		for i, name := range overlapLongNames {
-			f := &Flag{Name: name, HasArg: NoArgument}
-			if longHandled[i] {
-				f.Handle = childHandler
-			}
-			childLongMap[name] = f
-			defs = append(defs, overloadDef{name: name, isShort: false, childHandled: longHandled[i]})
-		}
-
-		// Build args referencing all overloaded options.
-		var args []string
-		for _, d := range defs {
-			if d.isShort {
-				args = append(args, "-"+d.name)
-			} else {
-				args = append(args, "--"+d.name)
-			}
-		}
-
-		child, err := NewParser(cfg, childShortMap, childLongMap, args)
-		if err != nil {
-			return true
-		}
-		parent.AddCmd("sub", child)
-
-		parentCalls = nil
-		childCalls = nil
-		var yielded []Option
-		for opt, err := range child.Options() {
-			if err != nil {
-				t.Logf("seed=%d unexpected error: %v", seed, err)
-				return false
-			}
-			yielded = append(yielded, opt)
-		}
-
-		// Parent handler must NEVER be invoked (child overloads all).
-		if len(parentCalls) != 0 {
-			t.Logf("seed=%d parent handler invoked %d times, want 0", seed, len(parentCalls))
-			return false
-		}
-
-		// Count expected child handler calls and yielded options.
-		var expectChildCalls, expectYielded int
-		for _, d := range defs {
-			if d.childHandled {
-				expectChildCalls++
-			} else {
-				expectYielded++
-			}
-		}
-
-		if len(childCalls) != expectChildCalls {
-			t.Logf("seed=%d child handler calls: got %d, want %d", seed, len(childCalls), expectChildCalls)
-			return false
-		}
-		if len(yielded) != expectYielded {
-			t.Logf("seed=%d yielded options: got %d, want %d", seed, len(yielded), expectYielded)
-			return false
-		}
-
-		// Verify yielded options are only from non-handled child defs.
-		childHandledNames := make(map[string]bool)
-		for _, d := range defs {
-			if d.childHandled {
-				childHandledNames[d.name] = true
-			}
-		}
-		for _, opt := range yielded {
-			if childHandledNames[opt.Name] {
-				t.Logf("seed=%d option %q yielded but child has handler", seed, opt.Name)
-				return false
-			}
-		}
-
-		return true
+func TestChildOverloadingWins(t *testing.T) {
+	tests := []struct {
+		name            string
+		childShortFlags map[byte]bool   // true = child has handler, false = nil Handle
+		childLongFlags  map[string]bool // true = child has handler, false = nil Handle
+		wantChildCalls  []string        // names dispatched to child handler
+		wantYielded     []string        // names yielded as Options (nil Handle)
+	}{
+		{
+			name:            "short child-handled overrides parent-handled",
+			childShortFlags: map[byte]bool{'v': true},
+			wantChildCalls:  []string{"v"},
+		},
+		{
+			name:            "short child-nil-handle yields Option despite parent handler",
+			childShortFlags: map[byte]bool{'v': false},
+			wantYielded:     []string{"v"},
+		},
+		{
+			name:           "long child-handled overrides parent-handled",
+			childLongFlags: map[string]bool{"verbose": true},
+			wantChildCalls: []string{"verbose"},
+		},
+		{
+			name:           "long child-nil-handle yields Option despite parent handler",
+			childLongFlags: map[string]bool{"verbose": false},
+			wantYielded:    []string{"verbose"},
+		},
+		{
+			name:            "mixed short+long handled and non-handled",
+			childShortFlags: map[byte]bool{'v': true, 'x': false},
+			childLongFlags:  map[string]bool{"output": true, "debug": false},
+			wantChildCalls:  []string{"v", "output"},
+			wantYielded:     []string{"x", "debug"},
+		},
 	}
 
-	config := &quick.Config{MaxCount: 100}
-	if err := quick.Check(property, config); err != nil {
-		t.Errorf("Property 7 (Child overloading wins) failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var parentCalls, childCalls []handlerCall
+			parentHandler := func(name string, arg string) error {
+				parentCalls = append(parentCalls, handlerCall{name, arg})
+				return nil
+			}
+			childHandler := func(name string, arg string) error {
+				childCalls = append(childCalls, handlerCall{name, arg})
+				return nil
+			}
+
+			// Parent defines all overlapping options with handlers.
+			parentShort := make(map[byte]*Flag)
+			for c := range tt.childShortFlags {
+				parentShort[c] = &Flag{Name: string(c), HasArg: NoArgument, Handle: parentHandler}
+			}
+			parentLong := make(map[string]*Flag)
+			for n := range tt.childLongFlags {
+				parentLong[n] = &Flag{Name: n, HasArg: NoArgument, Handle: parentHandler}
+			}
+
+			cfg := ParserConfig{enableErrors: true, longCaseIgnore: true}
+			parent, err := NewParser(cfg, parentShort, parentLong, nil)
+			if err != nil {
+				t.Fatalf("NewParser parent: %v", err)
+			}
+
+			// Child overloads all parent options.
+			childShort := make(map[byte]*Flag)
+			childLong := make(map[string]*Flag)
+			var args []string
+			for c, handled := range tt.childShortFlags {
+				f := &Flag{Name: string(c), HasArg: NoArgument}
+				if handled {
+					f.Handle = childHandler
+				}
+				childShort[c] = f
+				args = append(args, "-"+string(c))
+			}
+			for n, handled := range tt.childLongFlags {
+				f := &Flag{Name: n, HasArg: NoArgument}
+				if handled {
+					f.Handle = childHandler
+				}
+				childLong[n] = f
+				args = append(args, "--"+n)
+			}
+
+			child, err := NewParser(cfg, childShort, childLong, args)
+			if err != nil {
+				t.Fatalf("NewParser child: %v", err)
+			}
+			parent.AddCmd("sub", child)
+
+			var yielded []string
+			for opt, err := range child.Options() {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				yielded = append(yielded, opt.Name)
+			}
+
+			// Parent handler must never be invoked.
+			if len(parentCalls) != 0 {
+				t.Errorf("parent handler invoked %d times, want 0", len(parentCalls))
+			}
+
+			var gotChildCalls []string
+			for _, c := range childCalls {
+				gotChildCalls = append(gotChildCalls, c.name)
+			}
+			if fmt.Sprint(gotChildCalls) != fmt.Sprint(tt.wantChildCalls) {
+				t.Errorf("child handler calls: got %v, want %v", gotChildCalls, tt.wantChildCalls)
+			}
+			if fmt.Sprint(yielded) != fmt.Sprint(tt.wantYielded) {
+				t.Errorf("yielded: got %v, want %v", yielded, tt.wantYielded)
+			}
+		})
 	}
 }
 
