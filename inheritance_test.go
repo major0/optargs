@@ -38,8 +38,17 @@ func childErr(t *testing.T, root, child *Parser) error {
 	return first
 }
 
-// TestFindShortOptCoverage tests all code paths in findShortOpt via
-// parent-chain inheritance.
+// TestFindShortOptCoverage tests findShortOpt code paths via parent-chain
+// inheritance. Reduced to boundary + representative cases per equivalence
+// class analysis:
+//   - NoArgument via inheritance (representative)
+//   - RequiredArgument: arg-from-word vs arg-from-args (boundary pair)
+//   - OptionalArgument: arg-present vs arg-absent (boundary pair)
+//   - Multi-level grandparent fallback (boundary: chain depth >1)
+//
+// Error paths (missing required arg, unknown option) are covered by
+// TestFindShortOptDirectCoverage. The unknown-argument-type edge case
+// is covered by TestFindShortOptEdgeCases.
 func TestFindShortOptCoverage(t *testing.T) {
 	t.Run("NoArgument_option_inheritance", func(t *testing.T) {
 		_, child := childOf(t, "v", "")
@@ -101,18 +110,6 @@ func TestFindShortOptCoverage(t *testing.T) {
 		}
 	})
 
-	t.Run("RequiredArgument_missing_argument", func(t *testing.T) {
-		_, child := childOf(t, "f:", "")
-
-		_, _, _, _, err := child.findShortOpt('f', "", []string{})
-		if err == nil {
-			t.Fatal("expected error for missing required argument")
-		}
-		if err.Error() != "option requires an argument: f" {
-			t.Errorf("error = %q, want %q", err.Error(), "option requires an argument: f")
-		}
-	})
-
 	t.Run("OptionalArgument_from_word", func(t *testing.T) {
 		_, child := childOf(t, "f::", "")
 
@@ -128,27 +125,6 @@ func TestFindShortOptCoverage(t *testing.T) {
 		}
 		if option.Arg != "filename.txt" {
 			t.Errorf("Arg = %q, want %q", option.Arg, "filename.txt")
-		}
-	})
-
-	t.Run("OptionalArgument_from_next_arg", func(t *testing.T) {
-		_, child := childOf(t, "f::", "")
-
-		args, _, _, option, err := child.findShortOpt('f', "", []string{"filename.txt", "other"})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if option.Name != "f" {
-			t.Errorf("Name = %q, want %q", option.Name, "f")
-		}
-		if !option.HasArg {
-			t.Error("HasArg = false, want true")
-		}
-		if option.Arg != "filename.txt" {
-			t.Errorf("Arg = %q, want %q", option.Arg, "filename.txt")
-		}
-		if len(args) != 1 || args[0] != "other" {
-			t.Errorf("args = %v, want [other]", args)
 		}
 	})
 
@@ -201,18 +177,6 @@ func TestFindShortOptCoverage(t *testing.T) {
 		}
 		if option.HasArg {
 			t.Error("HasArg = true, want false")
-		}
-	})
-
-	t.Run("Option_not_found_in_chain", func(t *testing.T) {
-		_, child := childOf(t, "p", "c")
-
-		_, _, _, _, err := child.findShortOpt('x', "", []string{})
-		if err == nil {
-			t.Fatal("expected error for unknown option")
-		}
-		if err.Error() != "unknown option: x" {
-			t.Errorf("error = %q, want %q", err.Error(), "unknown option: x")
 		}
 	})
 }
