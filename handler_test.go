@@ -383,93 +383,82 @@ func TestHandlerReceivesCorrectNameAndArg(t *testing.T) {
 	}
 }
 
-// Feature: option-handlers, Property 5: Handler error propagation
-// Handler returning non-nil error causes iterator to yield that error
-// paired with a zero-value Option.
-// Validates: Requirements 2.4, 9.1, 9.3
-func TestPropertyHandlerErrorPropagation(t *testing.T) {
-	property := func(seed int64) bool {
-		rng := rand.New(rand.NewSource(seed))
-
-		// Pick 2–4 short options; one will have an error-returning handler.
-		nShort := 2 + rng.Intn(3)
-		perm := rng.Perm(len(validShortChars))
-		chars := make([]byte, nShort)
-		for i := range chars {
-			chars[i] = validShortChars[perm[i]]
-		}
-
-		// Pick which option returns an error.
-		errIdx := rng.Intn(nShort)
-		errMsg := "handler error from " + string(chars[errIdx])
-		sentinel := fmt.Errorf("%s", errMsg)
-
-		shortMap := make(map[byte]*Flag)
-		for i, c := range chars {
-			f := &Flag{Name: string(c), HasArg: NoArgument}
-			if i == errIdx {
-				f.Handle = func(name string, arg string) error {
-					return sentinel
-				}
-			}
-			shortMap[c] = f
-		}
-
-		// Build args: one of each option, error option first so we can
-		// verify the error yield clearly.
-		var args []string
-		args = append(args, "-"+string(chars[errIdx]))
-		for i, c := range chars {
-			if i != errIdx {
-				args = append(args, "-"+string(c))
-			}
-		}
-
-		p, err := NewParser(ParserConfig{enableErrors: true}, shortMap, nil, args)
-		if err != nil {
-			return true
-		}
-
-		// The first yield should be the handler error with zero-value Option.
-		first := true
-		var sawError bool
-		for opt, err := range p.Options() {
-			if first {
-				first = false
-				if err == nil {
-					t.Logf("seed=%d expected error on first yield, got nil", seed)
-					return false
-				}
-				if err.Error() != errMsg {
-					t.Logf("seed=%d error mismatch: got %q, want %q", seed, err.Error(), errMsg)
-					return false
-				}
-				// Option must be zero-value.
-				if opt != (Option{}) {
-					t.Logf("seed=%d expected zero Option, got %+v", seed, opt)
-					return false
-				}
-				sawError = true
-				continue
-			}
-			// Remaining options should yield normally (no handler on them).
-			if err != nil {
-				t.Logf("seed=%d unexpected error after handler error: %v", seed, err)
-				return false
-			}
-		}
-
-		if !sawError {
-			t.Logf("seed=%d never saw handler error", seed)
-			return false
-		}
-
-		return true
+// TestHandlerErrorPropagation verifies that a handler returning non-nil error
+// causes the iterator to yield (zero Option, that error). Remaining non-error
+// options continue to yield normally.
+func TestHandlerErrorPropagation(t *testing.T) {
+	tests := []struct {
+		name       string
+		errMsg     string
+		errChar    byte   // which short option returns the error
+		otherChars []byte // non-error options (yielded normally)
+	}{
+		{
+			name:       "error on first of two options",
+			errMsg:     "fail at a",
+			errChar:    'a',
+			otherChars: []byte{'b'},
+		},
+		{
+			name:       "error on middle of three options",
+			errMsg:     "middle broke",
+			errChar:    'b',
+			otherChars: []byte{'a', 'c'},
+		},
+		{
+			name:       "error on last of three options",
+			errMsg:     "last option error",
+			errChar:    'c',
+			otherChars: []byte{'a', 'b'},
+		},
+		{
+			name:       "error on sole option",
+			errMsg:     "only handler fails",
+			errChar:    'x',
+			otherChars: nil,
+		},
 	}
 
-	config := &quick.Config{MaxCount: 100}
-	if err := quick.Check(property, config); err != nil {
-		t.Errorf("Property 5 (Handler error propagation) failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sentinel := fmt.Errorf("%s", tt.errMsg)
+			shortMap := map[byte]*Flag{
+				tt.errChar: {
+					Name:   string(tt.errChar),
+					HasArg: NoArgument,
+					Handle: func(string, string) error { return sentinel },
+				},
+			}
+			// Error option appears first in args.
+			args := []string{"-" + string(tt.errChar)}
+			for _, c := range tt.otherChars {
+				shortMap[c] = &Flag{Name: string(c), HasArg: NoArgument}
+				args = append(args, "-"+string(c))
+			}
+
+			p, err := NewParser(ParserConfig{enableErrors: true}, shortMap, nil, args)
+			if err != nil {
+				t.Fatalf("NewParser: %v", err)
+			}
+
+			opts, errs := collectOptions(p)
+			// First yield: (zero Option, sentinel error).
+			if len(errs) == 0 || errs[0] == nil {
+				t.Fatal("expected error on first yield, got nil")
+			}
+			if errs[0].Error() != tt.errMsg {
+				t.Fatalf("error mismatch: got %q, want %q", errs[0].Error(), tt.errMsg)
+			}
+			if opts[0] != (Option{}) {
+				t.Fatalf("expected zero Option with error, got %+v", opts[0])
+			}
+			// Remaining yields: normal options, no errors.
+			for i := 1; i < len(errs); i++ {
+				if errs[i] != nil {
+					t.Fatalf("unexpected error at yield %d: %v", i, errs[i])
+				}
+			}
+		})
 	}
 }
 
