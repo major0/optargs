@@ -367,32 +367,6 @@ func TestLongOnlyNoShortFallback(t *testing.T) {
 	}
 }
 
-// requireParseError creates a parser and iterates its options, returning
-// the first iteration error or nil. It fails the test if parser creation
-// itself fails.
-func requireParseError(t *testing.T, args []string, optstring string, longOpts []Flag) error {
-	t.Helper()
-
-	var parser *Parser
-	var err error
-
-	if longOpts != nil {
-		parser, err = GetOptLong(args, optstring, longOpts)
-	} else {
-		parser, err = GetOpt(args, optstring)
-	}
-	if err != nil {
-		return err
-	}
-
-	for _, err := range parser.Options() {
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // TestEdgeCaseEmptyInputs tests edge cases with empty inputs.
 func TestEdgeCaseEmptyInputs(t *testing.T) {
 	tests := []struct {

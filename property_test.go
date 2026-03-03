@@ -9,19 +9,6 @@ import (
 	"testing/quick"
 )
 
-// collectOpts iterates a parser and returns all successfully parsed options.
-// Returns nil on the first iteration error.
-func collectOpts(p *Parser) []Option {
-	var out []Option
-	for opt, err := range p.Options() {
-		if err != nil {
-			return nil
-		}
-		out = append(out, opt)
-	}
-	return out
-}
-
 // firstErr iterates a parser and returns the first error encountered, or nil.
 func firstErr(p *Parser) error {
 	for _, err := range p.Options() {
