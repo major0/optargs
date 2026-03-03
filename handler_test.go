@@ -201,106 +201,111 @@ func TestPropertyNilHandleBackwardCompat(t *testing.T) {
 	}
 }
 
-// Feature: option-handlers, Property 3: Handler invocation suppresses Option yield
-// For any Flag with non-nil Handle returning nil, handler is invoked and
-// no Option is yielded through the iterator for that flag.
-// Validates: Requirements 1.4, 2.5
-func TestPropertyHandlerSuppressesYield(t *testing.T) {
-	property := func(seed int64) bool {
-		rng := rand.New(rand.NewSource(seed))
-
-		// Pick 2–5 short options.
-		nShort := 2 + rng.Intn(4)
-		perm := rng.Perm(len(validShortChars))
-		chars := make([]byte, nShort)
-		for i := range chars {
-			chars[i] = validShortChars[perm[i]]
-		}
-
-		// Randomly decide which options get handlers (at least one handled,
-		// at least one not handled).
-		handled := make([]bool, nShort)
-		for i := range handled {
-			handled[i] = rng.Intn(2) == 0
-		}
-		// Ensure at least one of each.
-		handled[0] = true
-		handled[1] = false
-
-		// Track handler invocations.
-		var calls []handlerCall
-
-		shortMap := make(map[byte]*Flag)
-		for i, c := range chars {
-			f := &Flag{Name: string(c), HasArg: NoArgument}
-			if handled[i] {
-				f.Handle = func(name string, arg string) error {
-					calls = append(calls, handlerCall{name, arg})
-					return nil
-				}
-			}
-			shortMap[c] = f
-		}
-
-		// Build args: one instance of each option.
-		var args []string
-		for _, c := range chars {
-			args = append(args, "-"+string(c))
-		}
-
-		p, err := NewParser(ParserConfig{enableErrors: true}, shortMap, nil, args)
-		if err != nil {
-			return true
-		}
-
-		var yielded []Option
-		for opt, err := range p.Options() {
-			if err != nil {
-				t.Logf("seed=%d unexpected error: %v", seed, err)
-				return false
-			}
-			yielded = append(yielded, opt)
-		}
-
-		// Count expected handlers and yields.
-		var expectHandled, expectYielded int
-		for _, h := range handled {
-			if h {
-				expectHandled++
-			} else {
-				expectYielded++
-			}
-		}
-
-		if len(calls) != expectHandled {
-			t.Logf("seed=%d handler calls: got %d, want %d", seed, len(calls), expectHandled)
-			return false
-		}
-		if len(yielded) != expectYielded {
-			t.Logf("seed=%d yielded options: got %d, want %d", seed, len(yielded), expectYielded)
-			return false
-		}
-
-		// Verify no yielded option has a name that belongs to a handled flag.
-		handledNames := make(map[string]bool)
-		for i, c := range chars {
-			if handled[i] {
-				handledNames[string(c)] = true
-			}
-		}
-		for _, opt := range yielded {
-			if handledNames[opt.Name] {
-				t.Logf("seed=%d option %q was yielded but should have been handled", seed, opt.Name)
-				return false
-			}
-		}
-
-		return true
+// TestHandlerSuppressesYield verifies that flags with non-nil Handle are
+// dispatched to the handler (not yielded), while flags with nil Handle are
+// yielded as Options. Covers short/long, all argument types, and the three
+// partitions: handled-only, non-handled-only, mixed.
+func TestHandlerSuppressesYield(t *testing.T) {
+	tests := []struct {
+		name        string
+		short       map[byte]*Flag
+		long        map[string]*Flag
+		args        []string
+		wantHandled []string // names dispatched to handler
+		wantYielded []string // names yielded as Options
+	}{
+		{
+			name:        "short NoArg handled-only",
+			short:       map[byte]*Flag{'v': {Name: "v", HasArg: NoArgument}},
+			args:        []string{"-v"},
+			wantHandled: []string{"v"},
+		},
+		{
+			name:        "short RequiredArg non-handled-only",
+			short:       map[byte]*Flag{'o': {Name: "o", HasArg: RequiredArgument}},
+			args:        []string{"-o", "file"},
+			wantYielded: []string{"o"},
+		},
+		{
+			name:  "short mixed NoArg handled + non-handled",
+			short: map[byte]*Flag{'v': {Name: "v", HasArg: NoArgument}, 'x': {Name: "x", HasArg: NoArgument}},
+			args:  []string{"-v", "-x"},
+			// v handled, x not
+			wantHandled: []string{"v"},
+			wantYielded: []string{"x"},
+		},
+		{
+			name:        "long RequiredArg handled",
+			long:        map[string]*Flag{"output": {Name: "output", HasArg: RequiredArgument}},
+			args:        []string{"--output=file"},
+			wantHandled: []string{"output"},
+		},
+		{
+			name:        "long OptionalArg non-handled",
+			long:        map[string]*Flag{"debug": {Name: "debug", HasArg: OptionalArgument}},
+			args:        []string{"--debug=3"},
+			wantYielded: []string{"debug"},
+		},
+		{
+			name:  "mixed short+long handled and non-handled",
+			short: map[byte]*Flag{'v': {Name: "v", HasArg: NoArgument}, 'x': {Name: "x", HasArg: NoArgument}},
+			long:  map[string]*Flag{"output": {Name: "output", HasArg: RequiredArgument}, "debug": {Name: "debug", HasArg: NoArgument}},
+			args:  []string{"-v", "--output=f", "-x", "--debug"},
+			// v, output handled; x, debug not
+			wantHandled: []string{"v", "output"},
+			wantYielded: []string{"x", "debug"},
+		},
 	}
 
-	config := &quick.Config{MaxCount: 100}
-	if err := quick.Check(property, config); err != nil {
-		t.Errorf("Property 3 (Handler suppresses yield) failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var calls []handlerCall
+			handler := func(name string, arg string) error {
+				calls = append(calls, handlerCall{name, arg})
+				return nil
+			}
+
+			// Assign handler to flags listed in wantHandled.
+			handledSet := make(map[string]bool)
+			for _, n := range tt.wantHandled {
+				handledSet[n] = true
+			}
+			for c, f := range tt.short {
+				if handledSet[f.Name] {
+					tt.short[c].Handle = handler
+				}
+			}
+			for n, f := range tt.long {
+				if handledSet[f.Name] {
+					tt.long[n].Handle = handler
+				}
+			}
+
+			p, err := NewParser(ParserConfig{enableErrors: true, longCaseIgnore: true}, tt.short, tt.long, tt.args)
+			if err != nil {
+				t.Fatalf("NewParser: %v", err)
+			}
+
+			var yielded []string
+			for opt, err := range p.Options() {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				yielded = append(yielded, opt.Name)
+			}
+
+			// Verify handler calls.
+			var gotHandled []string
+			for _, c := range calls {
+				gotHandled = append(gotHandled, c.name)
+			}
+			if fmt.Sprint(gotHandled) != fmt.Sprint(tt.wantHandled) {
+				t.Errorf("handled: got %v, want %v", gotHandled, tt.wantHandled)
+			}
+			if fmt.Sprint(yielded) != fmt.Sprint(tt.wantYielded) {
+				t.Errorf("yielded: got %v, want %v", yielded, tt.wantYielded)
+			}
+		})
 	}
 }
 
@@ -515,143 +520,121 @@ func TestPropertyHandlerErrorPropagation(t *testing.T) {
 	}
 }
 
-// Feature: option-handlers, Property 8: Mixed handled and non-handled dispatch
-// Parser with both handled and non-handled Flags invokes handlers for
-// handled Flags and yields Options for non-handled Flags within the same
-// iteration, with no cross-contamination.
-// Validates: Requirements 7.1
-func TestPropertyMixedHandledAndNonHandled(t *testing.T) {
-	property := func(seed int64) bool {
-		rng := rand.New(rand.NewSource(seed))
-
-		// Generate 2–5 short options and 1–3 long options.
-		nShort := 2 + rng.Intn(4)
-		nLong := 1 + rng.Intn(3)
-		shortPerm := rng.Perm(len(validShortChars))
-		longPerm := rng.Perm(len(validLongNames))
-
-		chars := make([]byte, nShort)
-		for i := range chars {
-			chars[i] = validShortChars[shortPerm[i]]
-		}
-
-		type optDef struct {
-			name    string
-			isShort bool
-			handled bool
-		}
-		var defs []optDef
-
-		// Assign handled/non-handled randomly, ensuring at least one of each.
-		shortMap := make(map[byte]*Flag)
-		var calls []handlerCall
-
-		handler := func(name string, arg string) error {
-			calls = append(calls, handlerCall{name, arg})
-			return nil
-		}
-
-		for i, c := range chars {
-			h := rng.Intn(2) == 0
-			if i == 0 {
-				h = true // ensure at least one handled
-			}
-			if i == 1 {
-				h = false // ensure at least one non-handled
-			}
-			f := &Flag{Name: string(c), HasArg: NoArgument}
-			if h {
-				f.Handle = handler
-			}
-			shortMap[c] = f
-			defs = append(defs, optDef{name: string(c), isShort: true, handled: h})
-		}
-
-		longMap := make(map[string]*Flag)
-		for i := 0; i < nLong && i < len(validLongNames); i++ {
-			name := validLongNames[longPerm[i]]
-			h := rng.Intn(2) == 0
-			f := &Flag{Name: name, HasArg: NoArgument}
-			if h {
-				f.Handle = handler
-			}
-			longMap[name] = f
-			defs = append(defs, optDef{name: name, isShort: false, handled: h})
-		}
-
-		// Build args in definition order.
-		var args []string
-		for _, d := range defs {
-			if d.isShort {
-				args = append(args, "-"+d.name)
-			} else {
-				args = append(args, "--"+d.name)
-			}
-		}
-
-		cfg := ParserConfig{enableErrors: true, longCaseIgnore: true}
-		p, err := NewParser(cfg, shortMap, longMap, args)
-		if err != nil {
-			return true
-		}
-
-		calls = nil // reset
-		var yielded []Option
-		for opt, err := range p.Options() {
-			if err != nil {
-				t.Logf("seed=%d unexpected error: %v", seed, err)
-				return false
-			}
-			yielded = append(yielded, opt)
-		}
-
-		// Build expected sets.
-		handledNames := make(map[string]bool)
-		nonHandledNames := make(map[string]bool)
-		for _, d := range defs {
-			if d.handled {
-				handledNames[d.name] = true
-			} else {
-				nonHandledNames[d.name] = true
-			}
-		}
-
-		// Every handler call must be for a handled flag.
-		for _, c := range calls {
-			if !handledNames[c.name] {
-				t.Logf("seed=%d handler called for non-handled flag %q", seed, c.name)
-				return false
-			}
-		}
-
-		// Every yielded option must be for a non-handled flag.
-		for _, opt := range yielded {
-			if handledNames[opt.Name] {
-				t.Logf("seed=%d option %q yielded but should have been handled", seed, opt.Name)
-				return false
-			}
-			if !nonHandledNames[opt.Name] {
-				t.Logf("seed=%d option %q yielded but not in definitions", seed, opt.Name)
-				return false
-			}
-		}
-
-		// Counts must match.
-		if len(calls) != len(handledNames) {
-			t.Logf("seed=%d handler calls: got %d, want %d", seed, len(calls), len(handledNames))
-			return false
-		}
-		if len(yielded) != len(nonHandledNames) {
-			t.Logf("seed=%d yielded: got %d, want %d", seed, len(yielded), len(nonHandledNames))
-			return false
-		}
-
-		return true
+// TestMixedHandledAndNonHandledDispatch verifies that a parser with both
+// handled and non-handled flags dispatches handlers for handled flags and
+// yields Options for non-handled flags within the same iteration, with no
+// cross-contamination. Covers short+long, all argument types, and the
+// handled-only / non-handled-only / mixed partitions.
+//
+// Note: the basic short-only mixed case is already covered by
+// TestHandlerMixedHandledAndNonHandled. These rows extend coverage to long
+// options, different argument types, and the all-handled / all-yielded edges.
+func TestMixedHandledAndNonHandledDispatch(t *testing.T) {
+	tests := []struct {
+		name        string
+		short       map[byte]*Flag
+		long        map[string]*Flag
+		args        []string
+		wantHandled []string
+		wantYielded []string
+	}{
+		{
+			name:        "all handled short+long",
+			short:       map[byte]*Flag{'a': {Name: "a", HasArg: NoArgument}},
+			long:        map[string]*Flag{"verbose": {Name: "verbose", HasArg: NoArgument}},
+			args:        []string{"-a", "--verbose"},
+			wantHandled: []string{"a", "verbose"},
+		},
+		{
+			name:        "all non-handled short+long",
+			short:       map[byte]*Flag{'a': {Name: "a", HasArg: NoArgument}},
+			long:        map[string]*Flag{"verbose": {Name: "verbose", HasArg: NoArgument}},
+			args:        []string{"-a", "--verbose"},
+			wantYielded: []string{"a", "verbose"},
+		},
+		{
+			name:  "mixed RequiredArg short handled + long non-handled",
+			short: map[byte]*Flag{'o': {Name: "o", HasArg: RequiredArgument}},
+			long:  map[string]*Flag{"output": {Name: "output", HasArg: RequiredArgument}},
+			args:  []string{"-o", "a.txt", "--output=b.txt"},
+			// o handled, output not
+			wantHandled: []string{"o"},
+			wantYielded: []string{"output"},
+		},
+		{
+			name:  "mixed OptionalArg long handled + short non-handled",
+			short: map[byte]*Flag{'d': {Name: "d", HasArg: NoArgument}},
+			long:  map[string]*Flag{"debug": {Name: "debug", HasArg: OptionalArgument}},
+			args:  []string{"--debug=3", "-d"},
+			// debug handled, d not
+			wantHandled: []string{"debug"},
+			wantYielded: []string{"d"},
+		},
+		{
+			name: "three short two long mixed",
+			short: map[byte]*Flag{
+				'a': {Name: "a", HasArg: NoArgument},
+				'b': {Name: "b", HasArg: NoArgument},
+				'c': {Name: "c", HasArg: RequiredArgument},
+			},
+			long: map[string]*Flag{
+				"verbose": {Name: "verbose", HasArg: NoArgument},
+				"output":  {Name: "output", HasArg: RequiredArgument},
+			},
+			args: []string{"-a", "-b", "-c", "val", "--verbose", "--output=f"},
+			// a, c, verbose handled; b, output not
+			wantHandled: []string{"a", "c", "verbose"},
+			wantYielded: []string{"b", "output"},
+		},
 	}
 
-	config := &quick.Config{MaxCount: 100}
-	if err := quick.Check(property, config); err != nil {
-		t.Errorf("Property 8 (Mixed handled and non-handled dispatch) failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var calls []handlerCall
+			handler := func(name string, arg string) error {
+				calls = append(calls, handlerCall{name, arg})
+				return nil
+			}
+
+			handledSet := make(map[string]bool)
+			for _, n := range tt.wantHandled {
+				handledSet[n] = true
+			}
+			for c, f := range tt.short {
+				if handledSet[f.Name] {
+					tt.short[c].Handle = handler
+				}
+			}
+			for n, f := range tt.long {
+				if handledSet[f.Name] {
+					tt.long[n].Handle = handler
+				}
+			}
+
+			p, err := NewParser(ParserConfig{enableErrors: true, longCaseIgnore: true}, tt.short, tt.long, tt.args)
+			if err != nil {
+				t.Fatalf("NewParser: %v", err)
+			}
+
+			var yielded []string
+			for opt, err := range p.Options() {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				yielded = append(yielded, opt.Name)
+			}
+
+			var gotHandled []string
+			for _, c := range calls {
+				gotHandled = append(gotHandled, c.name)
+			}
+			if fmt.Sprint(gotHandled) != fmt.Sprint(tt.wantHandled) {
+				t.Errorf("handled: got %v, want %v", gotHandled, tt.wantHandled)
+			}
+			if fmt.Sprint(yielded) != fmt.Sprint(tt.wantYielded) {
+				t.Errorf("yielded: got %v, want %v", yielded, tt.wantYielded)
+			}
+		})
 	}
 }
 
