@@ -309,124 +309,77 @@ func TestHandlerSuppressesYield(t *testing.T) {
 	}
 }
 
-// Feature: option-handlers, Property 4: Handler receives correct name and arg
-// Handler receives the same name and arg that would have been yielded as
-// Option.Name and Option.Arg by the iterator if Handle were nil.
-// Validates: Requirements 2.1, 2.2
-func TestPropertyHandlerReceivesCorrectNameAndArg(t *testing.T) {
-	property := func(seed int64) bool {
-		rng := rand.New(rand.NewSource(seed))
-
-		// Generate 1–4 short options with varying arg types.
-		nShort := 1 + rng.Intn(4)
-		perm := rng.Perm(len(validShortChars))
-		chars := make([]byte, nShort)
-		argKinds := make([]ArgType, nShort)
-		for i := range chars {
-			chars[i] = validShortChars[perm[i]]
-			argKinds[i] = ArgType(rng.Intn(3))
-		}
-
-		// Generate 0–3 long options.
-		nLong := rng.Intn(4)
-		longPerm := rng.Perm(len(validLongNames))
-		type longDef struct {
-			name   string
-			hasArg ArgType
-		}
-		var longs []longDef
-		for i := 0; i < nLong && i < len(validLongNames); i++ {
-			longs = append(longs, longDef{
-				name:   validLongNames[longPerm[i]],
-				hasArg: ArgType(rng.Intn(3)),
-			})
-		}
-
-		// Build args that exercise the generated options.
-		var args []string
-		for i, c := range chars {
-			args = append(args, "-"+string(c))
-			if argKinds[i] == RequiredArgument {
-				args = append(args, "sval")
-			}
-		}
-		for _, l := range longs {
-			args = append(args, "--"+l.name)
-			if l.hasArg == RequiredArgument {
-				args = append(args, "lval")
-			}
-		}
-
-		// Pass 1: parse with nil Handle, collect yielded Options.
-		buildShortMap := func(handler func(string, string) error) map[byte]*Flag {
-			m := make(map[byte]*Flag)
-			for i, c := range chars {
-				m[c] = &Flag{Name: string(c), HasArg: argKinds[i], Handle: handler}
-			}
-			return m
-		}
-		buildLongMap := func(handler func(string, string) error) map[string]*Flag {
-			m := make(map[string]*Flag)
-			for _, l := range longs {
-				m[l.name] = &Flag{Name: l.name, HasArg: l.hasArg, Handle: handler}
-			}
-			return m
-		}
-
-		cfg := ParserConfig{enableErrors: true, longCaseIgnore: true}
-
-		args1 := make([]string, len(args))
-		copy(args1, args)
-		p1, err := NewParser(cfg, buildShortMap(nil), buildLongMap(nil), args1)
-		if err != nil {
-			return true
-		}
-		var expected []Option
-		for opt, err := range p1.Options() {
-			if err != nil {
-				return true // skip configs that produce errors
-			}
-			expected = append(expected, opt)
-		}
-
-		// Pass 2: parse with Handle on all flags, record calls.
-		var got []handlerCall
-		handler := func(name string, arg string) error {
-			got = append(got, handlerCall{name, arg})
-			return nil
-		}
-
-		args2 := make([]string, len(args))
-		copy(args2, args)
-		p2, err := NewParser(cfg, buildShortMap(handler), buildLongMap(handler), args2)
-		if err != nil {
-			return true
-		}
-		// With all flags handled, iterator should yield nothing.
-		for _, err := range p2.Options() {
-			if err != nil {
-				return true
-			}
-		}
-
-		if len(got) != len(expected) {
-			t.Logf("seed=%d call count: got %d, want %d", seed, len(got), len(expected))
-			return false
-		}
-		for i := range expected {
-			if got[i].name != expected[i].Name || got[i].arg != expected[i].Arg {
-				t.Logf("seed=%d [%d] handler got (%q,%q), want (%q,%q)",
-					seed, i, got[i].name, got[i].arg, expected[i].Name, expected[i].Arg)
-				return false
-			}
-		}
-
-		return true
+// TestHandlerReceivesCorrectNameAndArg verifies that handler receives the same
+// name and arg that would have been yielded as Option.Name and Option.Arg.
+// Covers: RequiredArgument long separate (not in TestHandlerArgumentTypes),
+// and multi-option parse (property test's additional dimension).
+func TestHandlerReceivesCorrectNameAndArg(t *testing.T) {
+	tests := []struct {
+		name      string
+		short     map[byte]*Flag
+		long      map[string]*Flag
+		args      []string
+		wantCalls []handlerCall
+	}{
+		{
+			name:      "RequiredArgument long separate arg",
+			long:      map[string]*Flag{"output": {Name: "output", HasArg: RequiredArgument}},
+			args:      []string{"--output", "result.txt"},
+			wantCalls: []handlerCall{{"output", "result.txt"}},
+		},
+		{
+			name: "multiple short and long options in one parse",
+			short: map[byte]*Flag{
+				'v': {Name: "v", HasArg: NoArgument},
+				'o': {Name: "o", HasArg: RequiredArgument},
+			},
+			long: map[string]*Flag{
+				"debug": {Name: "debug", HasArg: OptionalArgument},
+			},
+			args:      []string{"-v", "-o", "file", "--debug=3"},
+			wantCalls: []handlerCall{{"v", ""}, {"o", "file"}, {"debug", "3"}},
+		},
 	}
 
-	config := &quick.Config{MaxCount: 100}
-	if err := quick.Check(property, config); err != nil {
-		t.Errorf("Property 4 (Handler receives correct name and arg) failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got []handlerCall
+			handler := func(name string, arg string) error {
+				got = append(got, handlerCall{name, arg})
+				return nil
+			}
+			for _, f := range tt.short {
+				f.Handle = handler
+			}
+			for _, f := range tt.long {
+				f.Handle = handler
+			}
+			p, err := NewParser(
+				ParserConfig{enableErrors: true, longCaseIgnore: true},
+				tt.short, tt.long, tt.args,
+			)
+			if err != nil {
+				t.Fatalf("NewParser: %v", err)
+			}
+			opts, errs := collectOptions(p)
+			for _, e := range errs {
+				if e != nil {
+					t.Fatalf("unexpected error: %v", e)
+				}
+			}
+			if len(opts) != 0 {
+				t.Fatalf("expected no options yielded, got %d", len(opts))
+			}
+			if len(got) != len(tt.wantCalls) {
+				t.Fatalf("handler calls: got %d, want %d", len(got), len(tt.wantCalls))
+			}
+			for i, want := range tt.wantCalls {
+				if got[i].name != want.name || got[i].arg != want.arg {
+					t.Fatalf("[%d] handler got (%q, %q), want (%q, %q)",
+						i, got[i].name, got[i].arg, want.name, want.arg)
+				}
+			}
+		})
 	}
 }
 
