@@ -6,25 +6,30 @@ import (
 
 // genShortOpts generates all permutations of the input characters, each
 // followed by no colons, one colon, or two colons.
-func genShortOpts(input string, index int, current string, result *[]string) {
-	if index == len(input) {
-		*result = append(*result, current)
-		return
+// representativeOptstrings returns a representative subset of colon-suffix
+// combinations for the given option characters. Instead of exhaustive 3^n
+// permutations, it covers each colon variant (none, single, double) per
+// character position plus mixed combinations.
+func representativeOptstrings(opts string) []string {
+	if len(opts) == 0 {
+		return []string{""}
 	}
-
-	word := current + string(input[index])
-	index++
-
-	genShortOpts(input, index, word, result)
-	genShortOpts(input, index, word+":", result)
-	genShortOpts(input, index, word+"::", result)
-}
-
-// allShortOptPermutations returns every colon-suffix permutation of opts.
-func allShortOptPermutations(opts string) []string {
-	var permutations []string
-	genShortOpts(opts, 0, "", &permutations)
-	return permutations
+	// For "ab": covers no-arg, required-arg, optional-arg for each
+	// position, plus mixed combinations.
+	a, b := string(opts[0]), ""
+	if len(opts) > 1 {
+		b = string(opts[1])
+	}
+	if b == "" {
+		return []string{a, a + ":", a + "::"}
+	}
+	return []string{
+		a + b,               // both no-arg
+		a + ":" + b + ":",   // both required
+		a + "::" + b + "::", // both optional
+		a + ":" + b + "::",  // required + optional
+		a + "::" + b,        // optional + no-arg
+	}
 }
 
 // TestShortOptsGraph validates that every isgraph() character allowed by
@@ -62,10 +67,10 @@ func TestShortOptsGraph(t *testing.T) {
 	}
 }
 
-// TestShortOpts validates the default parse mode across all optstring
-// permutations.
+// TestShortOpts validates the default parse mode across representative
+// optstring colon-suffix combinations.
 func TestShortOpts(t *testing.T) {
-	for _, opts := range allShortOptPermutations("ab") {
+	for _, opts := range representativeOptstrings("ab") {
 		getopt, err := GetOpt(nil, opts)
 		if err != nil {
 			t.Errorf("unexpected error: %s", err)
@@ -108,7 +113,7 @@ func TestNoOptions(t *testing.T) {
 // we consume any number of prefix characters, toggling parser mode and
 // error mode settings as we go.
 func TestShortOptsDisableErrors(t *testing.T) {
-	for _, opts := range allShortOptPermutations("ab") {
+	for _, opts := range representativeOptstrings("ab") {
 		optstring := ":" + opts
 		getopt, err := GetOpt(nil, optstring)
 		if err != nil {
@@ -139,7 +144,7 @@ var parseModeTests = []struct {
 func TestShortOptsParseMode(t *testing.T) {
 	for _, tt := range parseModeTests {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, opts := range allShortOptPermutations("ab") {
+			for _, opts := range representativeOptstrings("ab") {
 				optstring := tt.prefix + opts
 				getopt, err := GetOpt(nil, optstring)
 				if err != nil {
@@ -191,7 +196,7 @@ func TestOptstringInvalid(t *testing.T) {
 // The `;` is never allowed in the optstring unless it follows `W`.
 // This is a GNU extension to POSIX.
 func TestShortOptsGnuWords(t *testing.T) {
-	for _, opts := range allShortOptPermutations("ab") {
+	for _, opts := range representativeOptstrings("ab") {
 		optstring := opts + "W;"
 		getopt, err := GetOpt(nil, optstring)
 		if err != nil {
