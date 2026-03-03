@@ -28,10 +28,8 @@ help:
 	@echo "  help              - Show this help message"
 	@echo ""
 	@echo "Coverage targets:"
-	@echo "  - Core parsing functions: 100% line and branch coverage"
-	@echo "  - Public API functions: 100% coverage"
-	@echo "  - Error handling paths: 100% coverage"
-	@echo "  - All parsing modes: 100% coverage"
+	@echo "  - Minimum floor: 70%"
+	@echo "  - Target range: 70-85%"
 
 # Run all tests
 test:
@@ -56,7 +54,7 @@ coverage-func: coverage
 	@echo "================================"
 	go tool cover -func=coverage.out
 
-# Validate coverage meets 100% target for core functions
+# Validate coverage meets minimum floor
 coverage-validate: coverage
 	@echo "Validating coverage targets..."
 	@./scripts/validate_coverage.sh coverage.out
