@@ -1,7 +1,6 @@
 package optargs
 
 import (
-	"fmt"
 	"math/rand"
 	"os"
 	"testing"
@@ -242,60 +241,74 @@ func TestIteratorCorrectness(t *testing.T) {
 	}
 }
 
-// Feature: test-refactor, Property 16: For any parsing session, when
-// POSIXLY_CORRECT is set, the parser stops at the first non-option argument.
-// The `+` prefix behaves identically.
-func TestProperty16_EnvironmentVariableBehavior(t *testing.T) {
-	property := func() bool {
-		rng := rand.New(rand.NewSource(rand.Int63()))
-
-		optstring := "abc"
-
-		var args []string
-		numInitialOpts := rng.Intn(2) + 1
-		for i := 0; i < numInitialOpts; i++ {
-			args = append(args, "-a")
-		}
-		args = append(args, fmt.Sprintf("nonopt%d", rng.Intn(100)))
-		numLaterOpts := rng.Intn(3) + 1
-		for i := 0; i < numLaterOpts; i++ {
-			args = append(args, "-b")
-		}
-
-		// Without POSIXLY_CORRECT
-		_ = os.Unsetenv("POSIXLY_CORRECT")
-		p1, err := GetOpt(args, optstring)
-		if err != nil {
-			return false
-		}
-		normalOpts := len(collectOpts(p1))
-
-		// With POSIXLY_CORRECT
-		_ = os.Setenv("POSIXLY_CORRECT", "1")
-		defer func() { _ = os.Unsetenv("POSIXLY_CORRECT") }()
-
-		p2, err := GetOpt(args, optstring)
-		if err != nil {
-			return false
-		}
-		posixOpts := len(collectOpts(p2))
-
-		if posixOpts >= normalOpts {
-			return false
-		}
-
-		// + prefix behaves the same as environment variable
-		p3, err := GetOpt(args, "+"+optstring)
-		if err != nil {
-			return false
-		}
-		prefixOpts := len(collectOpts(p3))
-
-		return posixOpts == prefixOpts
+// TestEnvironmentVariableBehavior verifies that POSIXLY_CORRECT and the `+`
+// optstring prefix both stop option parsing at the first non-option argument.
+func TestEnvironmentVariableBehavior(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		optstring string
+		wantAll   int // options parsed in normal (GNU) mode
+		wantPosix int // options parsed in POSIXLY_CORRECT / + prefix mode
+	}{
+		{
+			name:      "1 initial + nonopt + 1 trailing",
+			args:      []string{"-a", "nonopt", "-b"},
+			optstring: "abc",
+			wantAll:   2,
+			wantPosix: 1,
+		},
+		{
+			name:      "2 initial + nonopt + 2 trailing",
+			args:      []string{"-a", "-a", "nonopt", "-b", "-b"},
+			optstring: "abc",
+			wantAll:   4,
+			wantPosix: 2,
+		},
+		{
+			name:      "1 initial + nonopt + 3 trailing",
+			args:      []string{"-a", "nonopt", "-b", "-b", "-b"},
+			optstring: "abc",
+			wantAll:   4,
+			wantPosix: 1,
+		},
 	}
 
-	if err := quick.Check(property, &quick.Config{MaxCount: 100}); err != nil {
-		t.Errorf("Property 16 failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name+"/normal", func(t *testing.T) {
+			t.Setenv("POSIXLY_CORRECT", "")
+			os.Unsetenv("POSIXLY_CORRECT")
+			p, err := GetOpt(tt.args, tt.optstring)
+			if err != nil {
+				t.Fatalf("GetOpt error: %v", err)
+			}
+			if got := len(collectOpts(p)); got != tt.wantAll {
+				t.Errorf("normal mode: got %d opts, want %d", got, tt.wantAll)
+			}
+		})
+
+		t.Run(tt.name+"/POSIXLY_CORRECT", func(t *testing.T) {
+			t.Setenv("POSIXLY_CORRECT", "1")
+			p, err := GetOpt(tt.args, tt.optstring)
+			if err != nil {
+				t.Fatalf("GetOpt error: %v", err)
+			}
+			if got := len(collectOpts(p)); got != tt.wantPosix {
+				t.Errorf("POSIXLY_CORRECT: got %d opts, want %d", got, tt.wantPosix)
+			}
+		})
+
+		t.Run(tt.name+"/plus_prefix", func(t *testing.T) {
+			t.Setenv("POSIXLY_CORRECT", "")
+			os.Unsetenv("POSIXLY_CORRECT")
+			p, err := GetOpt(tt.args, "+"+tt.optstring)
+			if err != nil {
+				t.Fatalf("GetOpt error: %v", err)
+			}
+			if got := len(collectOpts(p)); got != tt.wantPosix {
+				t.Errorf("+ prefix: got %d opts, want %d", got, tt.wantPosix)
+			}
+		})
 	}
 }
 
