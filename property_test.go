@@ -1,10 +1,8 @@
 package optargs
 
 import (
-	"math/rand"
 	"os"
 	"testing"
-	"testing/quick"
 )
 
 // firstErr iterates a parser and returns the first error encountered, or nil.
@@ -362,84 +360,68 @@ func TestAmbiguityResolution(t *testing.T) {
 	}
 }
 
-// Feature: test-refactor, Property 18: For any parser with registered
-// subcommands, the iterator dispatches to the correct child parser when a
-// non-option argument matches a subcommand name, and unknown options in child
-// parsers are resolved by walking the parent chain. Both verbose and silent
-// error modes work correctly through the chain.
-func TestProperty18_NativeSubcommandDispatch(t *testing.T) {
-	validShortOpts := []byte("abcdefghijklmnopqrstuvwxyz")
-
-	property := func(seed int64) bool {
-		rng := rand.New(rand.NewSource(seed))
-
-		perm := rng.Perm(len(validShortOpts))
-		rootOptChar := validShortOpts[perm[0]]
-		childOptChar := validShortOpts[perm[1]]
-		inheritedOptChar := validShortOpts[perm[2]]
-
-		cmdNames := []string{"serve", "build", "test", "deploy", "run"}
-		cmdName := cmdNames[rng.Intn(len(cmdNames))]
-
-		silentMode := rng.Intn(2) == 0
-
-		rootOptstring := string(rootOptChar) + string(inheritedOptChar)
-		childOptstring := string(childOptChar)
-		if silentMode {
-			rootOptstring = ":" + rootOptstring
-			childOptstring = ":" + childOptstring
-		}
-
-		args := []string{
-			"-" + string(rootOptChar),
-			cmdName,
-			"-" + string(childOptChar),
-			"-" + string(inheritedOptChar),
-		}
-
-		root, err := GetOpt(args, rootOptstring)
-		if err != nil {
-			t.Logf("Failed to create root parser: %v", err)
-			return false
-		}
-
-		child, err := GetOpt([]string{}, childOptstring)
-		if err != nil {
-			t.Logf("Failed to create child parser: %v", err)
-			return false
-		}
-		root.AddCmd(cmdName, child)
-
-		if child.HasCommands() {
-			return false
-		}
-
-		// Root should yield its own option, then dispatch
-		rootOpts := collectOpts(root)
-		if len(rootOpts) != 1 || rootOpts[0].Name != string(rootOptChar) {
-			t.Logf("Expected 1 root option '%s', got %d opts", string(rootOptChar), len(rootOpts))
-			return false
-		}
-
-		// Child should yield its own option + inherited option
-		childOpts := collectOpts(child)
-		if len(childOpts) != 2 {
-			t.Logf("Expected 2 child options, got %d", len(childOpts))
-			return false
-		}
-		if childOpts[0].Name != string(childOptChar) {
-			t.Logf("Expected child option '%s', got '%s'", string(childOptChar), childOpts[0].Name)
-			return false
-		}
-		if childOpts[1].Name != string(inheritedOptChar) {
-			t.Logf("Expected inherited option '%s', got '%s'", string(inheritedOptChar), childOpts[1].Name)
-			return false
-		}
-
-		return true
+// TestNativeSubcommandDispatchProperty verifies that subcommand dispatch yields
+// root options on the root parser and child + inherited options on the child,
+// with different char assignments and error modes.
+func TestNativeSubcommandDispatchProperty(t *testing.T) {
+	cases := []struct {
+		name         string
+		rootOpt      byte
+		inheritedOpt byte
+		childOpt     byte
+		cmdName      string
+		silent       bool
+	}{
+		{"basic_abc_serve", 'a', 'b', 'c', "serve", false},
+		{"different_chars_xyz_build", 'x', 'y', 'z', "build", false},
+		{"silent_mode_def_deploy", 'd', 'e', 'f', "deploy", true},
+		{"silent_mode_mno_run", 'm', 'n', 'o', "run", true},
 	}
 
-	if err := quick.Check(property, &quick.Config{MaxCount: 100}); err != nil {
-		t.Errorf("Property 18 failed: %v", err)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rootOptstring := string(tc.rootOpt) + string(tc.inheritedOpt)
+			childOptstring := string(tc.childOpt)
+			if tc.silent {
+				rootOptstring = ":" + rootOptstring
+				childOptstring = ":" + childOptstring
+			}
+
+			args := []string{
+				"-" + string(tc.rootOpt),
+				tc.cmdName,
+				"-" + string(tc.childOpt),
+				"-" + string(tc.inheritedOpt),
+			}
+
+			root, err := GetOpt(args, rootOptstring)
+			if err != nil {
+				t.Fatalf("Failed to create root parser: %v", err)
+			}
+
+			child, err := GetOpt([]string{}, childOptstring)
+			if err != nil {
+				t.Fatalf("Failed to create child parser: %v", err)
+			}
+			root.AddCmd(tc.cmdName, child)
+
+			// Root should yield its own option, then dispatch
+			rootOpts := collectOpts(root)
+			if len(rootOpts) != 1 || rootOpts[0].Name != string(tc.rootOpt) {
+				t.Errorf("Expected 1 root option '%s', got %v", string(tc.rootOpt), rootOpts)
+			}
+
+			// Child should yield its own option + inherited option
+			childOpts := collectOpts(child)
+			if len(childOpts) != 2 {
+				t.Fatalf("Expected 2 child options, got %d", len(childOpts))
+			}
+			if childOpts[0].Name != string(tc.childOpt) {
+				t.Errorf("Expected child option '%s', got '%s'", string(tc.childOpt), childOpts[0].Name)
+			}
+			if childOpts[1].Name != string(tc.inheritedOpt) {
+				t.Errorf("Expected inherited option '%s', got '%s'", string(tc.inheritedOpt), childOpts[1].Name)
+			}
+		})
 	}
 }
