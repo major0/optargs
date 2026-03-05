@@ -314,54 +314,51 @@ func TestEnvironmentVariableBehavior(t *testing.T) {
 
 // Feature: test-refactor, Property 17: For any ambiguous long option input,
 // the parser reports an error per GNU specifications for ambiguity resolution.
-func TestProperty17_AmbiguityResolution(t *testing.T) {
-	property := func() bool {
-		longOpts := []Flag{
-			{Name: "verbose", HasArg: NoArgument},
-			{Name: "version", HasArg: NoArgument},
-			{Name: "value", HasArg: RequiredArgument},
-		}
-
-		// Exact matches work
-		p1, err := GetOptLong([]string{"--verbose"}, "", longOpts)
-		if err != nil {
-			return false
-		}
-		if findOpt(collectOpts(p1), "verbose") == nil {
-			return false
-		}
-
-		p2, err := GetOptLong([]string{"--version"}, "", longOpts)
-		if err != nil {
-			return false
-		}
-		if findOpt(collectOpts(p2), "version") == nil {
-			return false
-		}
-
-		// Exact match with argument
-		p3, err := GetOptLong([]string{"--value", "test"}, "", longOpts)
-		if err != nil {
-			return false
-		}
-		if o := findOpt(collectOpts(p3), "value"); o == nil || !o.HasArg || o.Arg != "test" {
-			return false
-		}
-
-		// Partial match should error (ambiguous)
-		p4, err := GetOptLong([]string{"--v"}, "", longOpts)
-		if err != nil {
-			return false
-		}
-		if firstErr(p4) == nil {
-			return false
-		}
-
-		return true
+// TestAmbiguityResolution verifies that exact long option matches succeed and
+// ambiguous prefixes produce errors when multiple options share a common prefix.
+func TestAmbiguityResolution(t *testing.T) {
+	longOpts := []Flag{
+		{Name: "verbose", HasArg: NoArgument},
+		{Name: "version", HasArg: NoArgument},
+		{Name: "value", HasArg: RequiredArgument},
 	}
 
-	if err := quick.Check(property, &quick.Config{MaxCount: 100}); err != nil {
-		t.Errorf("Property 17 failed: %v", err)
+	tests := []struct {
+		name    string
+		args    []string
+		wantOpt string // expected option name, empty if expecting error
+		wantArg string // expected argument value
+		wantErr bool   // true if iteration should produce an error
+	}{
+		{name: "exact_verbose", args: []string{"--verbose"}, wantOpt: "verbose"},
+		{name: "exact_version", args: []string{"--version"}, wantOpt: "version"},
+		{name: "exact_value_with_arg", args: []string{"--value", "test"}, wantOpt: "value", wantArg: "test"},
+		{name: "ambiguous_prefix", args: []string{"--v"}, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, err := GetOptLong(tt.args, "", longOpts)
+			if err != nil {
+				t.Fatalf("GetOptLong() error: %v", err)
+			}
+
+			if tt.wantErr {
+				if firstErr(p) == nil {
+					t.Error("expected iteration error for ambiguous prefix, got nil")
+				}
+				return
+			}
+
+			opts := collectOpts(p)
+			o := findOpt(opts, tt.wantOpt)
+			if o == nil {
+				t.Fatalf("expected option %q not found in results", tt.wantOpt)
+			}
+			if tt.wantArg != "" && o.Arg != tt.wantArg {
+				t.Errorf("option %q arg = %q, want %q", tt.wantOpt, o.Arg, tt.wantArg)
+			}
+		})
 	}
 }
 
