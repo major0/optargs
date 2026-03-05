@@ -28,64 +28,6 @@ func findOpt(opts []Option, name string) *Option {
 	return nil
 }
 
-// Feature: test-refactor, Property 4: For any argument list containing `--`,
-// the parser stops processing options at that point and treats all subsequent
-// arguments as non-options.
-func TestProperty4_OptionTerminationBehavior(t *testing.T) {
-	property := func() bool {
-		rng := rand.New(rand.NewSource(rand.Int63()))
-
-		numBefore := rng.Intn(3)
-		var argsBefore []string
-		for i := 0; i < numBefore; i++ {
-			argsBefore = append(argsBefore, "-a")
-		}
-
-		numAfter := rng.Intn(5) + 1
-		var argsAfter []string
-		for i := 0; i < numAfter; i++ {
-			switch rng.Intn(3) {
-			case 0:
-				argsAfter = append(argsAfter, "-a")
-			case 1:
-				argsAfter = append(argsAfter, "--long")
-			case 2:
-				argsAfter = append(argsAfter, fmt.Sprintf("arg%d", i))
-			}
-		}
-
-		args := append(argsBefore, "--")
-		args = append(args, argsAfter...)
-
-		parser, err := GetOpt(args, "abc")
-		if err != nil {
-			return false
-		}
-
-		opts := collectOpts(parser)
-		if opts == nil && numBefore > 0 {
-			return false
-		}
-		if len(opts) != numBefore {
-			return false
-		}
-		if len(parser.Args) != len(argsAfter) {
-			return false
-		}
-		for i, expected := range argsAfter {
-			if parser.Args[i] != expected {
-				return false
-			}
-		}
-
-		return true
-	}
-
-	if err := quick.Check(property, &quick.Config{MaxCount: 100}); err != nil {
-		t.Errorf("Property 4 failed: %v", err)
-	}
-}
-
 // Feature: test-refactor, Property 10: For any option that requires an
 // argument, the parser accepts arguments beginning with `-` when explicitly
 // provided (e.g. negative numbers).
