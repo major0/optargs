@@ -46,10 +46,16 @@ func errorsEqual(a, b []error) bool {
 	return true
 }
 
-// Feature: option-handlers, Property 1: Nil Handle backward compatibility
-// For any parser configuration and argument list where all Flags have nil
-// Handle, iterator output is identical to pre-handler implementation.
-// Validates: Requirements 1.3, 4.1, 4.4
+// Feature: test-refactor, Property 1: Coverage Floor Invariant
+//
+// Invariant: GetOptLong output ≡ NewParser with nil Handle for the same
+// configuration. For any parser configuration and argument list where all
+// Flags have nil Handle, iterator output is identical to the pre-handler
+// implementation.
+//
+// Why randomized inputs: this is an equivalence property over the full
+// optstring × args space — random configs catch corner cases that finite
+// examples miss.
 func TestPropertyNilHandleBackwardCompat(t *testing.T) {
 	// Use only lowercase letters to avoid optstring prefix flags (+, :, -)
 	// and special characters that complicate config equivalence.
