@@ -77,58 +77,41 @@ func TestNegativeArgumentSupport(t *testing.T) {
 
 // Feature: test-refactor, Property 12: For any optstring where options are
 // redefined, the parser uses the last definition encountered.
-func TestProperty12_OptionRedefinitionHandling(t *testing.T) {
-	property := func() bool {
-		// Redefine from no-argument to required-argument
-		p1, err := GetOpt([]string{"-a", "value"}, "aa:")
-		if err != nil {
-			return false
-		}
-		if o := findOpt(collectOpts(p1), "a"); o == nil || !o.HasArg || o.Arg != "value" {
-			return false
-		}
 
-		// Redefine from required-argument to no-argument
-		p2, err := GetOpt([]string{"-b"}, "b:b")
-		if err != nil {
-			return false
-		}
-		if o := findOpt(collectOpts(p2), "b"); o == nil || o.HasArg {
-			return false
-		}
-
-		// Redefine from optional-argument to required-argument
-		p3, err := GetOpt([]string{"-c", "value"}, "c::c:")
-		if err != nil {
-			return false
-		}
-		if o := findOpt(collectOpts(p3), "c"); o == nil || !o.HasArg || o.Arg != "value" {
-			return false
-		}
-
-		// Multiple redefinitions use the last one
-		p4, err := GetOpt([]string{"-d"}, "d:d::d")
-		if err != nil {
-			return false
-		}
-		if o := findOpt(collectOpts(p4), "d"); o == nil || o.HasArg {
-			return false
-		}
-
-		// Redefinition with behavior flags
-		p5, err := GetOpt([]string{"-e"}, ":e:e")
-		if err != nil {
-			return false
-		}
-		if o := findOpt(collectOpts(p5), "e"); o == nil || o.HasArg {
-			return false
-		}
-
-		return true
+// TestOptionRedefinitionHandling verifies that when an option character appears
+// multiple times in the optstring, the last definition wins.
+func TestOptionRedefinitionHandling(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		optstring string
+		optName   string
+		wantArg   bool
+		wantVal   string
+	}{
+		{"no-arg to required-arg", []string{"-a", "value"}, "aa:", "a", true, "value"},
+		{"required-arg to no-arg", []string{"-b"}, "b:b", "b", false, ""},
+		{"optional-arg to required-arg", []string{"-c", "value"}, "c::c:", "c", true, "value"},
+		{"triple redef last wins no-arg", []string{"-d"}, "d:d::d", "d", false, ""},
+		{"redef with behavior flags", []string{"-e"}, ":e:e", "e", false, ""},
 	}
-
-	if err := quick.Check(property, &quick.Config{MaxCount: 100}); err != nil {
-		t.Errorf("Property 12 failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, err := GetOpt(tt.args, tt.optstring)
+			if err != nil {
+				t.Fatalf("GetOpt(%v, %q) error: %v", tt.args, tt.optstring, err)
+			}
+			o := findOpt(collectOpts(p), tt.optName)
+			if o == nil {
+				t.Fatalf("option %q not found", tt.optName)
+			}
+			if o.HasArg != tt.wantArg {
+				t.Errorf("HasArg = %v, want %v", o.HasArg, tt.wantArg)
+			}
+			if tt.wantArg && o.Arg != tt.wantVal {
+				t.Errorf("Arg = %q, want %q", o.Arg, tt.wantVal)
+			}
+		})
 	}
 }
 
