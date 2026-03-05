@@ -28,62 +28,50 @@ func findOpt(opts []Option, name string) *Option {
 	return nil
 }
 
-// Feature: test-refactor, Property 10: For any option that requires an
-// argument, the parser accepts arguments beginning with `-` when explicitly
-// provided (e.g. negative numbers).
-func TestProperty10_NegativeArgumentSupport(t *testing.T) {
-	property := func() bool {
-		// Short option with negative number (separate)
-		p1, err := GetOpt([]string{"-a", "-123"}, "a:")
-		if err != nil {
-			return false
-		}
-		if o := findOpt(collectOpts(p1), "a"); o == nil || !o.HasArg || o.Arg != "-123" {
-			return false
-		}
+// TestNegativeArgumentSupport verifies that options requiring arguments accept
+// arguments beginning with `-` (e.g. negative numbers) across all delivery
+// forms: short separate, short attached, long separate, long equals, optional attached.
+func TestNegativeArgumentSupport(t *testing.T) {
+	numFlags := []Flag{{Name: "number", HasArg: RequiredArgument}}
 
-		// Short option with negative number (attached)
-		p2, err := GetOpt([]string{"-a-456"}, "a:")
-		if err != nil {
-			return false
-		}
-		if o := findOpt(collectOpts(p2), "a"); o == nil || !o.HasArg || o.Arg != "-456" {
-			return false
-		}
-
-		// Long option with negative number (separate)
-		numFlags := []Flag{{Name: "number", HasArg: RequiredArgument}}
-		p3, err := GetOptLong([]string{"--number", "-789"}, "", numFlags)
-		if err != nil {
-			return false
-		}
-		if o := findOpt(collectOpts(p3), "number"); o == nil || !o.HasArg || o.Arg != "-789" {
-			return false
-		}
-
-		// Long option with negative number (equals syntax)
-		p4, err := GetOptLong([]string{"--number=-999"}, "", numFlags)
-		if err != nil {
-			return false
-		}
-		if o := findOpt(collectOpts(p4), "number"); o == nil || !o.HasArg || o.Arg != "-999" {
-			return false
-		}
-
-		// Optional argument with negative number (attached)
-		p5, err := GetOpt([]string{"-b-100"}, "b::")
-		if err != nil {
-			return false
-		}
-		if o := findOpt(collectOpts(p5), "b"); o == nil || !o.HasArg || o.Arg != "-100" {
-			return false
-		}
-
-		return true
+	tests := []struct {
+		name    string
+		args    []string
+		optstr  string
+		flags   []Flag
+		optName string
+		wantArg string
+	}{
+		{"short separate", []string{"-a", "-123"}, "a:", nil, "a", "-123"},
+		{"short attached", []string{"-a-456"}, "a:", nil, "a", "-456"},
+		{"long separate", []string{"--number", "-789"}, "", numFlags, "number", "-789"},
+		{"long equals", []string{"--number=-999"}, "", numFlags, "number", "-999"},
+		{"optional attached", []string{"-b-100"}, "b::", nil, "b", "-100"},
 	}
 
-	if err := quick.Check(property, &quick.Config{MaxCount: 100}); err != nil {
-		t.Errorf("Property 10 failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var p *Parser
+			var err error
+			if tt.flags != nil {
+				p, err = GetOptLong(tt.args, tt.optstr, tt.flags)
+			} else {
+				p, err = GetOpt(tt.args, tt.optstr)
+			}
+			if err != nil {
+				t.Fatalf("parser creation failed: %v", err)
+			}
+			o := findOpt(collectOpts(p), tt.optName)
+			if o == nil {
+				t.Fatalf("option %q not found", tt.optName)
+			}
+			if !o.HasArg {
+				t.Fatalf("option %q: HasArg = false, want true", tt.optName)
+			}
+			if o.Arg != tt.wantArg {
+				t.Errorf("option %q: Arg = %q, want %q", tt.optName, o.Arg, tt.wantArg)
+			}
+		})
 	}
 }
 
