@@ -118,115 +118,127 @@ func TestOptionRedefinitionHandling(t *testing.T) {
 // Feature: test-refactor, Property 15: For any valid argument list, the
 // iterator yields all options exactly once and preserves non-option arguments
 // correctly.
-func TestProperty15_IteratorCorrectness(t *testing.T) {
-	property := func() bool {
-		// Simple options yielded exactly once in order
-		p1, err := GetOpt([]string{"-a", "-b", "-c"}, "abc")
-		if err != nil {
-			return false
-		}
-		opts1 := collectOpts(p1)
-		if len(opts1) != 3 {
-			return false
-		}
-		for i, name := range []string{"a", "b", "c"} {
-			if opts1[i].Name != name || opts1[i].HasArg {
-				return false
-			}
-		}
-
-		// Options with arguments preserve arguments
-		p2, err := GetOpt([]string{"-a", "arg1", "-b", "arg2"}, "a:b:")
-		if err != nil {
-			return false
-		}
-		opts2 := collectOpts(p2)
-		if len(opts2) != 2 {
-			return false
-		}
-		if opts2[0].Name != "a" || opts2[0].Arg != "arg1" {
-			return false
-		}
-		if opts2[1].Name != "b" || opts2[1].Arg != "arg2" {
-			return false
-		}
-
-		// Non-option arguments preserved in parser.Args
-		p3, err := GetOpt([]string{"-a", "nonopt1", "-b", "nonopt2"}, "ab")
-		if err != nil {
-			return false
-		}
-		opts3 := collectOpts(p3)
-		if len(opts3) != 2 || opts3[0].Name != "a" || opts3[1].Name != "b" {
-			return false
-		}
-		if len(p3.Args) != 2 || p3.Args[0] != "nonopt1" || p3.Args[1] != "nonopt2" {
-			return false
-		}
-
-		// Compacted options expanded correctly
-		p4, err := GetOpt([]string{"-abc"}, "abc")
-		if err != nil {
-			return false
-		}
-		opts4 := collectOpts(p4)
-		if len(opts4) != 3 {
-			return false
-		}
-		for i, name := range []string{"a", "b", "c"} {
-			if opts4[i].Name != name || opts4[i].HasArg {
-				return false
-			}
-		}
-
-		// -- termination stops option processing
-		p5, err := GetOpt([]string{"-a", "--", "-b", "nonopt"}, "ab")
-		if err != nil {
-			return false
-		}
-		opts5 := collectOpts(p5)
-		if len(opts5) != 1 || opts5[0].Name != "a" {
-			return false
-		}
-		if len(p5.Args) != 2 || p5.Args[0] != "-b" || p5.Args[1] != "nonopt" {
-			return false
-		}
-
-		// Long options yielded correctly
-		longOpts := []Flag{
-			{Name: "verbose", HasArg: NoArgument},
-			{Name: "output", HasArg: RequiredArgument},
-		}
-		p6, err := GetOptLong([]string{"--verbose", "--output", "file.txt"}, "", longOpts)
-		if err != nil {
-			return false
-		}
-		opts6 := collectOpts(p6)
-		if len(opts6) != 2 {
-			return false
-		}
-		if opts6[0].Name != "verbose" || opts6[0].HasArg {
-			return false
-		}
-		if opts6[1].Name != "output" || !opts6[1].HasArg || opts6[1].Arg != "file.txt" {
-			return false
-		}
-
-		// Empty argument list yields no options
-		p7, err := GetOpt([]string{}, "abc")
-		if err != nil {
-			return false
-		}
-		opts7 := collectOpts(p7)
-		if len(opts7) != 0 || len(p7.Args) != 0 {
-			return false
-		}
-
-		return true
+// TestIteratorCorrectness verifies that the iterator yields all options exactly
+// once in order, preserves arguments, handles compaction, termination, long
+// options, and empty input.
+func TestIteratorCorrectness(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		optstr   string
+		longOpts []Flag
+		useLong  bool
+		wantOpts []Option
+		wantArgs []string
+	}{
+		{
+			name:   "simple options yielded in order",
+			args:   []string{"-a", "-b", "-c"},
+			optstr: "abc",
+			wantOpts: []Option{
+				{Name: "a"},
+				{Name: "b"},
+				{Name: "c"},
+			},
+		},
+		{
+			name:   "options with arguments preserve arguments",
+			args:   []string{"-a", "arg1", "-b", "arg2"},
+			optstr: "a:b:",
+			wantOpts: []Option{
+				{Name: "a", HasArg: true, Arg: "arg1"},
+				{Name: "b", HasArg: true, Arg: "arg2"},
+			},
+		},
+		{
+			name:   "non-option arguments preserved in parser.Args",
+			args:   []string{"-a", "nonopt1", "-b", "nonopt2"},
+			optstr: "ab",
+			wantOpts: []Option{
+				{Name: "a"},
+				{Name: "b"},
+			},
+			wantArgs: []string{"nonopt1", "nonopt2"},
+		},
+		{
+			name:   "compacted options expanded correctly",
+			args:   []string{"-abc"},
+			optstr: "abc",
+			wantOpts: []Option{
+				{Name: "a"},
+				{Name: "b"},
+				{Name: "c"},
+			},
+		},
+		{
+			name:   "-- termination stops option processing",
+			args:   []string{"-a", "--", "-b", "nonopt"},
+			optstr: "ab",
+			wantOpts: []Option{
+				{Name: "a"},
+			},
+			wantArgs: []string{"-b", "nonopt"},
+		},
+		{
+			name:    "long options yielded correctly",
+			args:    []string{"--verbose", "--output", "file.txt"},
+			useLong: true,
+			longOpts: []Flag{
+				{Name: "verbose", HasArg: NoArgument},
+				{Name: "output", HasArg: RequiredArgument},
+			},
+			wantOpts: []Option{
+				{Name: "verbose"},
+				{Name: "output", HasArg: true, Arg: "file.txt"},
+			},
+		},
+		{
+			name:   "empty argument list yields no options",
+			args:   []string{},
+			optstr: "abc",
+		},
 	}
 
-	if err := quick.Check(property, &quick.Config{MaxCount: 100}); err != nil {
-		t.Errorf("Property 15 failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var p *Parser
+			var err error
+			if tt.useLong {
+				p, err = GetOptLong(tt.args, tt.optstr, tt.longOpts)
+			} else {
+				p, err = GetOpt(tt.args, tt.optstr)
+			}
+			if err != nil {
+				t.Fatalf("parse error: %v", err)
+			}
+
+			opts := collectOpts(p)
+
+			if len(opts) != len(tt.wantOpts) {
+				t.Fatalf("got %d options, want %d", len(opts), len(tt.wantOpts))
+			}
+			for i, want := range tt.wantOpts {
+				got := opts[i]
+				if got.Name != want.Name {
+					t.Errorf("opt[%d].Name = %q, want %q", i, got.Name, want.Name)
+				}
+				if got.HasArg != want.HasArg {
+					t.Errorf("opt[%d].HasArg = %v, want %v", i, got.HasArg, want.HasArg)
+				}
+				if got.Arg != want.Arg {
+					t.Errorf("opt[%d].Arg = %q, want %q", i, got.Arg, want.Arg)
+				}
+			}
+
+			if len(tt.wantArgs) != len(p.Args) {
+				t.Fatalf("got %d args, want %d", len(p.Args), len(tt.wantArgs))
+			}
+			for i, want := range tt.wantArgs {
+				if p.Args[i] != want {
+					t.Errorf("Args[%d] = %q, want %q", i, p.Args[i], want)
+				}
+			}
+		})
 	}
 }
 
