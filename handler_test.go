@@ -3,23 +3,10 @@ package optargs
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 	"testing/quick"
 )
-
-// validShortChars contains characters valid for short options in optstrings.
-// Excludes ':', ';', '-' (prohibited) and 'W' (reserved for gnuWords).
-var validShortChars = func() []byte {
-	var chars []byte
-	for c := byte('!'); c <= byte('~'); c++ {
-		switch c {
-		case ':', ';', '-', 'W':
-			continue
-		}
-		chars = append(chars, c)
-	}
-	return chars
-}()
 
 // handlerCall records a handler invocation for test assertions.
 type handlerCall struct{ name, arg string }
@@ -791,304 +778,254 @@ func TestChildOverloadingWins(t *testing.T) {
 	}
 }
 
-// Feature: option-handlers, Property 12: Compaction handler dispatch order
-// Compacted short options dispatched left-to-right: handlers for handled,
-// Options for non-handled.
-// Validates: Requirements 8.1, 8.2
-func TestPropertyCompactionHandlerDispatchOrder(t *testing.T) {
-	property := func(seed int64) bool {
-		rng := rand.New(rand.NewSource(seed))
-
-		// Pick 3–6 distinct NoArgument short options for compaction.
-		nShort := 3 + rng.Intn(4)
-		shortPerm := rng.Perm(len(validShortChars))
-		chars := make([]byte, nShort)
-		for i := range chars {
-			chars[i] = validShortChars[shortPerm[i]]
-		}
-
-		// Randomly assign handled/non-handled, ensuring at least one of each.
-		handled := make([]bool, nShort)
-		for i := range handled {
-			handled[i] = rng.Intn(2) == 0
-		}
-		handled[0] = true
-		handled[1] = false
-
-		// Track handler invocations in order.
-		type call struct {
-			name string
-			seq  int
-		}
-		seq := 0
-		var handlerCalls []call
-		var yieldedOpts []Option
-
-		shortMap := make(map[byte]*Flag)
-		for i, c := range chars {
-			f := &Flag{Name: string(c), HasArg: NoArgument}
-			if handled[i] {
-				f.Handle = func(name string, arg string) error {
-					handlerCalls = append(handlerCalls, call{name, seq})
-					seq++
-					return nil
-				}
-			}
-			shortMap[c] = f
-		}
-
-		// Build a single compacted arg: -abc...
-		compacted := "-"
-		for _, c := range chars {
-			compacted += string(c)
-		}
-
-		p, err := NewParser(ParserConfig{enableErrors: true}, shortMap, nil, []string{compacted})
-		if err != nil {
-			return true
-		}
-
-		for opt, err := range p.Options() {
-			if err != nil {
-				t.Logf("seed=%d unexpected error: %v", seed, err)
-				return false
-			}
-			yieldedOpts = append(yieldedOpts, opt)
-			seq++
-		}
-
-		// Verify dispatch order matches left-to-right character order.
-		hIdx := 0
-		yIdx := 0
-		for i, c := range chars {
-			if handled[i] {
-				if hIdx >= len(handlerCalls) {
-					t.Logf("seed=%d missing handler call for %c at position %d", seed, c, i)
-					return false
-				}
-				if handlerCalls[hIdx].name != string(c) {
-					t.Logf("seed=%d handler call[%d] name: got %q, want %q", seed, hIdx, handlerCalls[hIdx].name, string(c))
-					return false
-				}
-				hIdx++
-			} else {
-				if yIdx >= len(yieldedOpts) {
-					t.Logf("seed=%d missing yielded option for %c at position %d", seed, c, i)
-					return false
-				}
-				if yieldedOpts[yIdx].Name != string(c) {
-					t.Logf("seed=%d yielded[%d] name: got %q, want %q", seed, yIdx, yieldedOpts[yIdx].Name, string(c))
-					return false
-				}
-				yIdx++
-			}
-		}
-
-		// Verify counts.
-		var expectHandled, expectYielded int
-		for _, h := range handled {
-			if h {
-				expectHandled++
-			} else {
-				expectYielded++
-			}
-		}
-		if len(handlerCalls) != expectHandled {
-			t.Logf("seed=%d handler calls: got %d, want %d", seed, len(handlerCalls), expectHandled)
-			return false
-		}
-		if len(yieldedOpts) != expectYielded {
-			t.Logf("seed=%d yielded: got %d, want %d", seed, len(yieldedOpts), expectYielded)
-			return false
-		}
-
-		return true
+func TestCompactionHandlerDispatchOrder(t *testing.T) {
+	tests := []struct {
+		name        string
+		chars       []byte // short option chars in compaction order
+		handled     []bool // true = has handler, false = yields Option
+		wantCalls   []string
+		wantYielded []string
+	}{
+		{
+			name:        "4 chars alternating handled/non-handled",
+			chars:       []byte{'a', 'b', 'c', 'd'},
+			handled:     []bool{true, false, true, false},
+			wantCalls:   []string{"a", "c"},
+			wantYielded: []string{"b", "d"},
+		},
+		{
+			name:        "5 chars first and last handled",
+			chars:       []byte{'a', 'b', 'c', 'd', 'e'},
+			handled:     []bool{true, false, false, false, true},
+			wantCalls:   []string{"a", "e"},
+			wantYielded: []string{"b", "c", "d"},
+		},
+		{
+			name:        "4 chars all handled",
+			chars:       []byte{'x', 'y', 'z', 'q'},
+			handled:     []bool{true, true, true, true},
+			wantCalls:   []string{"x", "y", "z", "q"},
+			wantYielded: nil,
+		},
+		{
+			name:        "3 chars none handled",
+			chars:       []byte{'a', 'b', 'c'},
+			handled:     []bool{false, false, false},
+			wantCalls:   nil,
+			wantYielded: []string{"a", "b", "c"},
+		},
+		{
+			name:        "5 chars only middle handled",
+			chars:       []byte{'a', 'b', 'c', 'd', 'e'},
+			handled:     []bool{false, false, true, false, false},
+			wantCalls:   []string{"c"},
+			wantYielded: []string{"a", "b", "d", "e"},
+		},
 	}
 
-	config := &quick.Config{MaxCount: 100}
-	if err := quick.Check(property, config); err != nil {
-		t.Errorf("Property 12 (Compaction handler dispatch order) failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var calls []string
+			shortMap := make(map[byte]*Flag)
+			for i, c := range tt.chars {
+				f := &Flag{Name: string(c), HasArg: NoArgument}
+				if tt.handled[i] {
+					f.Handle = func(name string, arg string) error {
+						calls = append(calls, name)
+						return nil
+					}
+				}
+				shortMap[c] = f
+			}
+
+			compacted := "-"
+			for _, c := range tt.chars {
+				compacted += string(c)
+			}
+
+			p, err := NewParser(ParserConfig{enableErrors: true}, shortMap, nil, []string{compacted})
+			if err != nil {
+				t.Fatalf("NewParser: %v", err)
+			}
+
+			var yielded []string
+			for opt, err := range p.Options() {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				yielded = append(yielded, opt.Name)
+			}
+
+			if fmt.Sprintf("%v", calls) != fmt.Sprintf("%v", tt.wantCalls) {
+				t.Errorf("handler calls: got %v, want %v", calls, tt.wantCalls)
+			}
+			if fmt.Sprintf("%v", yielded) != fmt.Sprintf("%v", tt.wantYielded) {
+				t.Errorf("yielded options: got %v, want %v", yielded, tt.wantYielded)
+			}
+		})
 	}
 }
 
-// Feature: option-handlers, Property 13: Compaction error stops remaining
-// Handler error at position N prevents invocation of handlers at N+1 onward.
-// Validates: Requirements 8.3, 9.2
-func TestPropertyCompactionErrorStopsRemaining(t *testing.T) {
-	property := func(seed int64) bool {
-		rng := rand.New(rand.NewSource(seed))
-
-		// Pick 3–6 distinct NoArgument short options for compaction.
-		nShort := 3 + rng.Intn(4)
-		shortPerm := rng.Perm(len(validShortChars))
-		chars := make([]byte, nShort)
-		for i := range chars {
-			chars[i] = validShortChars[shortPerm[i]]
-		}
-
-		// Pick a random position (1 <= errPos < nShort) for the error.
-		// Position 0 would mean nothing runs before the error, so start at 1
-		// to ensure at least one handler runs before the error.
-		errPos := 1 + rng.Intn(nShort-1)
-		errMsg := fmt.Sprintf("handler error at position %d", errPos)
-		sentinel := fmt.Errorf("%s", errMsg)
-
-		// All options get handlers. The one at errPos returns an error.
-		var invoked []int
-		shortMap := make(map[byte]*Flag)
-		for i, c := range chars {
-			pos := i // capture
-			f := &Flag{Name: string(c), HasArg: NoArgument}
-			if pos == errPos {
-				f.Handle = func(name string, arg string) error {
-					invoked = append(invoked, pos)
-					return sentinel
-				}
-			} else {
-				f.Handle = func(name string, arg string) error {
-					invoked = append(invoked, pos)
-					return nil
-				}
-			}
-			shortMap[c] = f
-		}
-
-		// Build compacted arg.
-		compacted := "-"
-		for _, c := range chars {
-			compacted += string(c)
-		}
-
-		p, err := NewParser(ParserConfig{enableErrors: true}, shortMap, nil, []string{compacted})
-		if err != nil {
-			return true
-		}
-
-		var sawError bool
-		for opt, err := range p.Options() {
-			if err != nil {
-				if err.Error() != errMsg {
-					t.Logf("seed=%d unexpected error: %v", seed, err)
-					return false
-				}
-				if opt != (Option{}) {
-					t.Logf("seed=%d expected zero Option with error, got %+v", seed, opt)
-					return false
-				}
-				sawError = true
-				continue
-			}
-		}
-
-		if !sawError {
-			t.Logf("seed=%d never saw handler error", seed)
-			return false
-		}
-
-		// Handlers at positions 0..errPos should have been invoked.
-		// Handlers at positions errPos+1..nShort-1 should NOT have been invoked.
-		expectedInvoked := errPos + 1 // positions 0 through errPos inclusive
-		if len(invoked) != expectedInvoked {
-			t.Logf("seed=%d invoked handlers: got %d, want %d (errPos=%d)", seed, len(invoked), expectedInvoked, errPos)
-			return false
-		}
-
-		// Verify invocation order is 0, 1, ..., errPos.
-		for i, pos := range invoked {
-			if pos != i {
-				t.Logf("seed=%d invoked[%d] = %d, want %d", seed, i, pos, i)
-				return false
-			}
-		}
-
-		return true
+func TestCompactionErrorStopsRemaining(t *testing.T) {
+	tests := []struct {
+		name        string
+		chars       []byte // short option chars in compaction order (all handled)
+		errPos      int    // position of the handler that returns an error
+		wantInvoked []string
+	}{
+		{
+			name:        "error at position 1 of 3",
+			chars:       []byte{'a', 'b', 'c'},
+			errPos:      1,
+			wantInvoked: []string{"a", "b"},
+		},
+		{
+			name:        "error at position 2 of 4",
+			chars:       []byte{'a', 'b', 'c', 'd'},
+			errPos:      2,
+			wantInvoked: []string{"a", "b", "c"},
+		},
+		{
+			name:        "error at middle of 5",
+			chars:       []byte{'a', 'b', 'c', 'd', 'e'},
+			errPos:      2,
+			wantInvoked: []string{"a", "b", "c"},
+		},
+		{
+			name:        "error at last position of 4",
+			chars:       []byte{'a', 'b', 'c', 'd'},
+			errPos:      3,
+			wantInvoked: []string{"a", "b", "c", "d"},
+		},
 	}
 
-	config := &quick.Config{MaxCount: 100}
-	if err := quick.Check(property, config); err != nil {
-		t.Errorf("Property 13 (Compaction error stops remaining) failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errMsg := fmt.Sprintf("handler error at %s", string(tt.chars[tt.errPos]))
+			sentinel := fmt.Errorf("%s", errMsg)
+
+			var invoked []string
+			shortMap := make(map[byte]*Flag)
+			for i, c := range tt.chars {
+				pos := i
+				f := &Flag{Name: string(c), HasArg: NoArgument}
+				if pos == tt.errPos {
+					f.Handle = func(name string, arg string) error {
+						invoked = append(invoked, name)
+						return sentinel
+					}
+				} else {
+					f.Handle = func(name string, arg string) error {
+						invoked = append(invoked, name)
+						return nil
+					}
+				}
+				shortMap[c] = f
+			}
+
+			compacted := "-"
+			for _, c := range tt.chars {
+				compacted += string(c)
+			}
+
+			p, err := NewParser(ParserConfig{enableErrors: true}, shortMap, nil, []string{compacted})
+			if err != nil {
+				t.Fatalf("NewParser: %v", err)
+			}
+
+			var sawError bool
+			for opt, err := range p.Options() {
+				if err != nil {
+					if err.Error() != errMsg {
+						t.Fatalf("unexpected error: %v", err)
+					}
+					if opt != (Option{}) {
+						t.Fatalf("expected zero Option with error, got %+v", opt)
+					}
+					sawError = true
+					continue
+				}
+			}
+
+			if !sawError {
+				t.Fatal("never saw handler error")
+			}
+			if fmt.Sprintf("%v", invoked) != fmt.Sprintf("%v", tt.wantInvoked) {
+				t.Errorf("invoked handlers: got %v, want %v", invoked, tt.wantInvoked)
+			}
+		})
 	}
 }
 
-// Feature: option-handlers, Property 2: Constructor nil Handle
-func TestPropertyConstructorNilHandle(t *testing.T) {
-	// Use only lowercase letters to avoid optstring prefix flags (+, :, -)
-	// and special characters that complicate config equivalence.
-	safeChars := []byte("abcdefghijklmnopqrstuvxyz") // exclude 'W' (gnuWords)
-
-	// allNilHandle returns true if every Flag in the parser has nil Handle.
-	allNilHandle := func(p *Parser, seed int64, ctor string) bool {
-		for c, f := range p.shortOpts {
-			if f.Handle != nil {
-				t.Logf("seed=%d %s: shortOpt %q has non-nil Handle", seed, ctor, c)
-				return false
-			}
-		}
-		for name, f := range p.longOpts {
-			if f.Handle != nil {
-				t.Logf("seed=%d %s: longOpt %q has non-nil Handle", seed, ctor, name)
-				return false
-			}
-		}
-		return true
+func TestConstructorNilHandle(t *testing.T) {
+	tests := []struct {
+		name      string
+		optstring string
+		longFlags []Flag
+	}{
+		{
+			name:      "GetOpt/NoArg only",
+			optstring: "abc",
+		},
+		{
+			name:      "GetOpt/mixed arg types",
+			optstring: "a:b::c",
+		},
+		{
+			name:      "GetOptLong/short+long NoArg",
+			optstring: "v",
+			longFlags: []Flag{{Name: "verbose", HasArg: NoArgument}},
+		},
+		{
+			name:      "GetOptLong/mixed short and long arg types",
+			optstring: "o:d",
+			longFlags: []Flag{
+				{Name: "output", HasArg: RequiredArgument},
+				{Name: "help", HasArg: NoArgument},
+				{Name: "level", HasArg: OptionalArgument},
+			},
+		},
+		{
+			name:      "GetOptLongOnly/short+long mixed",
+			optstring: "a:b",
+			longFlags: []Flag{
+				{Name: "all", HasArg: NoArgument},
+				{Name: "format", HasArg: RequiredArgument},
+			},
+		},
+		{
+			name:      "GetOptLongOnly/long only optional",
+			optstring: "x",
+			longFlags: []Flag{{Name: "color", HasArg: OptionalArgument}},
+		},
 	}
 
-	property := func(seed int64) bool {
-		rng := rand.New(rand.NewSource(seed))
-
-		// Generate a random optstring with 1–6 short options.
-		nShort := 1 + rng.Intn(6)
-		perm := rng.Perm(len(safeChars))
-		var optstring string
-		for i := 0; i < nShort; i++ {
-			c := safeChars[perm[i]]
-			optstring += string(c)
-			switch ArgType(rng.Intn(3)) {
-			case RequiredArgument:
-				optstring += ":"
-			case OptionalArgument:
-				optstring += "::"
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var p *Parser
+			var err error
+			switch {
+			case len(tt.longFlags) == 0:
+				p, err = GetOpt([]string{"prog"}, tt.optstring)
+			case !strings.Contains(tt.name, "LongOnly"):
+				p, err = GetOptLong([]string{"prog"}, tt.optstring, tt.longFlags)
+			default:
+				p, err = GetOptLongOnly([]string{"prog"}, tt.optstring, tt.longFlags)
 			}
-		}
-
-		// Generate 0–4 random long options.
-		nLong := rng.Intn(5)
-		longPerm := rng.Perm(len(validLongNames))
-		var longFlags []Flag
-		for i := 0; i < nLong && i < len(validLongNames); i++ {
-			longFlags = append(longFlags, Flag{
-				Name:   validLongNames[longPerm[i]],
-				HasArg: ArgType(rng.Intn(3)),
-			})
-		}
-
-		// GetOpt — short options only.
-		if p, err := GetOpt([]string{"prog"}, optstring); err == nil {
-			if !allNilHandle(p, seed, "GetOpt") {
-				return false
+			if err != nil {
+				t.Fatalf("constructor error: %v", err)
 			}
-		}
-
-		// GetOptLong — short + long options.
-		if p, err := GetOptLong([]string{"prog"}, optstring, longFlags); err == nil {
-			if !allNilHandle(p, seed, "GetOptLong") {
-				return false
+			for c, f := range p.shortOpts {
+				if f.Handle != nil {
+					t.Errorf("shortOpt %q has non-nil Handle", c)
+				}
 			}
-		}
-
-		// GetOptLongOnly — short + long options, long-only mode.
-		if p, err := GetOptLongOnly([]string{"prog"}, optstring, longFlags); err == nil {
-			if !allNilHandle(p, seed, "GetOptLongOnly") {
-				return false
+			for name, f := range p.longOpts {
+				if f.Handle != nil {
+					t.Errorf("longOpt %q has non-nil Handle", name)
+				}
 			}
-		}
-
-		return true
-	}
-
-	config := &quick.Config{MaxCount: 100}
-	if err := quick.Check(property, config); err != nil {
-		t.Errorf("Property 2 (Constructor nil Handle) failed: %v", err)
+		})
 	}
 }
 
