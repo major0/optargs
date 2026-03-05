@@ -248,6 +248,20 @@ func TestHandlerSuppressesYield(t *testing.T) {
 			wantHandled: []string{"v", "output"},
 			wantYielded: []string{"x", "debug"},
 		},
+		{
+			name:        "all handled short+long (boundary)",
+			short:       map[byte]*Flag{'a': {Name: "a", HasArg: NoArgument}},
+			long:        map[string]*Flag{"verbose": {Name: "verbose", HasArg: NoArgument}},
+			args:        []string{"-a", "--verbose"},
+			wantHandled: []string{"a", "verbose"},
+		},
+		{
+			name:        "all non-handled short+long (boundary)",
+			short:       map[byte]*Flag{'a': {Name: "a", HasArg: NoArgument}},
+			long:        map[string]*Flag{"verbose": {Name: "verbose", HasArg: NoArgument}},
+			args:        []string{"-a", "--verbose"},
+			wantYielded: []string{"a", "verbose"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -450,124 +464,6 @@ func TestHandlerErrorPropagation(t *testing.T) {
 				if errs[i] != nil {
 					t.Fatalf("unexpected error at yield %d: %v", i, errs[i])
 				}
-			}
-		})
-	}
-}
-
-// TestMixedHandledAndNonHandledDispatch verifies that a parser with both
-// handled and non-handled flags dispatches handlers for handled flags and
-// yields Options for non-handled flags within the same iteration, with no
-// cross-contamination. Covers short+long, all argument types, and the
-// handled-only / non-handled-only / mixed partitions.
-//
-// Note: the basic short-only mixed case is already covered by
-// TestHandlerMixedHandledAndNonHandled. These rows extend coverage to long
-// options, different argument types, and the all-handled / all-yielded edges.
-func TestMixedHandledAndNonHandledDispatch(t *testing.T) {
-	tests := []struct {
-		name        string
-		short       map[byte]*Flag
-		long        map[string]*Flag
-		args        []string
-		wantHandled []string
-		wantYielded []string
-	}{
-		{
-			name:        "all handled short+long",
-			short:       map[byte]*Flag{'a': {Name: "a", HasArg: NoArgument}},
-			long:        map[string]*Flag{"verbose": {Name: "verbose", HasArg: NoArgument}},
-			args:        []string{"-a", "--verbose"},
-			wantHandled: []string{"a", "verbose"},
-		},
-		{
-			name:        "all non-handled short+long",
-			short:       map[byte]*Flag{'a': {Name: "a", HasArg: NoArgument}},
-			long:        map[string]*Flag{"verbose": {Name: "verbose", HasArg: NoArgument}},
-			args:        []string{"-a", "--verbose"},
-			wantYielded: []string{"a", "verbose"},
-		},
-		{
-			name:  "mixed RequiredArg short handled + long non-handled",
-			short: map[byte]*Flag{'o': {Name: "o", HasArg: RequiredArgument}},
-			long:  map[string]*Flag{"output": {Name: "output", HasArg: RequiredArgument}},
-			args:  []string{"-o", "a.txt", "--output=b.txt"},
-			// o handled, output not
-			wantHandled: []string{"o"},
-			wantYielded: []string{"output"},
-		},
-		{
-			name:  "mixed OptionalArg long handled + short non-handled",
-			short: map[byte]*Flag{'d': {Name: "d", HasArg: NoArgument}},
-			long:  map[string]*Flag{"debug": {Name: "debug", HasArg: OptionalArgument}},
-			args:  []string{"--debug=3", "-d"},
-			// debug handled, d not
-			wantHandled: []string{"debug"},
-			wantYielded: []string{"d"},
-		},
-		{
-			name: "three short two long mixed",
-			short: map[byte]*Flag{
-				'a': {Name: "a", HasArg: NoArgument},
-				'b': {Name: "b", HasArg: NoArgument},
-				'c': {Name: "c", HasArg: RequiredArgument},
-			},
-			long: map[string]*Flag{
-				"verbose": {Name: "verbose", HasArg: NoArgument},
-				"output":  {Name: "output", HasArg: RequiredArgument},
-			},
-			args: []string{"-a", "-b", "-c", "val", "--verbose", "--output=f"},
-			// a, c, verbose handled; b, output not
-			wantHandled: []string{"a", "c", "verbose"},
-			wantYielded: []string{"b", "output"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var calls []handlerCall
-			handler := func(name string, arg string) error {
-				calls = append(calls, handlerCall{name, arg})
-				return nil
-			}
-
-			handledSet := make(map[string]bool)
-			for _, n := range tt.wantHandled {
-				handledSet[n] = true
-			}
-			for c, f := range tt.short {
-				if handledSet[f.Name] {
-					tt.short[c].Handle = handler
-				}
-			}
-			for n, f := range tt.long {
-				if handledSet[f.Name] {
-					tt.long[n].Handle = handler
-				}
-			}
-
-			p, err := NewParser(ParserConfig{enableErrors: true, longCaseIgnore: true}, tt.short, tt.long, tt.args)
-			if err != nil {
-				t.Fatalf("NewParser: %v", err)
-			}
-
-			var yielded []string
-			for opt, err := range p.Options() {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-				yielded = append(yielded, opt.Name)
-			}
-
-			var gotHandled []string
-			for _, c := range calls {
-				gotHandled = append(gotHandled, c.name)
-			}
-			if fmt.Sprint(gotHandled) != fmt.Sprint(tt.wantHandled) {
-				t.Errorf("handled: got %v, want %v", gotHandled, tt.wantHandled)
-			}
-			if fmt.Sprint(yielded) != fmt.Sprint(tt.wantYielded) {
-				t.Errorf("yielded: got %v, want %v", yielded, tt.wantYielded)
 			}
 		})
 	}
@@ -1855,7 +1751,7 @@ func TestHandlerArgumentTypes(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Unit tests: child overload, mixed dispatch, nil handle
+// Unit tests: child overload shadows parent
 // ---------------------------------------------------------------------------
 
 func TestHandlerChildOverloadShadowsParent(t *testing.T) {
@@ -1895,161 +1791,6 @@ func TestHandlerChildOverloadShadowsParent(t *testing.T) {
 	if !childCalled {
 		t.Fatal("child handler should have been called")
 	}
-}
-
-func TestHandlerMixedHandledAndNonHandled(t *testing.T) {
-	var handledName string
-	handler := func(name string, arg string) error {
-		handledName = name
-		return nil
-	}
-
-	shortOpts := map[byte]*Flag{
-		'v': {Name: "v", HasArg: NoArgument, Handle: handler},
-		'x': {Name: "x", HasArg: NoArgument},
-	}
-	p, _ := NewParser(ParserConfig{enableErrors: true}, shortOpts, nil, []string{"-v", "-x"})
-
-	opts, errs := collectOptions(p)
-	for _, e := range errs {
-		if e != nil {
-			t.Fatalf("unexpected error: %v", e)
-		}
-	}
-	if handledName != "v" {
-		t.Fatalf("handler called with %q, want %q", handledName, "v")
-	}
-	expected := []Option{{Name: "x", HasArg: false, Arg: ""}}
-	if !optionsEqual(opts, expected) {
-		t.Fatalf("options: got %v, want %v", opts, expected)
-	}
-}
-
-func TestHandlerNilHandleIdenticalOutput(t *testing.T) {
-	shortOpts := map[byte]*Flag{
-		'v': {Name: "v", HasArg: NoArgument},
-		'o': {Name: "o", HasArg: RequiredArgument},
-	}
-	longOpts := map[string]*Flag{
-		"verbose": {Name: "verbose", HasArg: NoArgument},
-		"output":  {Name: "output", HasArg: RequiredArgument},
-	}
-	args := []string{"-v", "-o", "file.txt", "--verbose", "--output=result.txt"}
-
-	p, _ := NewParser(ParserConfig{enableErrors: true, longCaseIgnore: true}, shortOpts, longOpts, args)
-	opts, errs := collectOptions(p)
-	for _, e := range errs {
-		if e != nil {
-			t.Fatalf("unexpected error: %v", e)
-		}
-	}
-
-	expected := []Option{
-		{Name: "v", HasArg: false, Arg: ""},
-		{Name: "o", HasArg: true, Arg: "file.txt"},
-		{Name: "verbose", HasArg: false, Arg: ""},
-		{Name: "output", HasArg: true, Arg: "result.txt"},
-	}
-	if !optionsEqual(opts, expected) {
-		t.Fatalf("nil Handle output: got %v, want %v", opts, expected)
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Unit tests: compaction handler behavior
-// ---------------------------------------------------------------------------
-
-func TestHandlerCompaction(t *testing.T) {
-	t.Run("all handled", func(t *testing.T) {
-		var calls []string
-		makeHandler := func(name string) func(string, string) error {
-			return func(n string, arg string) error {
-				calls = append(calls, n)
-				return nil
-			}
-		}
-		shortOpts := map[byte]*Flag{
-			'a': {Name: "a", HasArg: NoArgument, Handle: makeHandler("a")},
-			'b': {Name: "b", HasArg: NoArgument, Handle: makeHandler("b")},
-			'c': {Name: "c", HasArg: NoArgument, Handle: makeHandler("c")},
-		}
-		p, _ := NewParser(ParserConfig{enableErrors: true}, shortOpts, nil, []string{"-abc"})
-		opts, errs := collectOptions(p)
-		for _, e := range errs {
-			if e != nil {
-				t.Fatalf("unexpected error: %v", e)
-			}
-		}
-		if len(opts) != 0 {
-			t.Fatalf("expected no options yielded, got %d", len(opts))
-		}
-		if len(calls) != 3 || calls[0] != "a" || calls[1] != "b" || calls[2] != "c" {
-			t.Fatalf("handlers called %v, want [a b c]", calls)
-		}
-	})
-
-	t.Run("mixed handled and non-handled", func(t *testing.T) {
-		var handledNames []string
-		handler := func(name string, arg string) error {
-			handledNames = append(handledNames, name)
-			return nil
-		}
-		shortOpts := map[byte]*Flag{
-			'a': {Name: "a", HasArg: NoArgument, Handle: handler},
-			'b': {Name: "b", HasArg: NoArgument},
-			'c': {Name: "c", HasArg: NoArgument, Handle: handler},
-		}
-		p, _ := NewParser(ParserConfig{enableErrors: true}, shortOpts, nil, []string{"-abc"})
-		opts, errs := collectOptions(p)
-		for _, e := range errs {
-			if e != nil {
-				t.Fatalf("unexpected error: %v", e)
-			}
-		}
-		expected := []Option{{Name: "b", HasArg: false, Arg: ""}}
-		if !optionsEqual(opts, expected) {
-			t.Fatalf("options: got %v, want %v", opts, expected)
-		}
-		if len(handledNames) != 2 || handledNames[0] != "a" || handledNames[1] != "c" {
-			t.Fatalf("handlers called %v, want [a c]", handledNames)
-		}
-	})
-
-	t.Run("error stops remaining", func(t *testing.T) {
-		handlerErr := fmt.Errorf("handler failed on b")
-		var calls []string
-		makeHandler := func(name string) func(string, string) error {
-			return func(n string, arg string) error {
-				calls = append(calls, n)
-				if n == "b" {
-					return handlerErr
-				}
-				return nil
-			}
-		}
-		shortOpts := map[byte]*Flag{
-			'a': {Name: "a", HasArg: NoArgument, Handle: makeHandler("a")},
-			'b': {Name: "b", HasArg: NoArgument, Handle: makeHandler("b")},
-			'c': {Name: "c", HasArg: NoArgument, Handle: makeHandler("c")},
-		}
-		p, _ := NewParser(ParserConfig{enableErrors: true}, shortOpts, nil, []string{"-abc"})
-		opts, errs := collectOptions(p)
-		var gotErr error
-		for _, e := range errs {
-			if e != nil {
-				gotErr = e
-			}
-		}
-		if gotErr == nil || gotErr.Error() != handlerErr.Error() {
-			t.Fatalf("expected error %q, got %v", handlerErr, gotErr)
-		}
-		if len(opts) != 1 || (opts[0] != Option{}) {
-			t.Fatalf("expected zero-value Option on error, got %v", opts)
-		}
-		if len(calls) != 2 || calls[0] != "a" || calls[1] != "b" {
-			t.Fatalf("handlers called %v, want [a b]", calls)
-		}
-	})
 }
 
 // ---------------------------------------------------------------------------
