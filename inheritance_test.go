@@ -50,107 +50,98 @@ func childErr(t *testing.T, root, child *Parser) error {
 // TestFindShortOptDirectCoverage. The unknown-argument-type edge case
 // is covered by TestFindShortOptEdgeCases.
 func TestFindShortOptCoverage(t *testing.T) {
-	t.Run("NoArgument_option_inheritance", func(t *testing.T) {
-		_, child := childOf(t, "v", "")
+	cases := []struct {
+		name       string
+		parentOpts string
+		char       byte
+		word       string
+		args       []string
+		wantName   string
+		wantHasArg bool
+		wantArg    string
+		wantArgs   []string
+		wantWord   string
+	}{
+		{
+			name:       "NoArgument_option_inheritance",
+			parentOpts: "v",
+			char:       'v',
+			wantName:   "v",
+		},
+		{
+			name:       "RequiredArgument_from_word",
+			parentOpts: "f:",
+			char:       'f',
+			word:       "filename.txt",
+			wantName:   "f",
+			wantHasArg: true,
+			wantArg:    "filename.txt",
+		},
+		{
+			name:       "RequiredArgument_from_next_arg",
+			parentOpts: "f:",
+			char:       'f',
+			args:       []string{"filename.txt", "other"},
+			wantName:   "f",
+			wantHasArg: true,
+			wantArg:    "filename.txt",
+			wantArgs:   []string{"other"},
+		},
+		{
+			name:       "OptionalArgument_from_word",
+			parentOpts: "f::",
+			char:       'f',
+			word:       "filename.txt",
+			wantName:   "f",
+			wantHasArg: true,
+			wantArg:    "filename.txt",
+		},
+		{
+			name:       "OptionalArgument_no_argument",
+			parentOpts: "f::",
+			char:       'f',
+			wantName:   "f",
+		},
+	}
 
-		args, word, _, option, err := child.findShortOpt('v', "", []string{})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if option.Name != "v" {
-			t.Errorf("Name = %q, want %q", option.Name, "v")
-		}
-		if option.HasArg {
-			t.Error("HasArg = true, want false")
-		}
-		if len(args) != 0 {
-			t.Errorf("args = %v, want empty", args)
-		}
-		if word != "" {
-			t.Errorf("word = %q, want empty", word)
-		}
-	})
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, child := childOf(t, tc.parentOpts, "")
 
-	t.Run("RequiredArgument_from_word", func(t *testing.T) {
-		_, child := childOf(t, "f:", "")
-
-		_, _, _, option, err := child.findShortOpt('f', "filename.txt", []string{})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if option.Name != "f" {
-			t.Errorf("Name = %q, want %q", option.Name, "f")
-		}
-		if !option.HasArg {
-			t.Error("HasArg = false, want true")
-		}
-		if option.Arg != "filename.txt" {
-			t.Errorf("Arg = %q, want %q", option.Arg, "filename.txt")
-		}
-	})
-
-	t.Run("RequiredArgument_from_next_arg", func(t *testing.T) {
-		_, child := childOf(t, "f:", "")
-
-		args, _, _, option, err := child.findShortOpt('f', "", []string{"filename.txt", "other"})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if option.Name != "f" {
-			t.Errorf("Name = %q, want %q", option.Name, "f")
-		}
-		if !option.HasArg {
-			t.Error("HasArg = false, want true")
-		}
-		if option.Arg != "filename.txt" {
-			t.Errorf("Arg = %q, want %q", option.Arg, "filename.txt")
-		}
-		if len(args) != 1 || args[0] != "other" {
-			t.Errorf("args = %v, want [other]", args)
-		}
-	})
-
-	t.Run("OptionalArgument_from_word", func(t *testing.T) {
-		_, child := childOf(t, "f::", "")
-
-		_, _, _, option, err := child.findShortOpt('f', "filename.txt", []string{})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if option.Name != "f" {
-			t.Errorf("Name = %q, want %q", option.Name, "f")
-		}
-		if !option.HasArg {
-			t.Error("HasArg = false, want true")
-		}
-		if option.Arg != "filename.txt" {
-			t.Errorf("Arg = %q, want %q", option.Arg, "filename.txt")
-		}
-	})
-
-	t.Run("OptionalArgument_no_argument", func(t *testing.T) {
-		_, child := childOf(t, "f::", "")
-
-		args, word, _, option, err := child.findShortOpt('f', "", []string{})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if option.Name != "f" {
-			t.Errorf("Name = %q, want %q", option.Name, "f")
-		}
-		if option.HasArg {
-			t.Error("HasArg = true, want false")
-		}
-		if option.Arg != "" {
-			t.Errorf("Arg = %q, want empty", option.Arg)
-		}
-		if len(args) != 0 {
-			t.Errorf("args = %v, want empty", args)
-		}
-		if word != "" {
-			t.Errorf("word = %q, want empty", word)
-		}
-	})
+			if tc.args == nil {
+				tc.args = []string{}
+			}
+			args, word, _, option, err := child.findShortOpt(tc.char, tc.word, tc.args)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if option.Name != tc.wantName {
+				t.Errorf("Name = %q, want %q", option.Name, tc.wantName)
+			}
+			if option.HasArg != tc.wantHasArg {
+				t.Errorf("HasArg = %v, want %v", option.HasArg, tc.wantHasArg)
+			}
+			if option.Arg != tc.wantArg {
+				t.Errorf("Arg = %q, want %q", option.Arg, tc.wantArg)
+			}
+			wantArgs := tc.wantArgs
+			if wantArgs == nil {
+				wantArgs = []string{}
+			}
+			if len(args) != len(wantArgs) {
+				t.Errorf("args = %v, want %v", args, wantArgs)
+			} else {
+				for i := range wantArgs {
+					if args[i] != wantArgs[i] {
+						t.Errorf("args[%d] = %q, want %q", i, args[i], wantArgs[i])
+					}
+				}
+			}
+			if word != tc.wantWord {
+				t.Errorf("word = %q, want %q", word, tc.wantWord)
+			}
+		})
+	}
 
 	t.Run("Multi_level_parent_fallback", func(t *testing.T) {
 		grandparent, err := GetOpt([]string{}, "g")
