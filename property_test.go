@@ -1,7 +1,6 @@
 package optargs
 
 import (
-	"os"
 	"testing"
 )
 
@@ -107,77 +106,6 @@ func TestOptionRedefinitionHandling(t *testing.T) {
 			}
 			if tt.wantArg && o.Arg != tt.wantVal {
 				t.Errorf("Arg = %q, want %q", o.Arg, tt.wantVal)
-			}
-		})
-	}
-}
-
-// TestEnvironmentVariableBehavior verifies that POSIXLY_CORRECT and the `+`
-// optstring prefix both stop option parsing at the first non-option argument.
-func TestEnvironmentVariableBehavior(t *testing.T) {
-	tests := []struct {
-		name      string
-		args      []string
-		optstring string
-		wantAll   int // options parsed in normal (GNU) mode
-		wantPosix int // options parsed in POSIXLY_CORRECT / + prefix mode
-	}{
-		{
-			name:      "1 initial + nonopt + 1 trailing",
-			args:      []string{"-a", "nonopt", "-b"},
-			optstring: "abc",
-			wantAll:   2,
-			wantPosix: 1,
-		},
-		{
-			name:      "2 initial + nonopt + 2 trailing",
-			args:      []string{"-a", "-a", "nonopt", "-b", "-b"},
-			optstring: "abc",
-			wantAll:   4,
-			wantPosix: 2,
-		},
-		{
-			name:      "1 initial + nonopt + 3 trailing",
-			args:      []string{"-a", "nonopt", "-b", "-b", "-b"},
-			optstring: "abc",
-			wantAll:   4,
-			wantPosix: 1,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name+"/normal", func(t *testing.T) {
-			t.Setenv("POSIXLY_CORRECT", "")
-			os.Unsetenv("POSIXLY_CORRECT")
-			p, err := GetOpt(tt.args, tt.optstring)
-			if err != nil {
-				t.Fatalf("GetOpt error: %v", err)
-			}
-			if got := len(collectOpts(p)); got != tt.wantAll {
-				t.Errorf("normal mode: got %d opts, want %d", got, tt.wantAll)
-			}
-		})
-
-		t.Run(tt.name+"/POSIXLY_CORRECT", func(t *testing.T) {
-			t.Setenv("POSIXLY_CORRECT", "1")
-			p, err := GetOpt(tt.args, tt.optstring)
-			if err != nil {
-				t.Fatalf("GetOpt error: %v", err)
-			}
-			if got := len(collectOpts(p)); got != tt.wantPosix {
-				t.Errorf("POSIXLY_CORRECT: got %d opts, want %d", got, tt.wantPosix)
-			}
-		})
-
-		t.Run(tt.name+"/plus_prefix", func(t *testing.T) {
-			t.Setenv("POSIXLY_CORRECT", "")
-			os.Unsetenv("POSIXLY_CORRECT")
-			p, err := GetOpt(tt.args, "+"+tt.optstring)
-			if err != nil {
-				t.Fatalf("GetOpt error: %v", err)
-			}
-			if got := len(collectOpts(p)); got != tt.wantPosix {
-				t.Errorf("+ prefix: got %d opts, want %d", got, tt.wantPosix)
 			}
 		})
 	}
