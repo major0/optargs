@@ -1,6 +1,7 @@
 package optargs
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -1170,6 +1171,211 @@ func TestEdgeCaseLongOptionErrors(t *testing.T) {
 			}
 			if !tt.expectErr && err != nil {
 				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// TestMultiLevelInheritanceViaIterator tests option inheritance through
+// multiple levels using the Options() iterator.
+func TestMultiLevelInheritanceViaIterator(t *testing.T) {
+	t.Run("short_and_long_opts_4_levels", func(t *testing.T) {
+		rootParser, err := NewParser(ParserConfig{}, map[byte]*Flag{
+			'r': {Name: "r", HasArg: NoArgument},
+		}, map[string]*Flag{
+			"root": {Name: "root", HasArg: NoArgument},
+		}, []string{})
+		if err != nil {
+			t.Fatalf("root parser: %v", err)
+		}
+
+		level1Parser, err := NewParser(ParserConfig{}, map[byte]*Flag{
+			'a': {Name: "a", HasArg: NoArgument},
+		}, map[string]*Flag{
+			"level1": {Name: "level1", HasArg: NoArgument},
+		}, []string{})
+		if err != nil {
+			t.Fatalf("level1 parser: %v", err)
+		}
+		rootParser.AddCmd("level1", level1Parser)
+
+		level2Parser, err := NewParser(ParserConfig{}, map[byte]*Flag{
+			'b': {Name: "b", HasArg: NoArgument},
+		}, map[string]*Flag{
+			"level2": {Name: "level2", HasArg: NoArgument},
+		}, []string{})
+		if err != nil {
+			t.Fatalf("level2 parser: %v", err)
+		}
+		level1Parser.AddCmd("level2", level2Parser)
+
+		level3Parser, err := NewParser(ParserConfig{}, map[byte]*Flag{
+			'c': {Name: "c", HasArg: NoArgument},
+		}, map[string]*Flag{
+			"level3": {Name: "level3", HasArg: NoArgument},
+		}, []string{"-r", "-a", "-b", "-c"})
+		if err != nil {
+			t.Fatalf("level3 parser: %v", err)
+		}
+		level2Parser.AddCmd("level3", level3Parser)
+
+		foundOptions := make(map[string]bool)
+		for option, err := range level3Parser.Options() {
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				continue
+			}
+			foundOptions[option.Name] = true
+		}
+
+		for _, expected := range []string{"r", "a", "b", "c"} {
+			if !foundOptions[expected] {
+				t.Errorf("missing option %q", expected)
+			}
+		}
+	})
+
+	t.Run("inherited_options_with_arguments", func(t *testing.T) {
+		rootParser, err := NewParser(ParserConfig{}, map[byte]*Flag{
+			'v': {Name: "v", HasArg: RequiredArgument},
+		}, map[string]*Flag{}, []string{})
+		if err != nil {
+			t.Fatalf("root parser: %v", err)
+		}
+
+		level1Parser, err := NewParser(ParserConfig{}, map[byte]*Flag{
+			'o': {Name: "o", HasArg: OptionalArgument},
+		}, map[string]*Flag{}, []string{})
+		if err != nil {
+			t.Fatalf("level1 parser: %v", err)
+		}
+		rootParser.AddCmd("level1", level1Parser)
+
+		level2Parser, err := NewParser(ParserConfig{}, map[byte]*Flag{
+			'f': {Name: "f", HasArg: RequiredArgument},
+		}, map[string]*Flag{}, []string{"-v", "verbose", "-o", "optional", "-f", "file"})
+		if err != nil {
+			t.Fatalf("level2 parser: %v", err)
+		}
+		level1Parser.AddCmd("level2", level2Parser)
+
+		expected := map[string]string{
+			"v": "verbose",
+			"o": "optional",
+			"f": "file",
+		}
+
+		found := make(map[string]string)
+		for option, err := range level2Parser.Options() {
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				continue
+			}
+			found[option.Name] = option.Arg
+		}
+
+		for name, arg := range expected {
+			if foundArg, exists := found[name]; !exists {
+				t.Errorf("missing option %q", name)
+			} else if foundArg != arg {
+				t.Errorf("option %q: Arg = %q, want %q", name, foundArg, arg)
+			}
+		}
+	})
+
+	t.Run("inherited_long_options", func(t *testing.T) {
+		rootParser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{
+			"verbose": {Name: "verbose", HasArg: NoArgument},
+		}, []string{})
+		if err != nil {
+			t.Fatalf("root parser: %v", err)
+		}
+
+		level1Parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{
+			"output": {Name: "output", HasArg: RequiredArgument},
+		}, []string{})
+		if err != nil {
+			t.Fatalf("level1 parser: %v", err)
+		}
+		rootParser.AddCmd("level1", level1Parser)
+
+		level2Parser, err := NewParser(ParserConfig{}, map[byte]*Flag{}, map[string]*Flag{
+			"file": {Name: "file", HasArg: RequiredArgument},
+		}, []string{"--verbose", "--output", "out.txt", "--file", "input.txt"})
+		if err != nil {
+			t.Fatalf("level2 parser: %v", err)
+		}
+		level1Parser.AddCmd("level2", level2Parser)
+
+		expected := map[string]string{
+			"verbose": "",
+			"output":  "out.txt",
+			"file":    "input.txt",
+		}
+
+		found := make(map[string]string)
+		for option, err := range level2Parser.Options() {
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				continue
+			}
+			found[option.Name] = option.Arg
+		}
+
+		for name, arg := range expected {
+			if foundArg, exists := found[name]; !exists {
+				t.Errorf("missing option %q", name)
+			} else if foundArg != arg {
+				t.Errorf("option %q: Arg = %q, want %q", name, foundArg, arg)
+			}
+		}
+	})
+}
+
+// TestFindShortOptEdgeCases tests remaining edge cases in findShortOpt
+// via inheritance.
+func TestFindShortOptEdgeCases(t *testing.T) {
+	t.Run("Unknown_argument_type", func(t *testing.T) {
+		parent, child := childOf(t, "f", "")
+
+		// Corrupt the parent's flag to have an invalid HasArg value.
+		parent.shortOpts['f'] = &Flag{Name: "f", HasArg: ArgType(999)}
+
+		_, _, _, _, err := child.findShortOpt('f', "", []string{})
+		if err == nil {
+			t.Fatal("expected error for unknown argument type")
+		}
+		if !strings.Contains(err.Error(), "unknown argument type") {
+			t.Errorf("error = %q, want containing %q", err.Error(), "unknown argument type")
+		}
+	})
+}
+
+// TestFindShortOptDirectErrors tests findShortOpt error paths on a
+// single parser (no inheritance chain).
+func TestFindShortOptDirectErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		char    byte
+		wantErr string
+	}{
+		{"invalid_option_dash", '-', "invalid option: -"},
+		{"unknown_option", 'z', "unknown option: z"},
+	}
+
+	parser, err := GetOpt([]string{}, "abc")
+	if err != nil {
+		t.Fatalf("parser: %v", err)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, _, _, err := parser.findShortOpt(tt.char, "", []string{})
+			if err == nil {
+				t.Fatalf("expected error %q, got nil", tt.wantErr)
+			}
+			if err.Error() != tt.wantErr {
+				t.Errorf("error = %q, want %q", err.Error(), tt.wantErr)
 			}
 		})
 	}

@@ -143,3 +143,49 @@ func setupChain3(t *testing.T, gpOpts, parOpts, childOpts []Flag, childArgs []st
 	par.AddCmd("leaf", child)
 	return child
 }
+
+// childOf creates a child parser linked to a parent via AddCmd.
+func childOf(t *testing.T, parentOpts, childOpts string) (*Parser, *Parser) {
+	t.Helper()
+	parent, err := GetOpt([]string{}, parentOpts)
+	if err != nil {
+		t.Fatalf("parent parser: %v", err)
+	}
+	child, err := GetOpt([]string{}, childOpts)
+	if err != nil {
+		t.Fatalf("child parser: %v", err)
+	}
+	parent.AddCmd("child", child)
+	return parent, child
+}
+
+// childErr drains root.Options() (failing on error), then returns the
+// first error from child.Options().
+func childErr(t *testing.T, root, child *Parser) error {
+	t.Helper()
+	for _, err := range root.Options() {
+		if err != nil {
+			t.Fatalf("root error: %v", err)
+		}
+	}
+	var first error
+	for _, err := range child.Options() {
+		if err != nil && first == nil {
+			first = err
+		}
+	}
+	return first
+}
+
+// collectNamedOptions iterates a parser and returns a map of option name → arg value.
+func collectNamedOptions(t *testing.T, p *Parser) map[string]string {
+	t.Helper()
+	result := make(map[string]string)
+	for opt, err := range p.Options() {
+		if err != nil {
+			t.Fatalf("unexpected error during iteration: %v", err)
+		}
+		result[opt.Name] = opt.Arg
+	}
+	return result
+}
