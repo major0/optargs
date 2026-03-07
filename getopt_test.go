@@ -1,6 +1,7 @@
 package optargs
 
 import (
+	"os"
 	"testing"
 )
 
@@ -463,6 +464,78 @@ func TestEdgeCaseBoundaryValues(t *testing.T) {
 			if !tt.expectErr && err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+		})
+	}
+}
+func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
+	tests := []struct {
+		name          string
+		optstring     string
+		args          []string
+		envValue      string
+		expected      []Option
+		remainingArgs []string
+	}{
+		{
+			name:          "without POSIXLY_CORRECT processes all options",
+			optstring:     "a",
+			args:          []string{"file1", "-a", "file2"},
+			envValue:      "",
+			expected:      []Option{{Name: "a"}},
+			remainingArgs: []string{"file1", "file2"},
+		},
+		{
+			name:          "with POSIXLY_CORRECT stops at first non-option",
+			optstring:     "a",
+			args:          []string{"file1", "-a", "file2"},
+			envValue:      "1",
+			expected:      []Option{},
+			remainingArgs: []string{"file1", "-a", "file2"},
+		},
+		{
+			name:      "POSIXLY_CORRECT with options first",
+			optstring: "ab",
+			args:      []string{"-a", "-b", "file1", "-a"},
+			envValue:  "1",
+			expected: []Option{
+				{Name: "a"},
+				{Name: "b"},
+			},
+			remainingArgs: []string{"file1", "-a"},
+		},
+		{
+			name:          "plus prefix overrides environment variable",
+			optstring:     "+a",
+			args:          []string{"file1", "-a", "file2"},
+			envValue:      "", // Even without env var, + prefix should work
+			expected:      []Option{},
+			remainingArgs: []string{"file1", "-a", "file2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalValue := os.Getenv("POSIXLY_CORRECT")
+			defer func() {
+				if originalValue == "" {
+					_ = os.Unsetenv("POSIXLY_CORRECT")
+				} else {
+					_ = os.Setenv("POSIXLY_CORRECT", originalValue)
+				}
+			}()
+
+			if tt.envValue == "" {
+				_ = os.Unsetenv("POSIXLY_CORRECT")
+			} else {
+				_ = os.Setenv("POSIXLY_CORRECT", tt.envValue)
+			}
+
+			parser, err := GetOpt(tt.args, tt.optstring)
+			if err != nil {
+				t.Fatalf("GetOpt failed: %v", err)
+			}
+			assertOptions(t, requireParsedOptions(t, parser), tt.expected)
+			assertArgs(t, parser.Args, tt.remainingArgs)
 		})
 	}
 }

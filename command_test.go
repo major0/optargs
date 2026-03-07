@@ -534,3 +534,113 @@ func TestRealWorldCommandHierarchy(t *testing.T) {
 		}
 	})
 }
+
+// TestSubcommandOverlappingLongOpts verifies cross-chain prefix matching
+// when parent and child parsers register long options with overlapping
+// prefixes. The longest matching option name wins regardless of which
+// level in the chain registered it.
+func TestSubcommandOverlappingLongOpts(t *testing.T) {
+	tests := []struct {
+		name      string
+		gpOpts    []Flag // nil means 2-level chain
+		parOpts   []Flag // parent opts (or grandparent for 3-level)
+		childOpts []Flag
+		childArgs []string
+		expected  []Option
+	}{
+		{
+			// Parent: "out", Child: "output". Input: --output=file.txt
+			// Child's "output" is longest match → match "output"
+			name:      "child_longer_prefix_wins_over_parent_shorter",
+			parOpts:   []Flag{{Name: "out", HasArg: RequiredArgument}},
+			childOpts: []Flag{{Name: "output", HasArg: RequiredArgument}},
+			childArgs: []string{"--output=file.txt"},
+			expected:  []Option{{Name: "output", Arg: "file.txt", HasArg: true}},
+		},
+		{
+			// Parent: "output", Child: "out". Input: --output=file.txt
+			// Parent's "output" is longest match → match "output"
+			name:      "parent_longer_prefix_wins_over_child_shorter",
+			parOpts:   []Flag{{Name: "output", HasArg: RequiredArgument}},
+			childOpts: []Flag{{Name: "out", HasArg: RequiredArgument}},
+			childArgs: []string{"--output=file.txt"},
+			expected:  []Option{{Name: "output", Arg: "file.txt", HasArg: true}},
+		},
+		{
+			// Parent: "output", Child: "out". Input: --out=val
+			// "out" matches at '=' boundary → match "out"
+			name:      "child_matches_shorter_when_input_is_shorter",
+			parOpts:   []Flag{{Name: "output", HasArg: RequiredArgument}},
+			childOpts: []Flag{{Name: "out", HasArg: RequiredArgument}},
+			childArgs: []string{"--out=val"},
+			expected:  []Option{{Name: "out", Arg: "val", HasArg: true}},
+		},
+		{
+			// GP: "output-format", Parent: "output", Child: "out"
+			// Input: --output-format=json → GP's "output-format" is longest
+			name:      "three_level_chain_longest_from_grandparent",
+			gpOpts:    []Flag{{Name: "output-format", HasArg: RequiredArgument}},
+			parOpts:   []Flag{{Name: "output", HasArg: RequiredArgument}},
+			childOpts: []Flag{{Name: "out", HasArg: RequiredArgument}},
+			childArgs: []string{"--output-format=json"},
+			expected:  []Option{{Name: "output-format", Arg: "json", HasArg: true}},
+		},
+		{
+			// Same chain. Input: --output=json → Parent's "output" matches
+			name:      "three_level_chain_mid_match",
+			gpOpts:    []Flag{{Name: "output-format", HasArg: RequiredArgument}},
+			parOpts:   []Flag{{Name: "output", HasArg: RequiredArgument}},
+			childOpts: []Flag{{Name: "out", HasArg: RequiredArgument}},
+			childArgs: []string{"--output=json"},
+			expected:  []Option{{Name: "output", Arg: "json", HasArg: true}},
+		},
+		{
+			// Parent: "key=val" (NoArgument), Child: "key" (RequiredArgument)
+			// Input: --key=val → Parent's "key=val" is longest exact match
+			name:      "equals_in_option_name_across_chain",
+			parOpts:   []Flag{{Name: "key=val", HasArg: NoArgument}},
+			childOpts: []Flag{{Name: "key", HasArg: RequiredArgument}},
+			childArgs: []string{"--key=val"},
+			expected:  []Option{{Name: "key=val", HasArg: false}},
+		},
+		{
+			// Parent: "key=val" (RequiredArgument), Child: "key" (RequiredArgument)
+			// Input: --key=val=extra → Parent's "key=val" matches, arg "extra"
+			name:      "equals_in_name_with_arg_across_chain",
+			parOpts:   []Flag{{Name: "key=val", HasArg: RequiredArgument}},
+			childOpts: []Flag{{Name: "key", HasArg: RequiredArgument}},
+			childArgs: []string{"--key=val=extra"},
+			expected:  []Option{{Name: "key=val", Arg: "extra", HasArg: true}},
+		},
+		{
+			// Both parent and child register "verbose" (NoArgument).
+			// Child's own should be found (child is searched first).
+			name:      "child_own_option_preferred_when_same_length",
+			parOpts:   []Flag{{Name: "verbose", HasArg: NoArgument}},
+			childOpts: []Flag{{Name: "verbose", HasArg: NoArgument}},
+			childArgs: []string{"--verbose"},
+			expected:  []Option{{Name: "verbose", HasArg: false}},
+		},
+		{
+			// Parent: "debug" (RequiredArgument), Child: no overlap
+			// Input: --debug=trace → resolved via parent chain
+			name:      "parent_only_option_resolved_from_child",
+			parOpts:   []Flag{{Name: "debug", HasArg: RequiredArgument}},
+			childOpts: []Flag{{Name: "color", HasArg: NoArgument}},
+			childArgs: []string{"--debug=trace"},
+			expected:  []Option{{Name: "debug", Arg: "trace", HasArg: true}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var child *Parser
+			if tt.gpOpts != nil {
+				child = setupChain3(t, tt.gpOpts, tt.parOpts, tt.childOpts, tt.childArgs)
+			} else {
+				child = setupChain(t, tt.parOpts, tt.childOpts, tt.childArgs)
+			}
+			assertOptions(t, requireParsedOptions(t, child), tt.expected)
+		})
+	}
+}
