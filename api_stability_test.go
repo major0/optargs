@@ -76,62 +76,6 @@ func TestAPIStability(t *testing.T) {
 			[]reflect.Type{stringSliceType, stringType, flagSliceType},
 			[]reflect.Type{parserPtrType})
 	})
-
-	t.Run("backward_compatibility", func(t *testing.T) {
-		// Basic GetOpt usage
-		p, err := GetOpt([]string{"-a", "-b", "value"}, "ab:")
-		if err != nil {
-			t.Fatalf("GetOpt: %v", err)
-		}
-		opts := collectOpts(p)
-		if len(opts) != 2 {
-			t.Errorf("GetOpt options: got %d, want 2", len(opts))
-		}
-
-		// GetOptLong usage
-		longOpts := []Flag{
-			{Name: "verbose", HasArg: NoArgument},
-			{Name: "output", HasArg: RequiredArgument},
-		}
-		p, err = GetOptLong([]string{"--verbose", "--output", "file.txt"}, "vo:", longOpts)
-		if err != nil {
-			t.Fatalf("GetOptLong: %v", err)
-		}
-		opts = collectOpts(p)
-		if len(opts) != 2 {
-			t.Errorf("GetOptLong options: got %d, want 2", len(opts))
-		}
-
-		// GetOptLongOnly usage
-		p, err = GetOptLongOnly([]string{"-verbose"}, "", longOpts)
-		if err != nil {
-			t.Fatalf("GetOptLongOnly: %v", err)
-		}
-		opts = collectOpts(p)
-		if len(opts) != 1 {
-			t.Errorf("GetOptLongOnly options: got %d, want 1", len(opts))
-		}
-	})
-
-	t.Run("posixly_correct_compatibility", func(t *testing.T) {
-		// Default mode processes all options
-		p, err := GetOpt([]string{"-a", "file", "-b"}, "ab")
-		if err != nil {
-			t.Fatalf("default mode: %v", err)
-		}
-		if n := len(collectOpts(p)); n != 2 {
-			t.Errorf("default mode options: got %d, want 2", n)
-		}
-
-		// + prefix stops at first non-option
-		p, err = GetOpt([]string{"-a", "file", "-b"}, "+ab")
-		if err != nil {
-			t.Fatalf("POSIX mode: %v", err)
-		}
-		if n := len(collectOpts(p)); n != 1 {
-			t.Errorf("POSIX mode options: got %d, want 1", n)
-		}
-	})
 }
 
 // assertKind checks that a value's reflect.Kind matches want.

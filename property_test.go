@@ -4,16 +4,6 @@ import (
 	"testing"
 )
 
-// firstErr iterates a parser and returns the first error encountered, or nil.
-func firstErr(p *Parser) error {
-	for _, err := range p.Options() {
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // findOpt returns the first option with the given name, or nil.
 func findOpt(opts []Option, name string) *Option {
 	for i := range opts {
