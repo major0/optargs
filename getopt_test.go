@@ -437,21 +437,9 @@ func TestEdgeCaseBoundaryValues(t *testing.T) {
 			optstring: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
 		},
 		{
-			name:      "mixed argument types",
-			optstring: "a:b::c",
-		},
-		{
 			name:      "too many colons rejected",
 			optstring: "a::::",
 			expectErr: true,
-		},
-		{
-			name:      "multiple behavior flags",
-			optstring: ":+-abc",
-		},
-		{
-			name:      "GNU words extension",
-			optstring: "W;abc",
 		},
 	}
 

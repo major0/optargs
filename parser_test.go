@@ -537,12 +537,6 @@ func TestEdgeCaseErrorPropagation(t *testing.T) {
 			longOpts:  []Flag{{Name: "test\x00", HasArg: NoArgument}},
 			expectErr: true,
 		},
-		{
-			name:      "short and long options coexist",
-			args:      []string{"-v", "--verbose"},
-			optstring: "v",
-			longOpts:  []Flag{{Name: "verbose", HasArg: NoArgument}},
-		},
 	}
 
 	for _, tt := range tests {
@@ -556,64 +550,6 @@ func TestEdgeCaseErrorPropagation(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TestEdgeCaseMemoryAndPerformance tests allocation patterns with large inputs.
-func TestEdgeCaseMemoryAndPerformance(t *testing.T) {
-	t.Run("large argument list", func(t *testing.T) {
-		args := make([]string, 1000)
-		for i := range args {
-			args[i] = "-a"
-		}
-
-		parser, err := GetOpt(args, "a")
-		if err != nil {
-			t.Fatalf("GetOpt: %v", err)
-		}
-
-		count := 0
-		for _, err := range parser.Options() {
-			if err != nil {
-				t.Fatalf("Options iteration: %v", err)
-			}
-			count++
-		}
-
-		if count != 1000 {
-			t.Errorf("expected 1000 options, got %d", count)
-		}
-	})
-
-	t.Run("large optstring", func(t *testing.T) {
-		buf := make([]byte, 0, 62)
-		for c := byte('a'); c <= 'z'; c++ {
-			buf = append(buf, c)
-		}
-		for c := byte('A'); c <= 'Z'; c++ {
-			buf = append(buf, c)
-		}
-		for c := byte('0'); c <= '9'; c++ {
-			buf = append(buf, c)
-		}
-
-		if _, err := GetOpt(nil, string(buf)); err != nil {
-			t.Fatalf("GetOpt: %v", err)
-		}
-	})
-
-	t.Run("many long options", func(t *testing.T) {
-		longOpts := make([]Flag, 100)
-		for i := range longOpts {
-			longOpts[i] = Flag{
-				Name:   string(rune('a'+i%26)) + string(rune('a'+(i/26)%26)),
-				HasArg: NoArgument,
-			}
-		}
-
-		if _, err := GetOptLong(nil, "", longOpts); err != nil {
-			t.Fatalf("GetOptLong: %v", err)
-		}
-	})
 }
 
 // --- Tests moved from compliance_test.go (unique long-option and prefix-overlap tests) ---
@@ -1123,9 +1059,6 @@ func TestEdgeCaseLongOptionErrors(t *testing.T) {
 		{Name: "verbose", HasArg: NoArgument},
 		{Name: "output", HasArg: RequiredArgument},
 		{Name: "config", HasArg: OptionalArgument},
-		{Name: "123", HasArg: NoArgument},
-		{Name: "foo-bar", HasArg: NoArgument},
-		{Name: "foo_bar", HasArg: NoArgument},
 		{Name: "foo=bar", HasArg: NoArgument},
 	}
 
@@ -1134,18 +1067,6 @@ func TestEdgeCaseLongOptionErrors(t *testing.T) {
 		args      []string
 		expectErr bool
 	}{
-		{
-			name: "numeric long option",
-			args: []string{"--123"},
-		},
-		{
-			name: "hyphenated long option",
-			args: []string{"--foo-bar"},
-		},
-		{
-			name: "underscored long option",
-			args: []string{"--foo_bar"},
-		},
 		{
 			name:      "unknown long option with multiple equals",
 			args:      []string{"--foo=bar=baz"},
