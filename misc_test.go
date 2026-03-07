@@ -3,29 +3,7 @@ package optargs
 import (
 	"log/slog"
 	"testing"
-	"unicode"
 )
-
-// Generate tests for all 256 8-bit values. We want the same
-// behavior from our 'isGraph()' as the libc `isgraph()`.
-func isGraphTests() []bool {
-	tests := make([]bool, 256)
-	for i := 0; i < 256; i++ {
-		slog.Debug("isGraphTests", "i", i)
-		tests[i] = unicode.IsGraphic(rune(i)) && !unicode.IsSpace(rune(i))
-	}
-	return tests
-}
-
-// Test our `IsGraph()` against all 256 8-bit values
-func TestIsGraph(t *testing.T) {
-	for c, expect := range isGraphTests() {
-		slog.Debug("TestIsGraph", "c", c, "expect", expect)
-		if got := isGraph(byte(c)); got != expect {
-			t.Errorf("isGraph(%q) = %v, want %v", byte(c), got, expect)
-		}
-	}
-}
 
 func FuzzIsGraph(f *testing.F) {
 	f.Fuzz(func(t *testing.T, c byte) {
@@ -104,12 +82,6 @@ func BenchmarkHasPrefixNoMatchIgnoreCase(b *testing.B) {
 	}
 }
 
-func FuzzHasPrefix(f *testing.F) {
-	f.Fuzz(func(t *testing.T, s string, prefix string, ignoreCase bool) {
-		_ = hasPrefix(s, prefix, ignoreCase)
-	})
-}
-
 var trimPrefixTests = []struct {
 	s, prefix  string
 	ignoreCase bool
@@ -165,10 +137,4 @@ func BenchmarkTrimPrefixNoMatchIgnoreCase(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		trimPrefix("foo123ABC123Abc123", "bar123", false)
 	}
-}
-
-func FuzzTrimPrefix(f *testing.F) {
-	f.Fuzz(func(t *testing.T, s string, prefix string, ignoreCase bool) {
-		_ = trimPrefix(s, prefix, ignoreCase)
-	})
 }

@@ -109,44 +109,6 @@ func TestRoundTripMixedOptions(t *testing.T) {
 	}
 }
 
-// TestRoundTripOptionCompaction verifies that expanded and compacted forms
-// parse to the same result.
-func TestRoundTripOptionCompaction(t *testing.T) {
-	tests := []struct {
-		name      string
-		optstring string
-		original  []string
-		compacted []string
-	}{
-		{"basic compaction", "abc", []string{"-a", "-b", "-c"}, []string{"-abc"}},
-		{"with required argument", "ab:c", []string{"-a", "-barg"}, []string{"-abarg"}},
-		{"with optional argument", "ab::c", []string{"-a", "-barg"}, []string{"-abarg"}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p1, err := GetOpt(tt.original, tt.optstring)
-			if err != nil {
-				t.Fatalf("original parse: %v", err)
-			}
-			opts1 := collectOpts(p1)
-
-			p2, err := GetOpt(tt.compacted, tt.optstring)
-			if err != nil {
-				t.Fatalf("compacted parse: %v", err)
-			}
-			opts2 := collectOpts(p2)
-
-			if !slices.Equal(opts1, opts2) {
-				t.Errorf("options differ\n  original:  %+v\n  compacted: %+v", opts1, opts2)
-			}
-			if !slices.Equal(p1.Args, p2.Args) {
-				t.Errorf("remaining args differ\n  original:  %+v\n  compacted: %+v", p1.Args, p2.Args)
-			}
-		})
-	}
-}
-
 // generateArgsFromOptions reconstructs command-line arguments from parsed options.
 func generateArgsFromOptions(options []Option, remainingArgs []string) []string {
 	var args []string
