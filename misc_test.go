@@ -17,18 +17,6 @@ func BenchmarkIsGraphValid(b *testing.B) {
 	}
 }
 
-func BenchmarkIsGraphInvalid(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		isGraph(byte(1))
-	}
-}
-
-func BenchmarkIsGraphSpace(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		isGraph('\t')
-	}
-}
-
 var hasPrefixTests = []struct {
 	s, prefix  string
 	ignoreCase bool
@@ -67,18 +55,6 @@ func BenchmarkHasPrefixMatch(b *testing.B) {
 func BenchmarkHasPrefixMatchIgnoreCase(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		hasPrefix("abc123ABC123Abc123", "ABC123", true) // pragma: allowlist secret
-	}
-}
-
-func BenchmarkHasPrefixNoMatch(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		hasPrefix("abc123ABC123Abc123", "ABC123", false) // pragma: allowlist secret
-	}
-}
-
-func BenchmarkHasPrefixNoMatchIgnoreCase(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		hasPrefix("foo123ABC123Abc123", "bar123", false)
 	}
 }
 
@@ -124,17 +100,5 @@ func BenchmarkTrimPrefixMatch(b *testing.B) {
 func BenchmarkTrimPrefixMatchIgnoreCase(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		trimPrefix("abc123ABC123Abc123", "ABC123", true) // pragma: allowlist secret
-	}
-}
-
-func BenchmarkTrimPrefixNoMatch(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		trimPrefix("abc123ABC123Abc123", "ABC123", false) // pragma: allowlist secret
-	}
-}
-
-func BenchmarkTrimPrefixNoMatchIgnoreCase(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		trimPrefix("foo123ABC123Abc123", "bar123", false)
 	}
 }

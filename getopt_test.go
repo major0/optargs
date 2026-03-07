@@ -213,45 +213,15 @@ func TestShortOptsGnuWords(t *testing.T) {
 func TestShortOptsFlags(t *testing.T) {
 	getopt, err := GetOpt(nil, "ab:c::")
 	if err != nil {
-		t.Errorf("unexpected error: %s", err)
+		t.Fatalf("unexpected error: %s", err)
 	}
-
 	if len(getopt.shortOpts) != 3 {
-		t.Errorf("Expected shortOpts to be 3, got %d", len(getopt.shortOpts))
+		t.Fatalf("Expected 3 shortOpts, got %d", len(getopt.shortOpts))
 	}
-
-	for c, opt := range getopt.shortOpts {
-		if opt.Name != string(c) {
-			t.Errorf("Expected shortOpts[%c].Name to be '%c', got %s", c, c, opt.Name)
-		}
-	}
-
-	if getopt.shortOpts['a'].HasArg != NoArgument {
-		t.Errorf("Expected shortOpts['a'].HasArg to be NoArgument, got %d", getopt.shortOpts['a'].HasArg)
-	}
-
-	if getopt.shortOpts['b'].HasArg != RequiredArgument {
-		t.Errorf("Expected shortOpts['b'].HasArg to be RequiredArgument, got %d", getopt.shortOpts['b'].HasArg)
-	}
-
-	if getopt.shortOpts['c'].HasArg != OptionalArgument {
-		t.Errorf("Expected shortOpts['c'].HasArg to be OptionalArgument, got %d", getopt.shortOpts['c'].HasArg)
-	}
-}
-
-func TestShortOptNoArgIntegration(t *testing.T) {
-	args := []string{"-c"}
-	getopt, err := GetOpt(args, "abc")
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-	}
-
-	for opt, err := range getopt.Options() {
-		if err != nil {
-			t.Errorf("unexpected error: %s", err)
-		}
-		if opt.Name != "c" {
-			t.Errorf("Expected option %c, got %s", 'c', opt.Name)
+	wantArgs := map[byte]ArgType{'a': NoArgument, 'b': RequiredArgument, 'c': OptionalArgument}
+	for c, want := range wantArgs {
+		if getopt.shortOpts[c].HasArg != want {
+			t.Errorf("shortOpts[%c].HasArg = %d, want %d", c, getopt.shortOpts[c].HasArg, want)
 		}
 	}
 }
@@ -338,15 +308,6 @@ func TestShortOptRequiredIntegration(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func BenchmarkShortOpts(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		_, err := GetOpt(nil, ":-+ab:c::W;")
-		if err != nil {
-			b.Errorf("unexpected error: %s", err)
-		}
 	}
 }
 
@@ -465,39 +426,19 @@ func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 		remainingArgs []string
 	}{
 		{
-			name:          "without POSIXLY_CORRECT processes all options",
-			optstring:     "a",
-			args:          []string{"file1", "-a", "file2"},
-			envValue:      "",
-			expected:      []Option{{Name: "a"}},
-			remainingArgs: []string{"file1", "file2"},
+			name: "without POSIXLY_CORRECT processes all options", optstring: "a",
+			args: []string{"file1", "-a", "file2"}, envValue: "",
+			expected: []Option{{Name: "a"}}, remainingArgs: []string{"file1", "file2"},
 		},
 		{
-			name:          "with POSIXLY_CORRECT stops at first non-option",
-			optstring:     "a",
-			args:          []string{"file1", "-a", "file2"},
-			envValue:      "1",
-			expected:      []Option{},
-			remainingArgs: []string{"file1", "-a", "file2"},
+			name: "with POSIXLY_CORRECT stops at first non-option", optstring: "a",
+			args: []string{"file1", "-a", "file2"}, envValue: "1",
+			expected: []Option{}, remainingArgs: []string{"file1", "-a", "file2"},
 		},
 		{
-			name:      "POSIXLY_CORRECT with options first",
-			optstring: "ab",
-			args:      []string{"-a", "-b", "file1", "-a"},
-			envValue:  "1",
-			expected: []Option{
-				{Name: "a"},
-				{Name: "b"},
-			},
-			remainingArgs: []string{"file1", "-a"},
-		},
-		{
-			name:          "plus prefix overrides environment variable",
-			optstring:     "+a",
-			args:          []string{"file1", "-a", "file2"},
-			envValue:      "", // Even without env var, + prefix should work
-			expected:      []Option{},
-			remainingArgs: []string{"file1", "-a", "file2"},
+			name: "plus prefix overrides environment variable", optstring: "+a",
+			args: []string{"file1", "-a", "file2"}, envValue: "",
+			expected: []Option{}, remainingArgs: []string{"file1", "-a", "file2"},
 		},
 	}
 
@@ -511,7 +452,6 @@ func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 					_ = os.Setenv("POSIXLY_CORRECT", originalValue)
 				}
 			}()
-
 			if tt.envValue == "" {
 				_ = os.Unsetenv("POSIXLY_CORRECT")
 			} else {

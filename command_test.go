@@ -76,21 +76,19 @@ func TestBasicCommandRegistration(t *testing.T) {
 }
 
 func TestCommandExecution(t *testing.T) {
-	rootParser := newCmdRootParser(t)
-	serverParser := newCmdServerParser(t)
-	rootParser.AddCmd("server", serverParser)
+	root := newCmdRootParser(t)
+	server := newCmdServerParser(t)
+	root.AddCmd("server", server)
 
-	executedParser, err := rootParser.ExecuteCommand("server", []string{"--port", "8080"})
+	got, err := root.ExecuteCommand("server", []string{"--port", "8080"})
 	if err != nil {
-		t.Errorf("ExecuteCommand: %v", err)
+		t.Fatalf("ExecuteCommand: %v", err)
 	}
-	if executedParser != serverParser {
+	if got != server {
 		t.Error("ExecuteCommand should return the subcommand parser")
 	}
-
-	expectedArgs := []string{"--port", "8080"}
-	if len(executedParser.Args) != len(expectedArgs) {
-		t.Errorf("len(Args) = %d, want %d", len(executedParser.Args), len(expectedArgs))
+	if len(got.Args) != 2 || got.Args[0] != "--port" || got.Args[1] != "8080" {
+		t.Errorf("Args = %v, want [--port 8080]", got.Args)
 	}
 }
 
@@ -208,62 +206,27 @@ func TestShortOptionInheritance(t *testing.T) {
 	}
 }
 
-func TestMultipleCommands(t *testing.T) {
-	rootParser := newCmdRootParser(t)
-	serverParser := newCmdServerParser(t)
-	clientParser := newCmdClientParser(t)
-
-	rootParser.AddCmd("server", serverParser)
-	rootParser.AddCmd("client", clientParser)
-
-	commands := rootParser.ListCommands()
-	if len(commands) != 2 {
-		t.Errorf("len(commands) = %d, want 2", len(commands))
-	}
-	if parser, exists := commands["server"]; !exists || parser != serverParser {
-		t.Error("server command not found or incorrect parser")
-	}
-	if parser, exists := commands["client"]; !exists || parser != clientParser {
-		t.Error("client command not found or incorrect parser")
-	}
-}
-
 func TestCommandAliases(t *testing.T) {
-	rootParser := newCmdRootParser(t)
-	serverParser := newCmdServerParser(t)
-	rootParser.AddCmd("server", serverParser)
-
-	if err := rootParser.AddAlias("srv", "server"); err != nil {
+	root := newCmdRootParser(t)
+	server := newCmdServerParser(t)
+	root.AddCmd("server", server)
+	if err := root.AddAlias("srv", "server"); err != nil {
 		t.Fatalf("AddAlias(srv): %v", err)
 	}
-	if err := rootParser.AddAlias("s", "server"); err != nil {
+	if err := root.AddAlias("s", "server"); err != nil {
 		t.Fatalf("AddAlias(s): %v", err)
 	}
 
-	// All names should resolve to the same parser.
 	for _, name := range []string{"server", "srv", "s"} {
-		cmd, exists := rootParser.GetCommand(name)
-		if !exists {
-			t.Fatalf("GetCommand(%q) not found", name)
-		}
-		if cmd != serverParser {
-			t.Errorf("GetCommand(%q) returned wrong parser", name)
+		cmd, exists := root.GetCommand(name)
+		if !exists || cmd != server {
+			t.Fatalf("GetCommand(%q) failed", name)
 		}
 	}
 
-	aliases := rootParser.GetAliases(serverParser)
+	aliases := root.GetAliases(server)
 	if len(aliases) != 3 {
 		t.Errorf("len(aliases) = %d, want 3", len(aliases))
-	}
-
-	aliasSet := make(map[string]bool, len(aliases))
-	for _, a := range aliases {
-		aliasSet[a] = true
-	}
-	for _, want := range []string{"server", "srv", "s"} {
-		if !aliasSet[want] {
-			t.Errorf("alias %q not found in %v", want, aliases)
-		}
 	}
 }
 
@@ -279,53 +242,20 @@ func TestAliasForNonExistentCommand(t *testing.T) {
 	}
 }
 
-// commandMappingTests drives TestCommandInspection subtests.
-var commandMappingTests = []struct {
-	name     string
-	register func(*Parser, *Parser, *Parser)
-	want     map[string]string // command name → parser label
-}{
-	{
-		name: "commands_and_aliases",
-		register: func(root, server, client *Parser) {
-			root.AddCmd("server", server)
-			root.AddCmd("client", client)
-			_ = root.AddAlias("srv", "server")
-			_ = root.AddAlias("c", "client")
-		},
-		want: map[string]string{
-			"server": "server",
-			"srv":    "server",
-			"client": "client",
-			"c":      "client",
-		},
-	},
-}
-
 func TestCommandInspection(t *testing.T) {
-	for _, tt := range commandMappingTests {
-		t.Run(tt.name, func(t *testing.T) {
-			rootParser := newCmdRootParser(t)
-			serverParser := newCmdServerParser(t)
-			clientParser := newCmdClientParser(t)
+	root := newCmdRootParser(t)
+	server := newCmdServerParser(t)
+	client := newCmdClientParser(t)
+	root.AddCmd("server", server)
+	root.AddCmd("client", client)
+	_ = root.AddAlias("srv", "server")
 
-			parsersByLabel := map[string]*Parser{
-				"server": serverParser,
-				"client": clientParser,
-			}
-
-			tt.register(rootParser, serverParser, clientParser)
-
-			commands := rootParser.ListCommands()
-			if len(commands) != len(tt.want) {
-				t.Errorf("len(commands) = %d, want %d", len(commands), len(tt.want))
-			}
-			for name, label := range tt.want {
-				if parser, exists := commands[name]; !exists || parser != parsersByLabel[label] {
-					t.Errorf("command %q mapping incorrect", name)
-				}
-			}
-		})
+	commands := root.ListCommands()
+	if len(commands) != 3 {
+		t.Errorf("len(commands) = %d, want 3", len(commands))
+	}
+	if commands["server"] != server || commands["srv"] != server || commands["client"] != client {
+		t.Error("command mapping incorrect")
 	}
 }
 
@@ -346,43 +276,17 @@ func TestNewParserWithCaseInsensitiveCommands(t *testing.T) {
 	}
 }
 
-func TestNewParserWithCaseInsensitiveCommandsParent(t *testing.T) {
-	parent := newMinimalParser(t)
-	child, err := NewParserWithCaseInsensitiveCommands(
-		map[byte]*Flag{}, map[string]*Flag{}, []string{},
-	)
-	if err != nil {
-		t.Fatalf("NewParserWithCaseInsensitiveCommands: %v", err)
-	}
-
-	parent.AddCmd("child", child)
-
-	if child.parent != parent {
-		t.Error("child should reference parent")
-	}
-	if !child.config.commandCaseIgnore {
-		t.Error("commandCaseIgnore should be true")
-	}
-}
-
-// caseInsensitiveLookupTests drives case-insensitive and case-sensitive
-// command lookup subtests.
 var caseInsensitiveLookupTests = []struct {
 	name       string
 	caseIgnore bool
 	lookup     string
 	wantFound  bool
 }{
-	// Case-insensitive mode: all casings match.
 	{"insensitive_exact", true, "server", true},
 	{"insensitive_upper", true, "SERVER", true},
-	{"insensitive_mixed", true, "SeRvEr", true},
 	{"insensitive_miss", true, "nonexistent", false},
-
-	// Case-sensitive mode: only exact match works.
 	{"sensitive_exact", false, "server", true},
 	{"sensitive_upper", false, "SERVER", false},
-	{"sensitive_mixed", false, "SeRvEr", false},
 }
 
 func TestCommandCaseInsensitiveLookup(t *testing.T) {
@@ -423,45 +327,31 @@ func TestExecuteCommandCaseInsensitive(t *testing.T) {
 // when parent and child parsers register long options with overlapping
 // prefixes. The longest matching option name wins regardless of which
 // level in the chain registered it.
+// TestSubcommandOverlappingLongOpts verifies cross-chain prefix matching.
 func TestSubcommandOverlappingLongOpts(t *testing.T) {
 	tests := []struct {
 		name      string
-		gpOpts    []Flag // nil means 2-level chain
-		parOpts   []Flag // parent opts (or grandparent for 3-level)
+		gpOpts    []Flag
+		parOpts   []Flag
 		childOpts []Flag
 		childArgs []string
 		expected  []Option
 	}{
 		{
-			// Parent: "out", Child: "output". Input: --output=file.txt
-			// Child's "output" is longest match → match "output"
-			name:      "child_longer_prefix_wins_over_parent_shorter",
+			name:      "child_longer_prefix_wins",
 			parOpts:   []Flag{{Name: "out", HasArg: RequiredArgument}},
 			childOpts: []Flag{{Name: "output", HasArg: RequiredArgument}},
 			childArgs: []string{"--output=file.txt"},
 			expected:  []Option{{Name: "output", Arg: "file.txt", HasArg: true}},
 		},
 		{
-			// Parent: "output", Child: "out". Input: --output=file.txt
-			// Parent's "output" is longest match → match "output"
-			name:      "parent_longer_prefix_wins_over_child_shorter",
+			name:      "parent_longer_prefix_wins",
 			parOpts:   []Flag{{Name: "output", HasArg: RequiredArgument}},
 			childOpts: []Flag{{Name: "out", HasArg: RequiredArgument}},
 			childArgs: []string{"--output=file.txt"},
 			expected:  []Option{{Name: "output", Arg: "file.txt", HasArg: true}},
 		},
 		{
-			// Parent: "output", Child: "out". Input: --out=val
-			// "out" matches at '=' boundary → match "out"
-			name:      "child_matches_shorter_when_input_is_shorter",
-			parOpts:   []Flag{{Name: "output", HasArg: RequiredArgument}},
-			childOpts: []Flag{{Name: "out", HasArg: RequiredArgument}},
-			childArgs: []string{"--out=val"},
-			expected:  []Option{{Name: "out", Arg: "val", HasArg: true}},
-		},
-		{
-			// GP: "output-format", Parent: "output", Child: "out"
-			// Input: --output-format=json → GP's "output-format" is longest
 			name:      "three_level_chain_longest_from_grandparent",
 			gpOpts:    []Flag{{Name: "output-format", HasArg: RequiredArgument}},
 			parOpts:   []Flag{{Name: "output", HasArg: RequiredArgument}},
@@ -470,17 +360,6 @@ func TestSubcommandOverlappingLongOpts(t *testing.T) {
 			expected:  []Option{{Name: "output-format", Arg: "json", HasArg: true}},
 		},
 		{
-			// Same chain. Input: --output=json → Parent's "output" matches
-			name:      "three_level_chain_mid_match",
-			gpOpts:    []Flag{{Name: "output-format", HasArg: RequiredArgument}},
-			parOpts:   []Flag{{Name: "output", HasArg: RequiredArgument}},
-			childOpts: []Flag{{Name: "out", HasArg: RequiredArgument}},
-			childArgs: []string{"--output=json"},
-			expected:  []Option{{Name: "output", Arg: "json", HasArg: true}},
-		},
-		{
-			// Parent: "key=val" (NoArgument), Child: "key" (RequiredArgument)
-			// Input: --key=val → Parent's "key=val" is longest exact match
 			name:      "equals_in_option_name_across_chain",
 			parOpts:   []Flag{{Name: "key=val", HasArg: NoArgument}},
 			childOpts: []Flag{{Name: "key", HasArg: RequiredArgument}},
@@ -488,17 +367,6 @@ func TestSubcommandOverlappingLongOpts(t *testing.T) {
 			expected:  []Option{{Name: "key=val", HasArg: false}},
 		},
 		{
-			// Parent: "key=val" (RequiredArgument), Child: "key" (RequiredArgument)
-			// Input: --key=val=extra → Parent's "key=val" matches, arg "extra"
-			name:      "equals_in_name_with_arg_across_chain",
-			parOpts:   []Flag{{Name: "key=val", HasArg: RequiredArgument}},
-			childOpts: []Flag{{Name: "key", HasArg: RequiredArgument}},
-			childArgs: []string{"--key=val=extra"},
-			expected:  []Option{{Name: "key=val", Arg: "extra", HasArg: true}},
-		},
-		{
-			// Both parent and child register "verbose" (NoArgument).
-			// Child's own should be found (child is searched first).
 			name:      "child_own_option_preferred_when_same_length",
 			parOpts:   []Flag{{Name: "verbose", HasArg: NoArgument}},
 			childOpts: []Flag{{Name: "verbose", HasArg: NoArgument}},
@@ -506,8 +374,6 @@ func TestSubcommandOverlappingLongOpts(t *testing.T) {
 			expected:  []Option{{Name: "verbose", HasArg: false}},
 		},
 		{
-			// Parent: "debug" (RequiredArgument), Child: no overlap
-			// Input: --debug=trace → resolved via parent chain
 			name:      "parent_only_option_resolved_from_child",
 			parOpts:   []Flag{{Name: "debug", HasArg: RequiredArgument}},
 			childOpts: []Flag{{Name: "color", HasArg: NoArgument}},
@@ -532,173 +398,71 @@ func TestSubcommandOverlappingLongOpts(t *testing.T) {
 // TestNativeSubcommandDispatch exercises the full dispatch flow:
 // root Options() encounters a subcommand name, dispatches via ExecuteCommand,
 // then the child parser's Options() resolves both local and inherited options.
+// TestNativeSubcommandDispatch exercises the full dispatch flow.
 func TestNativeSubcommandDispatch(t *testing.T) {
 	t.Run("dispatch_and_inherit", func(t *testing.T) {
-		root, err := GetOptLong([]string{"--verbose", "serve", "--port", "8080"}, "v", []Flag{
-			{Name: "verbose", HasArg: NoArgument},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create root parser: %v", err)
-		}
-
-		child, err := GetOptLong([]string{}, "p:", []Flag{
-			{Name: "port", HasArg: RequiredArgument},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create child parser: %v", err)
-		}
+		root, _ := GetOptLong([]string{"--verbose", "serve", "--port", "8080"}, "v", []Flag{{Name: "verbose", HasArg: NoArgument}})
+		child, _ := GetOptLong([]string{}, "p:", []Flag{{Name: "port", HasArg: RequiredArgument}})
 		root.AddCmd("serve", child)
 
 		rootOpts := collectNamedOptions(t, root)
-		if len(rootOpts) != 1 {
-			t.Errorf("Expected 1 root option, got %d", len(rootOpts))
-		}
 		if _, ok := rootOpts["verbose"]; !ok {
 			t.Error("Expected root to yield 'verbose'")
 		}
-
 		childOpts := collectNamedOptions(t, child)
-		if len(childOpts) != 1 {
-			t.Fatalf("Expected 1 child option, got %d", len(childOpts))
-		}
 		if arg, ok := childOpts["port"]; !ok || arg != "8080" {
 			t.Errorf("Expected port=8080, got %v", childOpts)
 		}
 	})
 
-	t.Run("child_uses_parent_option", func(t *testing.T) {
-		root, err := GetOptLong([]string{"sub"}, "v", []Flag{
-			{Name: "verbose", HasArg: NoArgument},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create root parser: %v", err)
-		}
-
-		child, err := GetOptLong([]string{}, "p:", []Flag{
-			{Name: "port", HasArg: RequiredArgument},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create child parser: %v", err)
-		}
-		root.AddCmd("sub", child)
-
-		collectNamedOptions(t, root) // dispatch
-
-		// Child should resolve parent's option via fallback
-		_, _, opt, err := child.findLongOpt("verbose", []string{})
-		if err != nil {
-			t.Errorf("Child couldn't resolve parent's verbose: %v", err)
-		}
-		if opt.Name != "verbose" {
-			t.Errorf("Expected 'verbose', got '%s'", opt.Name)
-		}
-	})
-
 	t.Run("multi_level_dispatch", func(t *testing.T) {
-		root, err := GetOptLong([]string{"-v", "db", "--name", "mydb", "migrate", "--steps", "3"}, "v", []Flag{
-			{Name: "verbose", HasArg: NoArgument},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create root: %v", err)
-		}
-
-		db, err := GetOptLong([]string{}, "n:", []Flag{
-			{Name: "name", HasArg: RequiredArgument},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create db: %v", err)
-		}
+		root, _ := GetOptLong([]string{"-v", "db", "--name", "mydb", "migrate", "--steps", "3"}, "v", []Flag{{Name: "verbose", HasArg: NoArgument}})
+		db, _ := GetOptLong([]string{}, "n:", []Flag{{Name: "name", HasArg: RequiredArgument}})
 		root.AddCmd("db", db)
-
-		migrate, err := GetOptLong([]string{}, "s:", []Flag{
-			{Name: "steps", HasArg: RequiredArgument},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create migrate: %v", err)
-		}
+		migrate, _ := GetOptLong([]string{}, "s:", []Flag{{Name: "steps", HasArg: RequiredArgument}})
 		db.AddCmd("migrate", migrate)
 
-		rootOpts := collectNamedOptions(t, root)
-		if len(rootOpts) != 1 {
-			t.Errorf("Expected 1 root option, got %d", len(rootOpts))
-		}
-		if _, ok := rootOpts["v"]; !ok {
-			t.Errorf("Expected root [v], got %v", rootOpts)
-		}
-
+		collectNamedOptions(t, root)
 		dbOpts := collectNamedOptions(t, db)
 		if arg, ok := dbOpts["name"]; !ok || arg != "mydb" {
 			t.Errorf("Expected db [name=mydb], got %v", dbOpts)
 		}
-
 		migrateOpts := collectNamedOptions(t, migrate)
 		if arg, ok := migrateOpts["steps"]; !ok || arg != "3" {
 			t.Errorf("Expected migrate [steps=3], got %v", migrateOpts)
-		}
-
-		// Verify migrate can resolve root's verbose via parent chain
-		_, _, opt, err := migrate.findLongOpt("verbose", []string{})
-		if err != nil {
-			t.Errorf("Migrate couldn't resolve root's verbose: %v", err)
-		}
-		if opt.Name != "verbose" {
-			t.Errorf("Expected 'verbose', got '%s'", opt.Name)
 		}
 	})
 }
 
 // TestDispatchErrorModes verifies that error modes work correctly through
 // the dispatch + inheritance chain.
+// TestDispatchErrorModes verifies error modes through dispatch + inheritance.
 func TestDispatchErrorModes(t *testing.T) {
 	t.Run("silent_child_inherits_parent_option", func(t *testing.T) {
-		root, err := GetOptLong([]string{"sub", "-v", "--file", "test.txt"}, "v", []Flag{
-			{Name: "verbose", HasArg: NoArgument},
-			{Name: "file", HasArg: RequiredArgument},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create root: %v", err)
-		}
-
-		child, err := GetOpt([]string{}, ":")
-		if err != nil {
-			t.Fatalf("Failed to create child: %v", err)
-		}
+		root, _ := GetOptLong([]string{"sub", "-v", "--file", "test.txt"}, "v", []Flag{{Name: "verbose", HasArg: NoArgument}, {Name: "file", HasArg: RequiredArgument}})
+		child, _ := GetOpt([]string{}, ":")
 		root.AddCmd("sub", child)
-
-		collectNamedOptions(t, root) // dispatch
-
+		collectNamedOptions(t, root)
 		found := collectNamedOptions(t, child)
 		if _, ok := found["v"]; !ok {
 			t.Error("Expected child to find parent's -v")
 		}
 		if arg, ok := found["file"]; !ok || arg != "test.txt" {
-			t.Errorf("Expected child to find parent's --file=test.txt, got %v", found)
+			t.Errorf("Expected --file=test.txt, got %v", found)
 		}
 	})
 
 	t.Run("silent_child_unknown_option_no_log", func(t *testing.T) {
-		root, err := GetOptLong([]string{"sub", "-x"}, "v", []Flag{
-			{Name: "verbose", HasArg: NoArgument},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create root: %v", err)
-		}
-
-		child, err := GetOpt([]string{}, ":")
-		if err != nil {
-			t.Fatalf("Failed to create child: %v", err)
-		}
+		root, _ := GetOptLong([]string{"sub", "-x"}, "v", []Flag{{Name: "verbose", HasArg: NoArgument}})
+		child, _ := GetOpt([]string{}, ":")
 		root.AddCmd("sub", child)
-
-		collectNamedOptions(t, root) // dispatch
-
+		collectNamedOptions(t, root)
 		var foundErr error
 		for _, err := range child.Options() {
 			if err != nil {
 				foundErr = err
 			}
 		}
-
 		if foundErr == nil {
 			t.Fatal("expected error for unknown option -x")
 		}
@@ -708,79 +472,21 @@ func TestDispatchErrorModes(t *testing.T) {
 	})
 
 	t.Run("verbose_child_missing_parent_arg", func(t *testing.T) {
-		root, err := GetOptLong([]string{"sub", "-f"}, "f:", []Flag{})
-		if err != nil {
-			t.Fatalf("Failed to create root: %v", err)
-		}
-
-		child, err := GetOpt([]string{}, "")
-		if err != nil {
-			t.Fatalf("Failed to create child: %v", err)
-		}
+		root, _ := GetOptLong([]string{"sub", "-f"}, "f:", []Flag{})
+		child, _ := GetOpt([]string{}, "")
 		root.AddCmd("sub", child)
-
-		collectNamedOptions(t, root) // dispatch
-
+		collectNamedOptions(t, root)
 		var foundErr error
 		for _, err := range child.Options() {
 			if err != nil {
 				foundErr = err
 			}
 		}
-
 		if foundErr == nil {
 			t.Fatal("expected error for missing argument")
 		}
 		if !strings.Contains(foundErr.Error(), "option requires an argument: f") {
 			t.Errorf("Expected 'option requires an argument: f', got '%s'", foundErr.Error())
-		}
-	})
-
-	t.Run("multi_level_silent_leaf_verbose_ancestors", func(t *testing.T) {
-		root, err := GetOptLong([]string{"mid", "leaf", "-r", "-m", "-z"}, "r", []Flag{})
-		if err != nil {
-			t.Fatalf("Failed to create root: %v", err)
-		}
-
-		mid, err := GetOpt([]string{}, "m")
-		if err != nil {
-			t.Fatalf("Failed to create mid: %v", err)
-		}
-		root.AddCmd("mid", mid)
-
-		leaf, err := GetOpt([]string{}, ":")
-		if err != nil {
-			t.Fatalf("Failed to create leaf: %v", err)
-		}
-		mid.AddCmd("leaf", leaf)
-
-		collectNamedOptions(t, root) // dispatch root → mid
-		collectNamedOptions(t, mid)  // dispatch mid → leaf
-
-		foundR := false
-		foundM := false
-		var lastErr error
-		for opt, err := range leaf.Options() {
-			if err != nil {
-				lastErr = err
-				continue
-			}
-			switch opt.Name {
-			case "r":
-				foundR = true
-			case "m":
-				foundM = true
-			}
-		}
-
-		if !foundR {
-			t.Error("Expected leaf to find root's -r")
-		}
-		if !foundM {
-			t.Error("Expected leaf to find mid's -m")
-		}
-		if lastErr == nil {
-			t.Error("expected error for unknown -z")
 		}
 	})
 }

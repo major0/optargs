@@ -26,44 +26,17 @@ func benchParse(b *testing.B, newParser newParserFunc, args []string, optstring 
 }
 
 // BenchmarkGetOpt benchmarks the core GetOpt function with various scenarios
+// BenchmarkGetOpt benchmarks the core GetOpt function
 func BenchmarkGetOpt(b *testing.B) {
 	testCases := []struct {
 		name      string
 		args      []string
 		optstring string
 	}{
-		{
-			name:      "SimpleShortOptions",
-			args:      []string{"prog", "-a", "-b", "-c"},
-			optstring: "abc",
-		},
-		{
-			name:      "CompactedShortOptions",
-			args:      []string{"prog", "-abc"},
-			optstring: "abc",
-		},
-		{
-			name:      "ShortOptionsWithArgs",
-			args:      []string{"prog", "-a", "arg1", "-b", "arg2"},
-			optstring: "a:b:",
-		},
-		{
-			name:      "CompactedWithArgs",
-			args:      []string{"prog", "-abarg1", "-c"},
-			optstring: "ab:c",
-		},
-		{
-			name:      "OptionalArgs",
-			args:      []string{"prog", "-a", "-barg", "-c"},
-			optstring: "ab::c",
-		},
-		{
-			name:      "MixedOptions",
-			args:      []string{"prog", "-a", "arg1", "-bc", "-d", "arg2"},
-			optstring: "a:bcd:",
-		},
+		{"SimpleShortOptions", []string{"prog", "-a", "-b", "-c"}, "abc"},
+		{"CompactedShortOptions", []string{"prog", "-abc"}, "abc"},
+		{"ShortOptionsWithArgs", []string{"prog", "-a", "arg1", "-b", "arg2"}, "a:b:"},
 	}
-
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ResetTimer()
@@ -75,47 +48,22 @@ func BenchmarkGetOpt(b *testing.B) {
 }
 
 // BenchmarkGetOptLong benchmarks the GetOptLong function with long options
+// BenchmarkGetOptLong benchmarks the GetOptLong function with long options
 func BenchmarkGetOptLong(b *testing.B) {
 	longOpts := []Flag{
 		{Name: "verbose", HasArg: NoArgument},
 		{Name: "output", HasArg: RequiredArgument},
 		{Name: "config", HasArg: OptionalArgument},
-		{Name: "help", HasArg: NoArgument},
-		{Name: "version", HasArg: NoArgument},
 	}
-
 	testCases := []struct {
 		name      string
 		args      []string
 		optstring string
 	}{
-		{
-			name:      "LongOptionsOnly",
-			args:      []string{"prog", "--verbose", "--help"},
-			optstring: "",
-		},
-		{
-			name:      "LongOptionsWithArgs",
-			args:      []string{"prog", "--output", "file.txt", "--config", "cfg.ini"},
-			optstring: "",
-		},
-		{
-			name:      "LongOptionsEqualsForm",
-			args:      []string{"prog", "--output=file.txt", "--config=cfg.ini"},
-			optstring: "",
-		},
-		{
-			name:      "MixedShortAndLong",
-			args:      []string{"prog", "-v", "--output", "file.txt", "-h"},
-			optstring: "vh",
-		},
-		{
-			name:      "PartialLongOptions",
-			args:      []string{"prog", "--verbose", "--output", "file.txt"},
-			optstring: "",
-		},
+		{"LongOptionsOnly", []string{"prog", "--verbose", "--output", "file.txt"}, ""},
+		{"LongOptionsEqualsForm", []string{"prog", "--output=file.txt", "--config=cfg.ini"}, ""},
+		{"MixedShortAndLong", []string{"prog", "-v", "--output", "file.txt"}, "v"},
 	}
-
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ResetTimer()
@@ -170,7 +118,7 @@ func BenchmarkGetOptLongOnly(b *testing.B) {
 
 // BenchmarkLargeArgumentLists benchmarks performance with large argument lists
 func BenchmarkLargeArgumentLists(b *testing.B) {
-	sizes := []int{100, 500, 1000, 5000}
+	sizes := []int{100, 1000}
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("Size%d", size), func(b *testing.B) {
@@ -254,175 +202,6 @@ func BenchmarkIteratorEfficiency(b *testing.B) {
 					break
 				}
 			}
-		}
-	})
-}
-
-// BenchmarkComplexScenarios benchmarks complex real-world scenarios
-func BenchmarkComplexScenarios(b *testing.B) {
-	longOpts := []Flag{
-		{Name: "verbose", HasArg: NoArgument},
-		{Name: "output", HasArg: RequiredArgument},
-		{Name: "config", HasArg: OptionalArgument},
-		{Name: "format", HasArg: RequiredArgument},
-		{Name: "debug", HasArg: NoArgument},
-		{Name: "quiet", HasArg: NoArgument},
-		{Name: "input", HasArg: RequiredArgument},
-		{Name: "threads", HasArg: RequiredArgument},
-	}
-
-	testCases := []struct {
-		name string
-		args []string
-	}{
-		{
-			name: "CompilerLike",
-			args: []string{"prog", "-O2", "-Wall", "-g", "-o", "output", "input.c"},
-		},
-		{
-			name: "TarLike",
-			args: []string{"prog", "-czf", "archive.tar.gz", "file1", "file2", "file3"},
-		},
-		{
-			name: "GitLike",
-			args: []string{"prog", "--verbose", "--format=json", "--output=result.json", "command"},
-		},
-		{
-			name: "DockerLike",
-			args: []string{"prog", "-it", "--rm", "--name", "container", "-v", "/host:/container", "image"},
-		},
-	}
-
-	for _, tc := range testCases {
-		b.Run(tc.name, func(b *testing.B) {
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				benchParse(b, GetOptLong, tc.args, "O:Wgo:czfitv:", longOpts)
-			}
-		})
-	}
-}
-
-// BenchmarkGNUExtensions benchmarks GNU-specific extensions
-func BenchmarkGNUExtensions(b *testing.B) {
-	longOpts := []Flag{
-		{Name: "word-option", HasArg: RequiredArgument},
-		{Name: "another-word", HasArg: NoArgument},
-	}
-
-	b.Run("GNUWords", func(b *testing.B) {
-		args := []string{"prog", "-W", "word-option=value", "-W", "another-word"}
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			benchParse(b, GetOptLong, args, "W;", longOpts)
-		}
-	})
-
-	b.Run("CaseInsensitive", func(b *testing.B) {
-		args := []string{"prog", "--WORD-OPTION", "value", "--Another-Word"}
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			benchParse(b, GetOptLong, args, "", longOpts)
-		}
-	})
-}
-
-// BenchmarkErrorHandling benchmarks error handling performance
-func BenchmarkErrorHandling(b *testing.B) {
-	b.Run("UnknownShortOption", func(b *testing.B) {
-		args := []string{"prog", "-z"}
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			parser, err := GetOpt(args, "abc")
-			if err != nil {
-				b.Fatal(err)
-			}
-			for option, err := range parser.Options() {
-				if err == nil {
-					b.Fatal("expected error for unknown option")
-				}
-				_ = option
-				break
-			}
-		}
-	})
-
-	b.Run("MissingRequiredArg", func(b *testing.B) {
-		args := []string{"prog", "-a"}
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			parser, err := GetOpt(args, "a:")
-			if err != nil {
-				b.Fatal(err)
-			}
-			for option, err := range parser.Options() {
-				if err == nil {
-					b.Fatal("expected error for missing argument")
-				}
-				_ = option
-				break
-			}
-		}
-	})
-}
-
-// BenchmarkScalability tests how performance scales with argument count
-func BenchmarkScalability(b *testing.B) {
-	sizes := []int{10, 50, 100, 500}
-
-	for _, size := range sizes {
-		b.Run(fmt.Sprintf("OptArgs_Size%d", size), func(b *testing.B) {
-			args := make([]string, 0, size+1)
-			args = append(args, "prog")
-			for j := 1; j <= size; j++ {
-				if j%3 == 0 {
-					args = append(args, "-a", "arg"+strconv.Itoa(j))
-				} else {
-					args = append(args, "arg"+strconv.Itoa(j))
-				}
-			}
-
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				benchParse(b, GetOptLong, args, "a:", nil)
-			}
-		})
-	}
-}
-
-// BenchmarkFeatureComparison benchmarks features unique to OptArgs
-func BenchmarkFeatureComparison(b *testing.B) {
-	b.Run("OptionCompaction", func(b *testing.B) {
-		args := []string{"prog", "-abcdef"}
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			benchParse(b, GetOptLong, args, "abcdef", nil)
-		}
-	})
-
-	b.Run("PartialLongOptionMatching", func(b *testing.B) {
-		args := []string{"prog", "--verbose", "--output", "file.txt"}
-		longOpts := []Flag{
-			{Name: "verbose", HasArg: NoArgument},
-			{Name: "output", HasArg: RequiredArgument},
-		}
-
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			benchParse(b, GetOptLong, args, "", longOpts)
-		}
-	})
-
-	b.Run("GNUWordExtension", func(b *testing.B) {
-		args := []string{"prog", "-W", "verbose", "-W", "output=file.txt"}
-		longOpts := []Flag{
-			{Name: "verbose", HasArg: NoArgument},
-			{Name: "output", HasArg: RequiredArgument},
-		}
-
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			benchParse(b, GetOptLong, args, "W;", longOpts)
 		}
 	})
 }
