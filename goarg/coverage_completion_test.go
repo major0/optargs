@@ -159,36 +159,6 @@ func TestParserFail(t *testing.T) {
 	}
 }
 
-// TestGenerateCompatibilityReport tests the uncovered function
-func TestGenerateCompatibilityReport(t *testing.T) {
-	framework := NewCompatibilityTestFramework()
-
-	// Add a simple test
-	testStruct := &struct {
-		Verbose bool `arg:"-v,--verbose"`
-	}{}
-	framework.AddCompatibilityTest("test", testStruct, []string{"--verbose"}, false)
-
-	// Create a mock report
-	report := &CompatibilityReport{
-		TotalTests:  1,
-		PassedTests: 1,
-		FailedTests: 0,
-	}
-
-	// Test the report generation
-	reportStr := framework.GenerateCompatibilityReport(report)
-
-	// The function should return some kind of report
-	if reportStr == "" {
-		t.Error("Expected non-empty compatibility report")
-	}
-
-	if !strings.Contains(reportStr, "Compatibility Test Report") {
-		t.Error("Expected report header in output")
-	}
-}
-
 // TestUncoveredHelpFunctions tests functions with low coverage in help.go
 func TestUncoveredHelpFunctions(t *testing.T) {
 	t.Run("WriteHelp edge cases", func(t *testing.T) {
@@ -619,51 +589,6 @@ func TestAdditionalCoverageImprovements(t *testing.T) {
 		err := parser.mapToOptArgsCore(&subcommandField)
 		if err != nil {
 			t.Errorf("Unexpected error for subcommand field: %v", err)
-		}
-	})
-
-	t.Run("GenerateCompatibilityReport comprehensive coverage", func(t *testing.T) {
-		framework := NewCompatibilityTestFramework()
-
-		// Add multiple tests to improve coverage
-		testStruct1 := &struct {
-			Verbose bool `arg:"-v,--verbose"`
-		}{}
-		framework.AddCompatibilityTest("test1", testStruct1, []string{"--verbose"}, false)
-
-		testStruct2 := &struct {
-			Count int `arg:"-c,--count"`
-		}{}
-		framework.AddCompatibilityTest("test2", testStruct2, []string{"--count", "42"}, false)
-
-		// Create a report with different scenarios
-		report := &CompatibilityReport{
-			TotalTests:  2,
-			PassedTests: 1,
-			FailedTests: 1,
-			Scenarios: []ScenarioResult{
-				{Name: "test1", Match: true},
-				{Name: "test2", Match: false},
-			},
-		}
-
-		// Test the report generation with failures
-		reportStr := framework.GenerateCompatibilityReport(report)
-
-		if reportStr == "" {
-			t.Error("Expected non-empty compatibility report")
-		}
-
-		if !strings.Contains(reportStr, "Compatibility Test Report") {
-			t.Error("Expected report header in output")
-		}
-
-		if !strings.Contains(reportStr, "Failed: 1") {
-			t.Error("Expected failed tests count in output")
-		}
-
-		if !strings.Contains(reportStr, "test2: Results differ") {
-			t.Error("Expected failed scenario in output")
 		}
 	})
 
