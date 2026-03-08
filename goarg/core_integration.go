@@ -387,3 +387,191 @@ func (ci *CoreIntegration) getEnvironmentValue(field *FieldMetadata) (string, bo
 	tagParser := &TagParser{}
 	return tagParser.GetEnvironmentValue(field)
 }
+
+// buildShortOptMap builds a map from struct metadata short options to Flag pointers.
+// Each flag's HasArg is set based on the field's ArgType. Short and long flags for
+// the same field share the same *optargs.Flag pointer so Handle is set once.
+func (ci *CoreIntegration) buildShortOptMap() map[byte]*optargs.Flag {
+	shortOpts := make(map[byte]*optargs.Flag)
+
+	for i := range ci.metadata.Fields {
+		field := &ci.metadata.Fields[i]
+		if field.Positional || field.IsSubcommand || field.Short == "" {
+			continue
+		}
+
+		flag := &optargs.Flag{
+			Name:   field.Short,
+			HasArg: field.ArgType,
+		}
+		shortOpts[field.Short[0]] = flag
+
+		// If this field also has a long option, store the shared pointer
+		// so buildLongOptMap can reuse it.
+		field.CoreFlag = flag
+	}
+
+	return shortOpts
+}
+
+// buildLongOptMap builds a map from struct metadata long options to Flag pointers.
+// For fields that have both short and long options, the same *optargs.Flag pointer
+// from buildShortOptMap is reused so Handle is set once.
+func (ci *CoreIntegration) buildLongOptMap() map[string]*optargs.Flag {
+	longOpts := make(map[string]*optargs.Flag)
+
+	for i := range ci.metadata.Fields {
+		field := &ci.metadata.Fields[i]
+		if field.Positional || field.IsSubcommand || field.Long == "" {
+			continue
+		}
+
+		if field.CoreFlag != nil {
+			// Reuse the shared pointer created by buildShortOptMap.
+			longOpts[field.Long] = field.CoreFlag
+		} else {
+			longOpts[field.Long] = &optargs.Flag{
+				Name:   field.Long,
+				HasArg: field.ArgType,
+			}
+		}
+	}
+
+	return longOpts
+}
+
+// makeHandler returns a Handle callback that sets the struct field value when
+// the option is parsed. Boolean flags with no argument are set to true, slice
+// fields append the converted element, and all other types use
+// TypeConverter.ConvertValue + TypeConverter.SetField via setFieldValue.
+func (ci *CoreIntegration) makeHandler(field *FieldMetadata, destValue reflect.Value) func(string, string) error {
+	return func(name, arg string) error {
+		fieldValue := destValue.FieldByName(field.Name)
+		if !fieldValue.IsValid() || !fieldValue.CanSet() {
+			return fmt.Errorf("cannot set field %s", field.Name)
+		}
+		return ci.setFieldValue(fieldValue, field, arg)
+	}
+}
+
+// CreateParserWithHandlers builds an OptArgs parser with Handle callbacks
+// wired to each flag. It builds short/long opt maps, sets Handle on each
+// flag via makeHandler, creates the parser with case-insensitive commands,
+// and prepares positional arg metadata. It does NOT register subcommands.
+func (ci *CoreIntegration) CreateParserWithHandlers(args []string, destValue reflect.Value) (*optargs.Parser, error) {
+	shortOpts := ci.buildShortOptMap()
+	longOpts := ci.buildLongOptMap()
+
+	// Set Handle callbacks on each flag. Because short and long flags for
+	// the same field share the same *optargs.Flag pointer, iterating over
+	// the metadata fields and setting Handle on whichever flag we find
+	// ensures each flag gets its handler exactly once.
+	for i := range ci.metadata.Fields {
+		field := &ci.metadata.Fields[i]
+		if field.Positional || field.IsSubcommand {
+			continue
+		}
+
+		handler := ci.makeHandler(field, destValue)
+
+		// Find the flag for this field — prefer the short opt pointer
+		// (which is shared with long), otherwise use the long opt pointer.
+		if field.Short != "" {
+			if f, ok := shortOpts[field.Short[0]]; ok {
+				f.Handle = handler
+			}
+		} else if field.Long != "" {
+			if f, ok := longOpts[field.Long]; ok {
+				f.Handle = handler
+			}
+		}
+	}
+
+	parser, err := optargs.NewParserWithCaseInsensitiveCommands(shortOpts, longOpts, args)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OptArgs parser: %w", err)
+	}
+
+	ci.buildPositionalArgs()
+
+	return parser, nil
+}
+
+// findSubcommandField finds the struct field for a subcommand by name
+// (case-insensitive). It returns the field's reflect.Value, the subcommand's
+// StructMetadata, and an error if the subcommand is not found.
+func (ci *CoreIntegration) findSubcommandField(destValue reflect.Value, name string) (reflect.Value, *StructMetadata, error) {
+	// Find the matching subcommand metadata (case-insensitive).
+	var matchedName string
+	var matchedMeta *StructMetadata
+	for cmdName, meta := range ci.metadata.Subcommands {
+		if strings.EqualFold(cmdName, name) {
+			matchedName = cmdName
+			matchedMeta = meta
+			break
+		}
+	}
+	if matchedMeta == nil {
+		return reflect.Value{}, nil, fmt.Errorf("unknown subcommand: %s", name)
+	}
+
+	// Find the struct field whose subcommand name matches.
+	tp := &TagParser{}
+	destType := destValue.Type()
+	for i := 0; i < destType.NumField(); i++ {
+		field := destType.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+		fieldMeta, err := tp.ParseField(field)
+		if err != nil || !fieldMeta.IsSubcommand {
+			continue
+		}
+		if strings.EqualFold(fieldMeta.SubcommandName, matchedName) {
+			return destValue.Field(i), matchedMeta, nil
+		}
+	}
+
+	return reflect.Value{}, nil, fmt.Errorf("subcommand field not found for %s", name)
+}
+
+// RegisterSubcommands iterates ci.metadata.Subcommands, creates a child
+// CoreIntegration for each, calls CreateParserWithHandlers on the child,
+// registers via coreParser.AddCmd, and recursively registers nested
+// subcommands.
+func (ci *CoreIntegration) RegisterSubcommands(coreParser *optargs.Parser, destValue reflect.Value) error {
+	for name, subMeta := range ci.metadata.Subcommands {
+		fieldValue, _, err := ci.findSubcommandField(destValue, name)
+		if err != nil {
+			return fmt.Errorf("failed to find subcommand field for %s: %w", name, err)
+		}
+
+		// If the field is a pointer, allocate and dereference so we can
+		// set fields on the underlying struct.
+		if fieldValue.Kind() == reflect.Ptr {
+			if fieldValue.IsNil() {
+				fieldValue.Set(reflect.New(fieldValue.Type().Elem()))
+			}
+			fieldValue = fieldValue.Elem()
+		}
+
+		child := &CoreIntegration{
+			metadata:  subMeta,
+			shortOpts: make(map[byte]*optargs.Flag),
+			longOpts:  make(map[string]*optargs.Flag),
+		}
+
+		childParser, err := child.CreateParserWithHandlers([]string{}, fieldValue)
+		if err != nil {
+			return fmt.Errorf("failed to create parser for subcommand %s: %w", name, err)
+		}
+
+		coreParser.AddCmd(name, childParser)
+
+		// Recursively register nested subcommands.
+		if err := child.RegisterSubcommands(childParser, fieldValue); err != nil {
+			return fmt.Errorf("failed to register nested subcommands for %s: %w", name, err)
+		}
+	}
+	return nil
+}
