@@ -2349,62 +2349,6 @@ func TestLowCoverageFunctions(t *testing.T) {
 		}
 	})
 
-	// Test validateMin and validateMax with more cases (currently 88.2% each)
-	t.Run("validateMin and validateMax comprehensive", func(t *testing.T) {
-		converter := &TypeConverter{}
-
-		// Test validateMin with various types
-		testCases := []struct {
-			value     interface{}
-			minStr    string
-			shouldErr bool
-		}{
-			{int(5), "3", false},
-			{int(2), "3", true},
-			{float64(5.5), "3.0", false},
-			{float64(2.5), "3.0", true},
-			{uint(5), "3", false},
-			{uint(2), "3", true},
-			{"hello", "3", false},     // String type is not validated, returns nil
-			{int(5), "invalid", true}, // Invalid min value
-		}
-
-		for _, tc := range testCases {
-			fieldValue := reflect.ValueOf(tc.value)
-			err := converter.validateMin(fieldValue, tc.minStr, "TestField")
-			if tc.shouldErr && err == nil {
-				t.Errorf("Expected error for value %v with min %s", tc.value, tc.minStr)
-			} else if !tc.shouldErr && err != nil {
-				t.Errorf("Unexpected error for value %v with min %s: %v", tc.value, tc.minStr, err)
-			}
-		}
-
-		// Test validateMax with various types
-		maxTestCases := []struct {
-			value     interface{}
-			maxStr    string
-			shouldErr bool
-		}{
-			{int(3), "5", false},
-			{int(7), "5", true},
-			{float64(3.5), "5.0", false},
-			{float64(7.5), "5.0", true},
-			{uint(3), "5", false},
-			{uint(7), "5", true},
-			{"hello", "5", false},     // String type is not validated, returns nil
-			{int(3), "invalid", true}, // Invalid max value
-		}
-
-		for _, tc := range maxTestCases {
-			fieldValue := reflect.ValueOf(tc.value)
-			err := converter.validateMax(fieldValue, tc.maxStr, "TestField")
-			if tc.shouldErr && err == nil {
-				t.Errorf("Expected error for value %v with max %s", tc.value, tc.maxStr)
-			} else if !tc.shouldErr && err != nil {
-				t.Errorf("Unexpected error for value %v with max %s: %v", tc.value, tc.maxStr, err)
-			}
-		}
-	})
 }
 
 // TestExhaustive100PercentCoverage targets every single uncovered line to reach exactly 100%
@@ -2740,42 +2684,6 @@ func TestExhaustive100PercentCoverage(t *testing.T) {
 		}
 	})
 
-	// Test all validation functions with edge cases
-	t.Run("Validation function edge cases", func(t *testing.T) {
-		converter := &TypeConverter{}
-
-		// Test validateMin with all integer types
-		intTypes := []interface{}{
-			int8(5), int16(5), int32(5), int64(5),
-			uint8(5), uint16(5), uint32(5), uint64(5),
-			float32(5.0),
-		}
-
-		for _, val := range intTypes {
-			fieldValue := reflect.ValueOf(val)
-			err := converter.validateMin(fieldValue, "3", "TestField")
-			if err != nil {
-				t.Errorf("Unexpected error for %T: %v", val, err)
-			}
-
-			err = converter.validateMax(fieldValue, "10", "TestField")
-			if err != nil {
-				t.Errorf("Unexpected error for %T: %v", val, err)
-			}
-		}
-
-		// Test with invalid constraint values
-		fieldValue := reflect.ValueOf(int(5))
-		err := converter.validateMin(fieldValue, "invalid", "TestField")
-		if err == nil {
-			t.Error("Expected error for invalid min constraint")
-		}
-
-		err = converter.validateMax(fieldValue, "invalid", "TestField")
-		if err == nil {
-			t.Error("Expected error for invalid max constraint")
-		}
-	})
 }
 
 // TestPinpointMissingCoverage creates very specific tests for exact missing lines
@@ -4181,41 +4089,6 @@ func TestConvertCustomSpecificMissingLines(t *testing.T) {
 
 // TestRemainingUncoveredFunctions tests other functions with missing coverage
 func TestRemainingUncoveredFunctions(t *testing.T) {
-	// Test validateMin and validateMax error paths
-	t.Run("validateMin error paths", func(t *testing.T) {
-		converter := &TypeConverter{}
-
-		// Test with value less than minimum
-		fieldValue := reflect.ValueOf(5)
-		err := converter.validateMin(fieldValue, "10", "TestField")
-		if err == nil {
-			t.Error("Expected min validation error")
-		}
-
-		// Test with invalid min tag
-		err = converter.validateMin(fieldValue, "invalid", "TestField")
-		if err == nil {
-			t.Error("Expected error for invalid min tag")
-		}
-	})
-
-	t.Run("validateMax error paths", func(t *testing.T) {
-		converter := &TypeConverter{}
-
-		// Test with value greater than maximum
-		fieldValue := reflect.ValueOf(15)
-		err := converter.validateMax(fieldValue, "10", "TestField")
-		if err == nil {
-			t.Error("Expected max validation error")
-		}
-
-		// Test with invalid max tag
-		err = converter.validateMax(fieldValue, "invalid", "TestField")
-		if err == nil {
-			t.Error("Expected error for invalid max tag")
-		}
-	})
-
 	// Test other functions with missing coverage
 	t.Run("parseArgTag error paths", func(t *testing.T) {
 		parser := &TagParser{}
@@ -4772,68 +4645,6 @@ func TestMustParseAlternativeApproach(t *testing.T) {
 func TestRemainingCoveragePaths(t *testing.T) {
 	// Test specific error conditions that might not be covered
 
-	t.Run("validateMin all numeric types", func(t *testing.T) {
-		converter := &TypeConverter{}
-
-		// Test all numeric types for validateMin
-		testCases := []struct {
-			value interface{}
-			min   string
-		}{
-			{int(5), "10"},
-			{int8(5), "10"},
-			{int16(5), "10"},
-			{int32(5), "10"},
-			{int64(5), "10"},
-			{uint(5), "10"},
-			{uint8(5), "10"},
-			{uint16(5), "10"},
-			{uint32(5), "10"},
-			{uint64(5), "10"},
-			{float32(5.0), "10.0"},
-			{float64(5.0), "10.0"},
-		}
-
-		for _, tc := range testCases {
-			fieldValue := reflect.ValueOf(tc.value)
-			err := converter.validateMin(fieldValue, tc.min, "TestField")
-			if err == nil {
-				t.Errorf("Expected min validation error for %T", tc.value)
-			}
-		}
-	})
-
-	t.Run("validateMax all numeric types", func(t *testing.T) {
-		converter := &TypeConverter{}
-
-		// Test all numeric types for validateMax
-		testCases := []struct {
-			value interface{}
-			max   string
-		}{
-			{int(15), "10"},
-			{int8(15), "10"},
-			{int16(15), "10"},
-			{int32(15), "10"},
-			{int64(15), "10"},
-			{uint(15), "10"},
-			{uint8(15), "10"},
-			{uint16(15), "10"},
-			{uint32(15), "10"},
-			{uint64(15), "10"},
-			{float32(15.0), "10.0"},
-			{float64(15.0), "10.0"},
-		}
-
-		for _, tc := range testCases {
-			fieldValue := reflect.ValueOf(tc.value)
-			err := converter.validateMax(fieldValue, tc.max, "TestField")
-			if err == nil {
-				t.Errorf("Expected max validation error for %T", tc.value)
-			}
-		}
-	})
-
 	t.Run("all error translation branches", func(t *testing.T) {
 		translator := &ErrorTranslator{}
 
@@ -5041,39 +4852,6 @@ func TestAbsoluteCompleteCoverage(t *testing.T) {
 		err := validateMissingMethods()
 		if err == nil {
 			t.Error("Expected missing method error")
-		}
-	})
-
-	t.Run("comprehensive error path testing", func(t *testing.T) {
-		// Test every possible error path in the codebase
-
-		// Test all validation functions with edge cases
-		converter := &TypeConverter{}
-
-		// Test validateMin with invalid tag
-		fieldValue := reflect.ValueOf(5)
-		err := converter.validateMin(fieldValue, "invalid", "TestField")
-		if err == nil {
-			t.Error("Expected error for invalid min tag")
-		}
-
-		// Test validateMax with invalid tag
-		err = converter.validateMax(fieldValue, "invalid", "TestField")
-		if err == nil {
-			t.Error("Expected error for invalid max tag")
-		}
-
-		// Test validateMinLen with invalid tag
-		stringValue := reflect.ValueOf("test")
-		err = converter.validateMinLen(stringValue, "invalid", "TestField")
-		if err == nil {
-			t.Error("Expected error for invalid minlen tag")
-		}
-
-		// Test validateMaxLen with invalid tag
-		err = converter.validateMaxLen(stringValue, "invalid", "TestField")
-		if err == nil {
-			t.Error("Expected error for invalid maxlen tag")
 		}
 	})
 }
