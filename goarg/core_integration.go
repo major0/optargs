@@ -575,3 +575,20 @@ func (ci *CoreIntegration) RegisterSubcommands(coreParser *optargs.Parser, destV
 	}
 	return nil
 }
+
+// PostParse executes the complete post-parse sequence: positional argument
+// processing, environment variable resolution, default value application,
+// and required field validation.
+func (ci *CoreIntegration) PostParse(coreParser *optargs.Parser, destValue reflect.Value) error {
+	if err := ci.processPositionalArgs(coreParser, destValue); err != nil {
+		return err
+	}
+	if err := ci.processEnvironmentVariables(destValue); err != nil {
+		return err
+	}
+	if err := ci.setDefaultValues(destValue); err != nil {
+		return err
+	}
+	tc := &TypeConverter{}
+	return tc.ValidateRequired(destValue.Addr().Interface(), ci.metadata)
+}
