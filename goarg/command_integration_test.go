@@ -2,8 +2,6 @@ package goarg
 
 import (
 	"testing"
-
-	"github.com/major0/optargs"
 )
 
 func TestCommandSystemIntegration(t *testing.T) {
@@ -65,43 +63,6 @@ func TestCommandSystemIntegration(t *testing.T) {
 		serverMeta := metadata.Subcommands["server"]
 		if len(serverMeta.Fields) != 2 {
 			t.Errorf("Expected server subcommand to have 2 fields, got %d", len(serverMeta.Fields))
-		}
-	})
-
-	t.Run("CoreIntegrationCreatesCommands", func(t *testing.T) {
-		var cmd RootCmd
-		parser := &TagParser{}
-		metadata, err := parser.ParseStruct(&cmd)
-		if err != nil {
-			t.Fatalf("ParseStruct() unexpected error: %v", err)
-		}
-
-		// Create core integration
-		coreIntegration := &CoreIntegration{
-			metadata:    metadata,
-			shortOpts:   make(map[byte]*optargs.Flag),
-			longOpts:    make(map[string]*optargs.Flag),
-			positionals: []PositionalArg{},
-		}
-
-		// Create parser with command support
-		coreParser, err := coreIntegration.CreateParser([]string{})
-		if err != nil {
-			t.Fatalf("CreateParser() unexpected error: %v", err)
-		}
-
-		// Verify commands were registered
-		if !coreParser.HasCommands() {
-			t.Error("Expected parser to have commands registered")
-		}
-
-		// Check specific commands
-		if _, exists := coreParser.GetCommand("server"); !exists {
-			t.Error("Expected 'server' command to be registered")
-		}
-
-		if _, exists := coreParser.GetCommand("client"); !exists {
-			t.Error("Expected 'client' command to be registered")
 		}
 	})
 

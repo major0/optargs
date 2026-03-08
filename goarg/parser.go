@@ -107,176 +107,99 @@ func (p *Parser) Parse(args []string) error {
 		args = os.Args[1:]
 	}
 
-	// Create core integration
-	coreIntegration := &CoreIntegration{
+	ci := &CoreIntegration{
 		metadata:    p.metadata,
 		shortOpts:   p.shortOpts,
 		longOpts:    p.longOpts,
 		positionals: []PositionalArg{},
 	}
+	destValue := reflect.ValueOf(p.dest).Elem()
 
-	// Build OptArgs Core parser with command support
-	coreParser, err := coreIntegration.CreateParser(args)
+	// Build parser with Handle callbacks
+	coreParser, err := ci.CreateParserWithHandlers(args, destValue)
 	if err != nil {
+		return p.translateError(err, "")
+	}
+
+	// Register subcommands
+	if err := ci.RegisterSubcommands(coreParser, destValue); err != nil {
 		return p.translateError(err, "")
 	}
 
 	p.coreParser = coreParser
 
-	// Check if we have subcommands and if a subcommand was invoked
-	if len(p.metadata.Subcommands) > 0 && len(args) > 0 {
-		// Look for subcommand in arguments
-		for i, arg := range args {
-			// Try case insensitive lookup for subcommands
-			subMetadata, subcommandName := p.findSubcommand(arg)
-			if subMetadata != nil {
-				// Found subcommand, dispatch to it
-				subParser, err := coreParser.Commands.ExecuteCommandCaseInsensitive(subcommandName, args[i+1:], true) // Always use case insensitive for go-arg
-				if err != nil {
-					return p.translateError(err, arg)
-				}
-
-				// Get the subcommand field from the destination struct
-				destValue := reflect.ValueOf(p.dest).Elem()
-				var subcommandField reflect.Value
-				for j := 0; j < destValue.NumField(); j++ {
-					field := destValue.Type().Field(j)
-					fieldMeta, _ := (&TagParser{}).ParseField(field)
-					if fieldMeta.IsSubcommand && strings.EqualFold(fieldMeta.SubcommandName, arg) {
-						subcommandField = destValue.Field(j)
-						break
-					}
-				}
-
-				if !subcommandField.IsValid() {
-					return p.translateError(fmt.Errorf("subcommand field not found for %s", arg), arg)
-				}
-
-				// Ensure subcommand field is initialized
-				if subcommandField.IsNil() {
-					subcommandField.Set(reflect.New(subcommandField.Type().Elem()))
-				}
-
-				// Process all options from the subcommand parser in a single pass
-				// This handles both inherited options (set on parent) and subcommand options (set on subcommand)
-				return p.translateError(p.processOptionsWithInheritance(subParser, coreIntegration, subMetadata, subcommandField.Interface()), "")
-			}
-		}
-	}
-
-	// No subcommand found, process as regular parsing
-	return p.translateError(coreIntegration.ProcessResults(coreParser, p.dest), "")
-}
-
-// processOptionsWithInheritance processes options from subcommand parser, handling inheritance in a single pass
-func (p *Parser) processOptionsWithInheritance(subParser *optargs.Parser, parentIntegration *CoreIntegration, subMetadata *StructMetadata, subcommandDest interface{}) error {
-	// Create integration for subcommand
-	subIntegration := &CoreIntegration{
-		metadata:    subMetadata,
-		shortOpts:   make(map[byte]*optargs.Flag),
-		longOpts:    make(map[string]*optargs.Flag),
-		positionals: []PositionalArg{},
-	}
-
-	// Build subcommand option mappings
-	subIntegration.BuildLongOpts()
-
-	destValue := reflect.ValueOf(p.dest).Elem()
-	subDestValue := reflect.ValueOf(subcommandDest).Elem()
-
-	// Process all options from the subcommand parser in a single pass
-	for option, err := range subParser.Options() {
+	// Iterate — Handle callbacks fire automatically
+	for _, err := range coreParser.Options() {
 		if err != nil {
 			return p.translateError(err, "")
 		}
+	}
 
-		// First, try to find the option in the subcommand metadata
-		subField := p.findFieldInMetadata(option.Name, subMetadata)
-		if subField != nil {
-			// This is a subcommand option, set it on the subcommand struct
-			fieldValue := subDestValue.FieldByName(subField.Name)
-			if fieldValue.IsValid() && fieldValue.CanSet() {
-				var arg string
-				if option.HasArg {
-					arg = option.Arg
-				}
+	// Subcommand dispatch: detect which subcommand was invoked and run
+	// its Options() iteration + PostParse. Non-invoked subcommand fields
+	// are reset to nil so callers can detect the active subcommand.
+	if len(p.metadata.Subcommands) > 0 {
+		invokedName := ""
+		// Scan original args for a subcommand name (case-insensitive),
+		// matching the same detection strategy as the previous implementation.
+		for _, arg := range args {
+			if strings.HasPrefix(arg, "-") {
+				continue
+			}
+			if _, _, err := ci.findSubcommandField(destValue, arg); err == nil {
+				invokedName = arg
+				break
+			}
+		}
 
-				if err := subIntegration.setFieldValue(fieldValue, subField, arg); err != nil {
-					return p.translateError(err, subField.Name)
+		if invokedName != "" {
+			fieldValue, subMeta, _ := ci.findSubcommandField(destValue, invokedName)
+
+			// Get the child parser registered by RegisterSubcommands
+			childParser, ok := coreParser.GetCommand(invokedName)
+			if !ok {
+				return p.translateError(fmt.Errorf("subcommand parser not found for %s", invokedName), invokedName)
+			}
+
+			// Iterate child Options() — Handle callbacks fire for subcommand options
+			for _, err := range childParser.Options() {
+				if err != nil {
+					return p.translateError(err, "")
 				}
 			}
-		} else {
-			// Not found in subcommand, check if it's a parent option (inherited)
-			parentField := p.findParentFieldForOption(option.Name)
-			if parentField != nil {
-				// This is an inherited parent option, set it on the parent struct
-				fieldValue := destValue.FieldByName(parentField.Name)
-				if fieldValue.IsValid() && fieldValue.CanSet() {
-					var arg string
-					if option.HasArg {
-						arg = option.Arg
-					}
 
-					if err := parentIntegration.setFieldValue(fieldValue, parentField, arg); err != nil {
-						return p.translateError(err, parentField.Name)
-					}
-				}
+			// PostParse on the subcommand
+			subDestValue := fieldValue.Elem()
+			childCI := &CoreIntegration{
+				metadata:    subMeta,
+				shortOpts:   make(map[byte]*optargs.Flag),
+				longOpts:    make(map[string]*optargs.Flag),
+				positionals: []PositionalArg{},
 			}
-			// If not found in either parent or subcommand, it's an unknown option (already handled by OptArgs Core)
+			childCI.buildPositionalArgs()
+			if err := childCI.PostParse(childParser, subDestValue); err != nil {
+				return p.translateError(err, "")
+			}
+		}
+
+		// Nil out non-invoked subcommand fields so callers can detect
+		// which subcommand was selected.
+		for name := range p.metadata.Subcommands {
+			if strings.EqualFold(name, invokedName) {
+				continue
+			}
+			fv, _, err := ci.findSubcommandField(destValue, name)
+			if err != nil {
+				continue
+			}
+			if fv.Kind() == reflect.Ptr {
+				fv.Set(reflect.Zero(fv.Type()))
+			}
 		}
 	}
 
-	// Process positional arguments for subcommand
-	if err := subIntegration.processPositionalArgs(subParser, subDestValue); err != nil {
-		return p.translateError(err, "")
-	}
-
-	// Process environment variables for subcommand
-	if err := subIntegration.processEnvironmentVariables(subDestValue); err != nil {
-		return p.translateError(err, "")
-	}
-
-	// Set default values for subcommand
-	if err := subIntegration.setDefaultValues(subDestValue); err != nil {
-		return p.translateError(err, "")
-	}
-
-	// Validate required fields for subcommand
-	typeConverter := &TypeConverter{}
-	if err := typeConverter.ValidateRequired(subcommandDest, subMetadata); err != nil {
-		return p.translateError(err, "")
-	}
-
-	// Process environment variables and defaults for parent as well
-	if err := parentIntegration.processEnvironmentVariables(destValue); err != nil {
-		return p.translateError(err, "")
-	}
-
-	if err := parentIntegration.setDefaultValues(destValue); err != nil {
-		return p.translateError(err, "")
-	}
-
-	return nil
-}
-
-// findFieldInMetadata finds a field in the given metadata that matches the option name
-func (p *Parser) findFieldInMetadata(optionName string, metadata *StructMetadata) *FieldMetadata {
-	for _, field := range metadata.Fields {
-		if field.Short == optionName || field.Long == optionName {
-			return &field
-		}
-	}
-	return nil
-}
-
-// findParentFieldForOption finds a field in the parent metadata that matches the option name
-func (p *Parser) findParentFieldForOption(optionName string) *FieldMetadata {
-	for _, field := range p.metadata.Fields {
-		if field.Short == optionName || field.Long == optionName {
-			return &field
-		}
-	}
-	return nil
+	// Post-parse: positionals, env vars, defaults, required validation
+	return p.translateError(ci.PostParse(coreParser, destValue), "")
 }
 
 // WriteHelp writes help text to the provided writer
@@ -310,21 +233,4 @@ func (p *Parser) translateError(err error, fieldName string) error {
 	}
 
 	return p.errorTranslator.TranslateError(err, context)
-}
-
-// findSubcommand performs case insensitive lookup for subcommands
-func (p *Parser) findSubcommand(name string) (*StructMetadata, string) {
-	// First try exact match
-	if metadata, exists := p.metadata.Subcommands[name]; exists {
-		return metadata, name
-	}
-
-	// Then try case insensitive match
-	for cmdName, metadata := range p.metadata.Subcommands {
-		if strings.EqualFold(cmdName, name) {
-			return metadata, cmdName
-		}
-	}
-
-	return nil, ""
 }

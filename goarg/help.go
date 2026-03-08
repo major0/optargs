@@ -243,8 +243,8 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 	}
 
 	// Handle wrapped positional argument errors
-	if strings.Contains(errMsg, "failed to process positional arguments: missing required positional argument: ") {
-		parts := strings.Split(errMsg, "failed to process positional arguments: missing required positional argument: ")
+	if strings.Contains(errMsg, "missing required positional argument: ") {
+		parts := strings.Split(errMsg, "missing required positional argument: ")
 		if len(parts) > 1 {
 			fieldName := strings.TrimSpace(parts[1])
 			return fmt.Errorf("%s is required", fieldName)
