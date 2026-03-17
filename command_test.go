@@ -3,6 +3,7 @@ package optargs
 import (
 	"strings"
 	"testing"
+	"testing/quick"
 )
 
 // newCmdRootParser creates a root parser with --verbose (-v) and --config (-c)
@@ -489,4 +490,259 @@ func TestDispatchErrorModes(t *testing.T) {
 			t.Errorf("Expected 'option requires an argument: f', got '%s'", foundErr.Error())
 		}
 	})
+}
+
+// Feature: goarg-optargs-integration, Property 10: Active subcommand detection correctness
+func TestPropertyActiveCommandCorrectness(t *testing.T) {
+	// Sub-property A: After dispatching a subcommand, ActiveCommand returns
+	// the correct name and parser pointer.
+	t.Run("dispatched_returns_correct", func(t *testing.T) {
+		f := func(cmdName string) bool {
+			// Filter to valid command names (non-empty, no dashes, no spaces).
+			if len(cmdName) == 0 || len(cmdName) > 20 {
+				return true
+			}
+			for _, r := range cmdName {
+				if r == '-' || r == ' ' || r < 'a' || r > 'z' {
+					return true
+				}
+			}
+
+			root, err := GetOptLong([]string{cmdName}, "", []Flag{})
+			if err != nil {
+				return false
+			}
+			child, err := GetOptLong([]string{}, "", []Flag{})
+			if err != nil {
+				return false
+			}
+			root.AddCmd(cmdName, child)
+
+			// Drain the iterator to trigger dispatch.
+			for range root.Options() {
+			}
+
+			name, parser := root.ActiveCommand()
+			return name == cmdName && parser == child
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Sub-property B: When no subcommand is dispatched, ActiveCommand
+	// returns empty name and nil parser.
+	t.Run("no_dispatch_returns_empty", func(t *testing.T) {
+		f := func(optArg string) bool {
+			if len(optArg) == 0 || len(optArg) > 20 {
+				return true
+			}
+			// Use only plain non-option args that won't match a command.
+			for _, r := range optArg {
+				if r < 'a' || r > 'z' {
+					return true
+				}
+			}
+
+			root, err := GetOptLong([]string{optArg}, "", []Flag{})
+			if err != nil {
+				return false
+			}
+			// No commands registered — nothing to dispatch.
+			for range root.Options() {
+			}
+
+			name, parser := root.ActiveCommand()
+			return name == "" && parser == nil
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Sub-property C: Recursive walk of ActiveCommand produces the full
+	// dispatch chain for nested subcommands.
+	t.Run("nested_chain_walk", func(t *testing.T) {
+		f := func(depth uint8) bool {
+			// Limit depth to 1–5 levels.
+			n := int(depth%5) + 1
+
+			// Build chain: root → cmd0 → cmd1 → ... → cmdN-1
+			names := make([]string, n)
+			parsers := make([]*Parser, n+1)
+			var err error
+			parsers[0], err = GetOptLong([]string{}, "", []Flag{})
+			if err != nil {
+				return false
+			}
+			args := make([]string, n)
+			for i := 0; i < n; i++ {
+				names[i] = string(rune('a' + i))
+				args[i] = names[i]
+				parsers[i+1], err = GetOptLong([]string{}, "", []Flag{})
+				if err != nil {
+					return false
+				}
+				parsers[i].AddCmd(names[i], parsers[i+1])
+			}
+
+			// Set args on root and drain.
+			parsers[0].Args = args
+			for range parsers[0].Options() {
+			}
+			// Drain each child's Options() to trigger nested dispatch.
+			for i := 1; i < n; i++ {
+				for range parsers[i].Options() {
+				}
+			}
+
+			// Walk the chain via ActiveCommand.
+			current := parsers[0]
+			for i := 0; i < n; i++ {
+				name, p := current.ActiveCommand()
+				if name != names[i] || p != parsers[i+1] {
+					return false
+				}
+				current = p
+			}
+			// Leaf should have no active command.
+			name, p := current.ActiveCommand()
+			return name == "" && p == nil
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+// activeCommandTests covers specific ActiveCommand scenarios not explored
+// by the property test: inherited options, aliases, and edge cases.
+var activeCommandTests = []struct {
+	name     string
+	args     []string
+	setup    func(t *testing.T) (*Parser, map[string]*Parser)
+	wantName string
+	wantNil  bool
+}{
+	{
+		name: "single_subcommand",
+		args: []string{"server", "--port", "8080"},
+		setup: func(t *testing.T) (*Parser, map[string]*Parser) {
+			t.Helper()
+			root := newCmdRootParser(t)
+			server := newCmdServerParser(t)
+			root.AddCmd("server", server)
+			return root, map[string]*Parser{"server": server}
+		},
+		wantName: "server",
+	},
+	{
+		name: "no_subcommand",
+		args: []string{"--verbose"},
+		setup: func(t *testing.T) (*Parser, map[string]*Parser) {
+			t.Helper()
+			root := newCmdRootParser(t)
+			server := newCmdServerParser(t)
+			root.AddCmd("server", server)
+			return root, nil
+		},
+		wantName: "",
+		wantNil:  true,
+	},
+	{
+		name: "subcommand_with_inherited_options",
+		args: []string{"--verbose", "server", "--port", "9090"},
+		setup: func(t *testing.T) (*Parser, map[string]*Parser) {
+			t.Helper()
+			root := newCmdRootParser(t)
+			server := newCmdServerParser(t)
+			root.AddCmd("server", server)
+			return root, map[string]*Parser{"server": server}
+		},
+		wantName: "server",
+	},
+	{
+		name: "no_commands_registered",
+		args: []string{"anything"},
+		setup: func(t *testing.T) (*Parser, map[string]*Parser) {
+			t.Helper()
+			root := newMinimalParser(t)
+			return root, nil
+		},
+		wantName: "",
+		wantNil:  true,
+	},
+}
+
+func TestActiveCommand(t *testing.T) {
+	for _, tt := range activeCommandTests {
+		t.Run(tt.name, func(t *testing.T) {
+			root, parsers := tt.setup(t)
+			root.Args = tt.args
+
+			// Drain root options to trigger dispatch.
+			for _, err := range root.Options() {
+				if err != nil {
+					t.Fatalf("Options() error: %v", err)
+				}
+			}
+
+			name, parser := root.ActiveCommand()
+			if name != tt.wantName {
+				t.Errorf("ActiveCommand() name = %q, want %q", name, tt.wantName)
+			}
+			if tt.wantNil {
+				if parser != nil {
+					t.Error("ActiveCommand() parser should be nil")
+				}
+			} else {
+				want := parsers[tt.wantName]
+				if parser != want {
+					t.Error("ActiveCommand() parser does not match expected")
+				}
+			}
+		})
+	}
+}
+
+func TestActiveCommandNestedChain(t *testing.T) {
+	root, _ := GetOptLong(
+		[]string{"-v", "db", "--name", "mydb", "migrate", "--steps", "3"},
+		"v", []Flag{{Name: "verbose", HasArg: NoArgument}},
+	)
+	db, _ := GetOptLong([]string{}, "n:", []Flag{{Name: "name", HasArg: RequiredArgument}})
+	root.AddCmd("db", db)
+	migrate, _ := GetOptLong([]string{}, "s:", []Flag{{Name: "steps", HasArg: RequiredArgument}})
+	db.AddCmd("migrate", migrate)
+
+	// Drain each level.
+	for _, err := range root.Options() {
+		if err != nil {
+			t.Fatalf("root Options(): %v", err)
+		}
+	}
+	for _, err := range db.Options() {
+		if err != nil {
+			t.Fatalf("db Options(): %v", err)
+		}
+	}
+	for _, err := range migrate.Options() {
+		if err != nil {
+			t.Fatalf("migrate Options(): %v", err)
+		}
+	}
+
+	// Walk the chain.
+	name1, p1 := root.ActiveCommand()
+	if name1 != "db" || p1 != db {
+		t.Fatalf("root.ActiveCommand() = (%q, %v), want (\"db\", db)", name1, p1)
+	}
+	name2, p2 := p1.ActiveCommand()
+	if name2 != "migrate" || p2 != migrate {
+		t.Fatalf("db.ActiveCommand() = (%q, %v), want (\"migrate\", migrate)", name2, p2)
+	}
+	name3, p3 := p2.ActiveCommand()
+	if name3 != "" || p3 != nil {
+		t.Errorf("migrate.ActiveCommand() = (%q, %v), want (\"\", nil)", name3, p3)
+	}
 }

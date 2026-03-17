@@ -104,3 +104,12 @@ func (cr CommandRegistry) GetAliases(targetParser *Parser) []string {
 	}
 	return aliases
 }
+
+// ActiveCommand returns the name and parser of the subcommand that was
+// dispatched during parsing. If no subcommand was dispatched, name is
+// empty and parser is nil. For nested subcommands, returns the immediate
+// child — callers walk the chain by calling ActiveCommand on the returned
+// parser.
+func (p *Parser) ActiveCommand() (name string, parser *Parser) {
+	return p.activeCmd, p.activeCmdParser
+}

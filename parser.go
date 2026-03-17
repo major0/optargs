@@ -62,6 +62,10 @@ type Parser struct {
 	// Metadata for help generation
 	Name        string // command/subcommand name
 	Description string // command/subcommand description
+
+	// Active subcommand tracking — set during Options() when command dispatch succeeds
+	activeCmd       string  // name of dispatched subcommand
+	activeCmdParser *Parser // parser of dispatched subcommand
 }
 
 // NewParser creates a Parser from pre-built configuration, short option map,
@@ -440,12 +444,15 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 			default:
 				// Check if this is a registered command
 				if cmd, exists := p.GetCommand(p.Args[0]); exists {
-					_, err := prepareCommand(p.Args[0], cmd, true, p.Args[1:])
+					cmdName := p.Args[0]
+					_, err := prepareCommand(cmdName, cmd, true, p.Args[1:])
 					if err != nil {
 						if !yield(Option{}, err) {
 							return
 						}
 					}
+					p.activeCmd = cmdName
+					p.activeCmdParser = cmd
 					p.Args = []string{}
 					break out
 				}

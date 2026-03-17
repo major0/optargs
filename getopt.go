@@ -130,10 +130,10 @@ type Flag struct {
 	Handle func(name string, arg string) error
 
 	// Metadata for help generation — set at registration time
-	Help         string  // human-readable help text
-	ArgName      string  // placeholder name (e.g., "FILE", "COUNT")
-	DefaultValue string  // display representation of default
-	Peer         *Flag   // bidirectional short↔long link
+	Help         string // human-readable help text
+	ArgName      string // placeholder name (e.g., "FILE", "COUNT")
+	DefaultValue string // display representation of default
+	Peer         *Flag  // bidirectional short↔long link
 }
 
 // Option represents a parsed option yielded by the iterator.
