@@ -3,6 +3,7 @@ package optargs
 import (
 	"strings"
 	"testing"
+	"testing/quick"
 )
 
 // graphChars returns every byte value for which isGraph reports true.
@@ -934,5 +935,254 @@ func TestFindShortOptDirectErrors(t *testing.T) {
 				t.Errorf("error = %q, want %q", err.Error(), tt.wantErr)
 			}
 		})
+	}
+}
+
+// Feature: goarg-optargs-integration, Property 7: Flag and Parser metadata round-trip
+// Validates: Requirements 8.1, 8.2, 8.3, 8.6, 8.7, 8.8, 8.9
+//
+// For any set of metadata values, setting them at registration time and
+// reading them back by walking the parser tree returns the same values.
+
+func TestPropertyMetadataRoundTrip(t *testing.T) {
+	cfg := &quick.Config{MaxCount: 100}
+
+	t.Run("flag_metadata", func(t *testing.T) {
+		f := func(help, argName, defaultVal string) bool {
+			flag := &Flag{
+				Name:         "test",
+				HasArg:       RequiredArgument,
+				Help:         help,
+				ArgName:      argName,
+				DefaultValue: defaultVal,
+			}
+			p, err := NewParser(ParserConfig{}, nil, map[string]*Flag{"test": flag}, nil)
+			if err != nil {
+				return false
+			}
+			got := p.longOpts["test"]
+			return got.Help == help && got.ArgName == argName && got.DefaultValue == defaultVal
+		}
+		if err := quick.Check(f, cfg); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("parser_metadata_via_addcmd", func(t *testing.T) {
+		f := func(name, desc string) bool {
+			// Filter out names with whitespace or non-graphic chars
+			// since those would fail command lookup.
+			for _, r := range name {
+				if r <= ' ' || r > '~' {
+					return true // skip, not a valid command name
+				}
+			}
+			if name == "" {
+				return true
+			}
+			parent, err := NewParser(ParserConfig{}, nil, nil, nil)
+			if err != nil {
+				return false
+			}
+			child, err := NewParser(ParserConfig{}, nil, nil, nil)
+			if err != nil {
+				return false
+			}
+			child.Description = desc
+			parent.AddCmd(name, child)
+
+			got, exists := parent.GetCommand(name)
+			if !exists {
+				return false
+			}
+			return got.Name == name && got.Description == desc
+		}
+		if err := quick.Check(f, cfg); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+// Feature: goarg-optargs-integration, Property 8: Peer link bidirectional invariant
+// Validates: Requirements 8.4, 8.5
+//
+// If shortFlag.Peer == longFlag, then longFlag.Peer == shortFlag —
+// one dereference each way.
+
+func TestPropertyPeerLinkBidirectional(t *testing.T) {
+	cfg := &quick.Config{MaxCount: 100}
+
+	f := func(help string) bool {
+		shortFlag := &Flag{Name: "v", HasArg: NoArgument, Help: help}
+		longFlag := &Flag{Name: "verbose", HasArg: NoArgument, Help: help}
+		shortFlag.Peer = longFlag
+		longFlag.Peer = shortFlag
+
+		p, err := NewParser(ParserConfig{},
+			map[byte]*Flag{'v': shortFlag},
+			map[string]*Flag{"verbose": longFlag},
+			nil,
+		)
+		if err != nil {
+			return false
+		}
+
+		s := p.shortOpts['v']
+		l := p.longOpts["verbose"]
+		return s.Peer == l && l.Peer == s
+	}
+	if err := quick.Check(f, cfg); err != nil {
+		t.Error(err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Unit tests — Flag and Parser metadata fields
+// Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9
+// ---------------------------------------------------------------------------
+
+func TestFlagMetadataFields(t *testing.T) {
+	tests := []struct {
+		name         string
+		help         string
+		argName      string
+		defaultValue string
+	}{
+		{"all fields set", "enable verbose output", "LEVEL", "0"},
+		{"empty help", "", "FILE", "/dev/stdin"},
+		{"empty argname", "show version", "", ""},
+		{"all empty", "", "", ""},
+		{"unicode help", "启用详细输出", "文件", "默认"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			flag := &Flag{
+				Name:         "test",
+				HasArg:       RequiredArgument,
+				Help:         tt.help,
+				ArgName:      tt.argName,
+				DefaultValue: tt.defaultValue,
+			}
+			p, err := NewParser(ParserConfig{}, nil, map[string]*Flag{"test": flag}, nil)
+			if err != nil {
+				t.Fatalf("NewParser: %v", err)
+			}
+			got := p.longOpts["test"]
+			if got.Help != tt.help {
+				t.Errorf("Help = %q, want %q", got.Help, tt.help)
+			}
+			if got.ArgName != tt.argName {
+				t.Errorf("ArgName = %q, want %q", got.ArgName, tt.argName)
+			}
+			if got.DefaultValue != tt.defaultValue {
+				t.Errorf("DefaultValue = %q, want %q", got.DefaultValue, tt.defaultValue)
+			}
+		})
+	}
+}
+
+func TestParserMetadataViaAddCmd(t *testing.T) {
+	tests := []struct {
+		name        string
+		cmdName     string
+		description string
+	}{
+		{"basic subcommand", "serve", "start the server"},
+		{"empty description", "build", ""},
+		{"unicode", "构建", "构建项目"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parent, err := NewParser(ParserConfig{}, nil, nil, nil)
+			if err != nil {
+				t.Fatalf("NewParser parent: %v", err)
+			}
+			child, err := NewParser(ParserConfig{}, nil, nil, nil)
+			if err != nil {
+				t.Fatalf("NewParser child: %v", err)
+			}
+			child.Description = tt.description
+			parent.AddCmd(tt.cmdName, child)
+
+			got, exists := parent.GetCommand(tt.cmdName)
+			if !exists {
+				t.Fatalf("command %q not found", tt.cmdName)
+			}
+			if got.Name != tt.cmdName {
+				t.Errorf("Name = %q, want %q", got.Name, tt.cmdName)
+			}
+			if got.Description != tt.description {
+				t.Errorf("Description = %q, want %q", got.Description, tt.description)
+			}
+		})
+	}
+}
+
+func TestPeerLinkSetAndVerified(t *testing.T) {
+	shortFlag := &Flag{Name: "v", HasArg: NoArgument, Help: "verbose"}
+	longFlag := &Flag{Name: "verbose", HasArg: NoArgument, Help: "verbose"}
+	shortFlag.Peer = longFlag
+	longFlag.Peer = shortFlag
+
+	p, err := NewParser(ParserConfig{},
+		map[byte]*Flag{'v': shortFlag},
+		map[string]*Flag{"verbose": longFlag},
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("NewParser: %v", err)
+	}
+
+	s := p.shortOpts['v']
+	l := p.longOpts["verbose"]
+
+	if s.Peer != l {
+		t.Error("short.Peer does not point to long flag")
+	}
+	if l.Peer != s {
+		t.Error("long.Peer does not point to short flag")
+	}
+	if s.Peer.Name != "verbose" {
+		t.Errorf("short.Peer.Name = %q, want %q", s.Peer.Name, "verbose")
+	}
+	if l.Peer.Name != "v" {
+		t.Errorf("long.Peer.Name = %q, want %q", l.Peer.Name, "v")
+	}
+}
+
+func TestPeerNilForFlagsWithoutCounterpart(t *testing.T) {
+	shortOnly := &Flag{Name: "v", HasArg: NoArgument}
+	longOnly := &Flag{Name: "output", HasArg: RequiredArgument}
+
+	p, err := NewParser(ParserConfig{},
+		map[byte]*Flag{'v': shortOnly},
+		map[string]*Flag{"output": longOnly},
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("NewParser: %v", err)
+	}
+
+	if p.shortOpts['v'].Peer != nil {
+		t.Error("short-only flag should have nil Peer")
+	}
+	if p.longOpts["output"].Peer != nil {
+		t.Error("long-only flag should have nil Peer")
+	}
+}
+
+func TestAddCmdNilParser(t *testing.T) {
+	parent, err := NewParser(ParserConfig{}, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("NewParser: %v", err)
+	}
+	// AddCmd with nil parser should not panic
+	parent.AddCmd("nilcmd", nil)
+
+	_, exists := parent.GetCommand("nilcmd")
+	if !exists {
+		t.Error("nil command should still be registered")
 	}
 }

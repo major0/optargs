@@ -58,6 +58,10 @@ type Parser struct {
 	// Command support - simple map of command name to parser
 	Commands CommandRegistry
 	parent   *Parser
+
+	// Metadata for help generation
+	Name        string // command/subcommand name
+	Description string // command/subcommand description
 }
 
 // NewParser creates a Parser from pre-built configuration, short option map,
@@ -476,6 +480,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 func (p *Parser) AddCmd(name string, parser *Parser) *Parser {
 	if parser != nil {
 		parser.parent = p
+		parser.Name = name
 	}
 	return p.Commands.AddCmd(name, parser)
 }
