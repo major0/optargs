@@ -158,7 +158,7 @@ func TestPropertySubcommandNilOut(t *testing.T) {
 	t.Run("no_subcommand", func(t *testing.T) {
 		f := func(_ uint8) bool {
 			type Args struct {
-				Verbose bool      `arg:"-v,--verbose"`
+				Verbose bool       `arg:"-v,--verbose"`
 				Server  *ServerCmd `arg:"subcommand:server"`
 				Client  *ClientCmd `arg:"subcommand:client"`
 			}
