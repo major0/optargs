@@ -1,11 +1,10 @@
-// Package goarg provides 100% API compatibility with alexflint/go-arg
-// while leveraging OptArgs Core's superior POSIX/GNU compliance.
+// Package goarg provides API compatibility with alexflint/go-arg
+// backed by OptArgs Core's POSIX/GNU getopt implementation.
 //
-// This package implements a complete compatibility layer that allows
-// existing alexflint/go-arg applications to work without modification
-// while benefiting from enhanced argument parsing capabilities.
+// goarg is a thin translation layer: struct tags are mapped to OptArgs
+// Core flags, Handle callbacks write parsed values to struct fields via
+// reflection, and all parsing, type conversion, subcommand dispatch, and
+// option inheritance are delegated to core.
 //
-// The architecture is intentionally simple: goarg interfaces directly
-// with OptArgs Core without intermediate layers. Extensions are handled
-// architecturally through separate -ext.go files.
+// Extensions are available via the goarg_ext build tag.
 package goarg
