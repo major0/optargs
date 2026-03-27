@@ -38,6 +38,12 @@ type ParserConfig struct {
 
 	// Command case sensitivity
 	commandCaseIgnore bool
+
+	// strictSubcommands prevents child parsers from inheriting parent
+	// options. When true, AddCmd does not set the parent pointer, so
+	// unknown options in a subcommand are not resolved by walking the
+	// parent chain. Automatically enabled when POSIXLY_CORRECT is set.
+	strictSubcommands bool
 }
 
 // Parser is the core argument parser. It processes command-line arguments
@@ -486,7 +492,9 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 // AddCmd registers a new subcommand with this parser.
 func (p *Parser) AddCmd(name string, parser *Parser) *Parser {
 	if parser != nil {
-		parser.parent = p
+		if !p.config.strictSubcommands {
+			parser.parent = p
+		}
 		parser.Name = name
 	}
 	return p.Commands.AddCmd(name, parser)
@@ -515,6 +523,19 @@ func (p *Parser) ExecuteCommand(name string, args []string) (*Parser, error) {
 // HasCommands returns true if any commands are registered
 func (p *Parser) HasCommands() bool {
 	return p.Commands.HasCommands()
+}
+
+// SetStrictSubcommands enables or disables strict subcommand mode.
+// When enabled, child parsers registered via AddCmd do not inherit
+// parent options — unknown options in a subcommand produce an error
+// instead of walking the parent chain.
+func (p *Parser) SetStrictSubcommands(strict bool) {
+	p.config.strictSubcommands = strict
+}
+
+// StrictSubcommands reports whether strict subcommand mode is enabled.
+func (p *Parser) StrictSubcommands() bool {
+	return p.config.strictSubcommands
 }
 
 // GetAliases returns all aliases for a given parser

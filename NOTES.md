@@ -14,21 +14,16 @@
  *
  */
 
-## TODO: StrictSubcommands (core change)
+## StrictSubcommands
 
-Add a `StrictSubcommands` flag to the core parser that prevents child parsers
-from walking the parent chain to resolve unknown options. When set, options
-defined on a parent parser are rejected if they appear after a subcommand name.
+Implemented in `ParserConfig.strictSubcommands`. When enabled, `AddCmd()` does
+not set the child parser's `parent` pointer, preventing the parent-chain walk
+for unknown options. Child parsers only resolve their own options.
 
-This should be automatically enabled when `POSIXLY_CORRECT` is set — POSIX
-semantics dictate that options belong to the command they're defined on, with
-no inheritance across subcommand boundaries.
+Automatically enabled when:
+- `POSIXLY_CORRECT` environment variable is set
+- `+` prefix appears in the optstring
 
-Implementation: skip setting `parent` on the child parser in `AddCmd()` (or
-add a flag to `ParserConfig` that disables the parent-chain walk in
-`findShortOpt`/`findLongOpt`).
+API: `Parser.SetStrictSubcommands(bool)` / `Parser.StrictSubcommands() bool`
 
-Upstream `alexflint/go-arg` exposes this as `Config.StrictSubcommands`. Once
-core supports it, goarg should wire `Config.StrictSubcommands` through to the
-core flag, and the goarg extension layer should auto-enable it when
-`POSIXLY_CORRECT` is detected.
+goarg exposes this via `Config.StrictSubcommands` (wired through to core).

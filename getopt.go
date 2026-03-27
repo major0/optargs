@@ -186,6 +186,7 @@ func getOpt(args []string, optstring string, longopts []Flag, longOnly bool) (*P
 	// If set, behave as if '+' prefix was used in optstring
 	if os.Getenv("POSIXLY_CORRECT") != "" {
 		config.parseMode = ParsePosixlyCorrect
+		config.strictSubcommands = true
 	}
 
 	// Iterate over the longOpts list populating the map
@@ -213,6 +214,7 @@ optPrefix:
 			config.enableErrors = false
 		case '+':
 			config.parseMode = ParsePosixlyCorrect
+			config.strictSubcommands = true
 		case '-':
 			config.parseMode = ParseNonOpts
 		default:

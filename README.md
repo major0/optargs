@@ -100,6 +100,20 @@ for opt, err := range root.Options() { /* root options */ }
 for opt, err := range serve.Options() { /* serve options + inherited */ }
 ```
 
+### Strict Subcommands
+
+By default, child parsers inherit parent options — unknown options in a
+subcommand are resolved by walking the parent chain. To disable this
+(POSIX-strict behavior where each command owns its own options):
+
+```go
+root.SetStrictSubcommands(true)
+root.AddCmd("serve", serve) // serve will NOT inherit root's options
+```
+
+This is automatically enabled when `POSIXLY_CORRECT` is set or when the
+optstring starts with `+`.
+
 ## Optstring Syntax
 
 | Prefix | Behavior |
