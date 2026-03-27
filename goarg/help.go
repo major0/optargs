@@ -146,6 +146,12 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 		fmt.Fprintf(w, "Version: %s\n", hg.config.Version)
 	}
 
+	// Add epilogue if available
+	if hg.config.Epilogue != "" {
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, hg.config.Epilogue)
+	}
+
 	return nil
 }
 

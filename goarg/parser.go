@@ -1,6 +1,7 @@
 package goarg
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -28,6 +29,7 @@ type Config struct {
 	Program     string
 	Description string
 	Version     string
+	Epilogue    string
 	IgnoreEnv   bool
 	// Additional fields for full alexflint/go-arg compatibility
 	IgnoreDefault bool
@@ -52,12 +54,19 @@ func ParseArgs(dest interface{}, args []string) error {
 	return parser.Parse(args)
 }
 
-// MustParse parses command line arguments and panics on error
-func MustParse(dest interface{}) {
-	if err := Parse(dest); err != nil {
+// MustParse parses command line arguments, prints help/version on the
+// corresponding sentinel errors, and exits on any error. Returns the
+// parser on success so callers can inspect subcommand state.
+func MustParse(dest interface{}) *Parser {
+	p, err := NewParser(Config{}, dest)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		os.Exit(2)
+		return nil
 	}
+	err = p.Parse(os.Args[1:])
+	p.handleMustParseError(err)
+	return p
 }
 
 // NewParser creates a new parser with the given configuration
@@ -84,6 +93,17 @@ func NewParser(config Config, dest interface{}) (*Parser, error) {
 		return nil, fmt.Errorf("failed to parse struct: %w", err)
 	}
 
+	// Detect Versioned/Described/Epilogued interfaces on dest struct
+	if v, ok := dest.(Versioned); ok && config.Version == "" {
+		config.Version = v.Version()
+	}
+	if d, ok := dest.(Described); ok && config.Description == "" {
+		config.Description = d.Description()
+	}
+	if e, ok := dest.(Epilogued); ok && config.Epilogue == "" {
+		config.Epilogue = e.Epilogue()
+	}
+
 	// Set default exit function if not provided
 	if config.Exit == nil {
 		config.Exit = os.Exit
@@ -105,6 +125,7 @@ func (p *Parser) Parse(args []string) error {
 
 	ci := &CoreIntegration{
 		metadata: p.metadata,
+		config:   p.config,
 	}
 	destValue := reflect.ValueOf(p.dest).Elem()
 
@@ -124,6 +145,10 @@ func (p *Parser) Parse(args []string) error {
 	// Iterate — Handle callbacks fire automatically
 	for _, err := range coreParser.Options() {
 		if err != nil {
+			// Sentinel errors pass through without translation
+			if errors.Is(err, ErrHelp) || errors.Is(err, ErrVersion) {
+				return err
+			}
 			return p.translateError(err, "")
 		}
 	}
@@ -177,6 +202,34 @@ func (p *Parser) Fail(msg string) {
 	fmt.Fprintln(os.Stderr, msg)
 	p.WriteUsage(os.Stderr)
 	p.config.Exit(1)
+}
+
+// MustParse parses the given arguments, prints help/version on the
+// corresponding sentinel errors, and exits on any error.
+func (p *Parser) MustParse(args []string) {
+	err := p.Parse(args)
+	p.handleMustParseError(err)
+}
+
+// handleMustParseError handles the result of Parse for MustParse callers.
+// ErrHelp prints help and exits 0, ErrVersion prints version and exits 0,
+// any other error prints the error with usage and exits 1.
+func (p *Parser) handleMustParseError(err error) {
+	if err == nil {
+		return
+	}
+	switch {
+	case errors.Is(err, ErrHelp):
+		p.WriteHelp(os.Stdout)
+		p.config.Exit(0)
+	case errors.Is(err, ErrVersion):
+		fmt.Fprintln(os.Stdout, p.config.Version)
+		p.config.Exit(0)
+	default:
+		fmt.Fprintln(os.Stderr, err)
+		p.WriteUsage(os.Stderr)
+		p.config.Exit(1)
+	}
 }
 
 // translateError translates an error using the error translator with context

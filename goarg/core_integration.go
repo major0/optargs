@@ -12,6 +12,7 @@ import (
 // CoreIntegration handles direct translation to OptArgs Core
 type CoreIntegration struct {
 	metadata    *StructMetadata
+	config      Config
 	positionals []PositionalArg
 }
 
@@ -330,6 +331,41 @@ func (ci *CoreIntegration) CreateParserWithHandlers(args []string, destValue ref
 		}
 	}
 
+	// Register builtin -h/--help flag (returns ErrHelp when parsed).
+	helpFlag := &optargs.Flag{
+		Name:   "h",
+		HasArg: optargs.NoArgument,
+		Help:   "display this help and exit",
+		Handle: func(_, _ string) error { return ErrHelp },
+	}
+	if _, exists := shortOpts['h']; !exists {
+		shortOpts['h'] = helpFlag
+	}
+	helpLong := &optargs.Flag{
+		Name:   "help",
+		HasArg: optargs.NoArgument,
+		Help:   "display this help and exit",
+		Peer:   helpFlag,
+		Handle: func(_, _ string) error { return ErrHelp },
+	}
+	helpFlag.Peer = helpLong
+	if _, exists := longOpts["help"]; !exists {
+		longOpts["help"] = helpLong
+	}
+
+	// Register builtin --version flag if version is configured.
+	if ci.config.Version != "" {
+		versionFlag := &optargs.Flag{
+			Name:   "version",
+			HasArg: optargs.NoArgument,
+			Help:   "display version and exit",
+			Handle: func(_, _ string) error { return ErrVersion },
+		}
+		if _, exists := longOpts["version"]; !exists {
+			longOpts["version"] = versionFlag
+		}
+	}
+
 	parser, err := optargs.NewParserWithCaseInsensitiveCommands(shortOpts, longOpts, args)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OptArgs parser: %w", err)
@@ -397,6 +433,7 @@ func (ci *CoreIntegration) RegisterSubcommands(coreParser *optargs.Parser, destV
 
 		child := &CoreIntegration{
 			metadata: subMeta,
+			config:   ci.config,
 		}
 
 		childParser, err := child.CreateParserWithHandlers([]string{}, fieldValue)
@@ -439,6 +476,7 @@ func (ci *CoreIntegration) dispatchSubcommand(childParser *optargs.Parser, invok
 	subDestValue := fieldValue.Elem()
 	childCI := &CoreIntegration{
 		metadata: subMeta,
+		config:   ci.config,
 	}
 	childCI.buildPositionalArgs()
 	if err := childCI.PostParse(childParser, subDestValue); err != nil {
