@@ -372,11 +372,6 @@ func (tp *TagParser) ValidateFieldMetadata(metadata *FieldMetadata) error {
 		}
 	}
 
-	// Required positional arguments are valid
-	if metadata.Positional && metadata.Required {
-		// This is valid
-	}
-
 	// Options should have at least one flag (short or long)
 	if !metadata.Positional && !metadata.IsSubcommand && metadata.Short == "" && metadata.Long == "" {
 		// Generate default long option from field name

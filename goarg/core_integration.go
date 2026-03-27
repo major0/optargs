@@ -96,17 +96,15 @@ func (ci *CoreIntegration) processPositionalArgs(parser *optargs.Parser, destVal
 
 		if positional.Multiple {
 			// For slice types, consume all remaining arguments
+			elemType := field.Type.Elem()
 			slice := reflect.MakeSlice(field.Type, 0, len(remainingArgs)-argIndex)
 
 			for argIndex < len(remainingArgs) {
-				elemType := field.Type.Elem()
-				elemValue := reflect.New(elemType).Elem()
-
-				if err := ci.setScalarValue(elemValue, elemType, remainingArgs[argIndex]); err != nil {
+				converted, err := optargs.Convert(remainingArgs[argIndex], elemType)
+				if err != nil {
 					return fmt.Errorf("failed to set positional argument %d: %w", argIndex, err)
 				}
-
-				slice = reflect.Append(slice, elemValue)
+				slice = reflect.Append(slice, reflect.ValueOf(converted))
 				argIndex++
 			}
 
@@ -258,8 +256,8 @@ func (ci *CoreIntegration) buildLongOptMap() map[string]*optargs.Flag {
 
 // makeHandler returns a Handle callback that sets the struct field value when
 // the option is parsed. Boolean flags with no argument are set to true, slice
-// fields append the converted element, and all other types use
-// TypeConverter.ConvertValue + TypeConverter.SetField via setFieldValue.
+// fields append the converted element, and all other types delegate to
+// optargs.Convert via setFieldValue.
 func (ci *CoreIntegration) makeHandler(field *FieldMetadata, destValue reflect.Value) func(string, string) error {
 	return func(name, arg string) error {
 		fieldValue := destValue.FieldByName(field.Name)
