@@ -161,15 +161,8 @@ func validateHelpTextFormat(helpText, usageText string, config Config, metadata 
 	hasSubcommands := false
 
 	if metadata != nil {
-		for _, field := range metadata.Fields {
-			if field.Positional {
-				hasPositionals = true
-			} else if field.IsSubcommand {
-				hasSubcommands = true
-			} else {
-				hasOptions = true
-			}
-		}
+		hasOptions = len(metadata.Options) > 0
+		hasPositionals = len(metadata.Positionals) > 0
 
 		if len(metadata.Subcommands) > 0 {
 			hasSubcommands = true

@@ -25,17 +25,15 @@ type PositionalArg struct {
 
 // buildPositionalArgs builds the list of positional arguments
 func (ci *CoreIntegration) buildPositionalArgs() {
-	ci.positionals = []PositionalArg{}
+	ci.positionals = make([]PositionalArg, 0, len(ci.metadata.Positionals))
 
-	for _, field := range ci.metadata.Fields {
-		if field.Positional {
-			positional := PositionalArg{
-				Field:    &field,
-				Required: field.Required,
-				Multiple: field.Type.Kind() == reflect.Slice,
-			}
-			ci.positionals = append(ci.positionals, positional)
-		}
+	for i := range ci.metadata.Positionals {
+		field := &ci.metadata.Positionals[i]
+		ci.positionals = append(ci.positionals, PositionalArg{
+			Field:    field,
+			Required: field.Required,
+			Multiple: field.Type.Kind() == reflect.Slice,
+		})
 	}
 }
 
@@ -216,9 +214,9 @@ func (ci *CoreIntegration) getEnvironmentValue(field *FieldMetadata) (string, bo
 func (ci *CoreIntegration) buildShortOptMap() map[byte]*optargs.Flag {
 	shortOpts := make(map[byte]*optargs.Flag)
 
-	for i := range ci.metadata.Fields {
-		field := &ci.metadata.Fields[i]
-		if field.Positional || field.IsSubcommand || field.Short == "" {
+	for i := range ci.metadata.Options {
+		field := &ci.metadata.Options[i]
+		if field.Short == "" {
 			continue
 		}
 
@@ -242,9 +240,9 @@ func (ci *CoreIntegration) buildShortOptMap() map[byte]*optargs.Flag {
 func (ci *CoreIntegration) buildLongOptMap() map[string]*optargs.Flag {
 	longOpts := make(map[string]*optargs.Flag)
 
-	for i := range ci.metadata.Fields {
-		field := &ci.metadata.Fields[i]
-		if field.Positional || field.IsSubcommand || field.Long == "" {
+	for i := range ci.metadata.Options {
+		field := &ci.metadata.Options[i]
+		if field.Long == "" {
 			continue
 		}
 
@@ -288,11 +286,8 @@ func (ci *CoreIntegration) CreateParserWithHandlers(args []string, destValue ref
 	// the same field share the same *optargs.Flag pointer, iterating over
 	// the metadata fields and setting Handle on whichever flag we find
 	// ensures each flag gets its handler exactly once.
-	for i := range ci.metadata.Fields {
-		field := &ci.metadata.Fields[i]
-		if field.Positional || field.IsSubcommand {
-			continue
-		}
+	for i := range ci.metadata.Options {
+		field := &ci.metadata.Options[i]
 
 		handler := ci.makeHandler(field, destValue)
 
@@ -323,38 +318,35 @@ func (ci *CoreIntegration) CreateParserWithHandlers(args []string, destValue ref
 // (case-insensitive). It returns the field's reflect.Value, the subcommand's
 // StructMetadata, and an error if the subcommand is not found.
 func (ci *CoreIntegration) findSubcommandField(destValue reflect.Value, name string) (reflect.Value, *StructMetadata, error) {
-	// Find the matching subcommand metadata (case-insensitive).
-	var matchedName string
-	var matchedMeta *StructMetadata
-	for cmdName, meta := range ci.metadata.Subcommands {
+	// Try direct lookup first via the pre-built field name index.
+	if fieldName, ok := ci.metadata.SubcommandFields[name]; ok {
+		subMeta := ci.metadata.Subcommands[name]
+		if subMeta == nil {
+			return reflect.Value{}, nil, fmt.Errorf("subcommand metadata not found for %s", name)
+		}
+		fv := destValue.FieldByName(fieldName)
+		if !fv.IsValid() {
+			return reflect.Value{}, nil, fmt.Errorf("subcommand field not found for %s", name)
+		}
+		return fv, subMeta, nil
+	}
+
+	// Fall back to case-insensitive scan of the index.
+	for cmdName, fieldName := range ci.metadata.SubcommandFields {
 		if strings.EqualFold(cmdName, name) {
-			matchedName = cmdName
-			matchedMeta = meta
-			break
-		}
-	}
-	if matchedMeta == nil {
-		return reflect.Value{}, nil, fmt.Errorf("unknown subcommand: %s", name)
-	}
-
-	// Find the struct field whose subcommand name matches.
-	tp := &TagParser{}
-	destType := destValue.Type()
-	for i := 0; i < destType.NumField(); i++ {
-		field := destType.Field(i)
-		if !field.IsExported() {
-			continue
-		}
-		fieldMeta, err := tp.ParseField(field)
-		if err != nil || !fieldMeta.IsSubcommand {
-			continue
-		}
-		if strings.EqualFold(fieldMeta.SubcommandName, matchedName) {
-			return destValue.Field(i), matchedMeta, nil
+			subMeta := ci.metadata.Subcommands[cmdName]
+			if subMeta == nil {
+				return reflect.Value{}, nil, fmt.Errorf("subcommand metadata not found for %s", cmdName)
+			}
+			fv := destValue.FieldByName(fieldName)
+			if !fv.IsValid() {
+				return reflect.Value{}, nil, fmt.Errorf("subcommand field not found for %s", cmdName)
+			}
+			return fv, subMeta, nil
 		}
 	}
 
-	return reflect.Value{}, nil, fmt.Errorf("subcommand field not found for %s", name)
+	return reflect.Value{}, nil, fmt.Errorf("unknown subcommand: %s", name)
 }
 
 // RegisterSubcommands iterates ci.metadata.Subcommands, creates a child

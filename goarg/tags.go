@@ -13,8 +13,11 @@ import (
 // StructMetadata represents parsed struct information
 type StructMetadata struct {
 	Fields         []FieldMetadata
+	Options        []FieldMetadata            // non-positional, non-subcommand fields
+	Positionals    []FieldMetadata            // positional fields, in declaration order
 	Subcommands    map[string]*StructMetadata
-	SubcommandHelp map[string]string // Maps subcommand name to help text
+	SubcommandHelp map[string]string          // Maps subcommand name to help text
+	SubcommandFields map[string]string        // Maps subcommand name to struct field name
 	Program        string
 	Description    string
 	Version        string
@@ -63,9 +66,12 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 
 	structType := destElem.Type()
 	metadata := &StructMetadata{
-		Fields:         []FieldMetadata{},
-		Subcommands:    make(map[string]*StructMetadata),
-		SubcommandHelp: make(map[string]string),
+		Fields:           []FieldMetadata{},
+		Options:          []FieldMetadata{},
+		Positionals:      []FieldMetadata{},
+		Subcommands:      make(map[string]*StructMetadata),
+		SubcommandHelp:   make(map[string]string),
+		SubcommandFields: make(map[string]string),
 	}
 
 	// Parse each field in the struct
@@ -88,6 +94,9 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 			if subcommandName == "" {
 				subcommandName = strings.ToLower(field.Name)
 			}
+
+			// Record the struct field name for O(1) lookup later.
+			metadata.SubcommandFields[subcommandName] = field.Name
 
 			// Parse the subcommand struct for metadata only
 			fieldValue := destElem.Field(i)
@@ -115,11 +124,13 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 				// If the field was originally nil, keep it nil (don't persist the temp instance)
 				// The subcommand will only be initialized when actually invoked
 			}
-
-			// Also add the subcommand field to Fields so we can access its help text
-			// metadata.Fields = append(metadata.Fields, *fieldMetadata)
 		} else {
 			metadata.Fields = append(metadata.Fields, *fieldMetadata)
+			if fieldMetadata.Positional {
+				metadata.Positionals = append(metadata.Positionals, *fieldMetadata)
+			} else {
+				metadata.Options = append(metadata.Options, *fieldMetadata)
+			}
 		}
 	}
 

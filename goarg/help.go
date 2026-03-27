@@ -43,26 +43,17 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 		fmt.Fprint(w, " COMMAND")
 	}
 
-	// Add options placeholder if we have non-positional fields
-	hasOptions := false
-	for _, field := range hg.metadata.Fields {
-		if !field.Positional && !field.IsSubcommand {
-			hasOptions = true
-			break
-		}
-	}
-	if hasOptions {
+	// Add options placeholder if we have options
+	if len(hg.metadata.Options) > 0 {
 		fmt.Fprint(w, " [OPTIONS]")
 	}
 
 	// Add positional arguments
-	for _, field := range hg.metadata.Fields {
-		if field.Positional {
-			if field.Required {
-				fmt.Fprintf(w, " %s", strings.ToUpper(field.Name))
-			} else {
-				fmt.Fprintf(w, " [%s]", strings.ToUpper(field.Name))
-			}
+	for _, field := range hg.metadata.Positionals {
+		if field.Required {
+			fmt.Fprintf(w, " %s", strings.ToUpper(field.Name))
+		} else {
+			fmt.Fprintf(w, " [%s]", strings.ToUpper(field.Name))
 		}
 	}
 
@@ -75,38 +66,25 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 	}
 
 	// Add positional arguments section
-	hasPositionals := false
-	for _, field := range hg.metadata.Fields {
-		if field.Positional {
-			hasPositionals = true
-			break
-		}
-	}
-	if hasPositionals {
+	if len(hg.metadata.Positionals) > 0 {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Positional arguments:")
-		for _, field := range hg.metadata.Fields {
-			if field.Positional {
-				name := strings.ToUpper(field.Name)
-				if field.Help != "" {
-					fmt.Fprintf(w, "  %-20s %s\n", name, field.Help)
-				} else {
-					fmt.Fprintf(w, "  %s\n", name)
-				}
+		for _, field := range hg.metadata.Positionals {
+			name := strings.ToUpper(field.Name)
+			if field.Help != "" {
+				fmt.Fprintf(w, "  %-20s %s\n", name, field.Help)
+			} else {
+				fmt.Fprintf(w, "  %s\n", name)
 			}
 		}
 	}
 
 	// Add options section
-	if hasOptions {
+	if len(hg.metadata.Options) > 0 {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Options:")
 
-		for _, field := range hg.metadata.Fields {
-			if field.Positional || field.IsSubcommand {
-				continue
-			}
-
+		for _, field := range hg.metadata.Options {
 			var optStr string
 			if field.Short != "" && field.Long != "" {
 				optStr = fmt.Sprintf("  -%s, --%s", field.Short, field.Long)
@@ -119,11 +97,7 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 			// Add argument placeholder for options that take arguments
 			if field.ArgType != 0 { // NoArgument is 0
 				argName := strings.ToUpper(field.Name)
-				if field.Long != "" {
-					optStr += fmt.Sprintf(" %s", argName)
-				} else {
-					optStr += fmt.Sprintf(" %s", argName)
-				}
+				optStr += fmt.Sprintf(" %s", argName)
 			}
 
 			if field.Help != "" {
@@ -185,27 +159,18 @@ func (hg *HelpGenerator) WriteUsage(w io.Writer) error {
 		fmt.Fprint(w, " COMMAND")
 	}
 
-	// Add options placeholder if we have non-positional fields
 	if hg.metadata != nil {
-		hasOptions := false
-		for _, field := range hg.metadata.Fields {
-			if !field.Positional && !field.IsSubcommand {
-				hasOptions = true
-				break
-			}
-		}
-		if hasOptions {
+		// Add options placeholder if we have options
+		if len(hg.metadata.Options) > 0 {
 			fmt.Fprint(w, " [OPTIONS]")
 		}
 
 		// Add positional arguments
-		for _, field := range hg.metadata.Fields {
-			if field.Positional {
-				if field.Required {
-					fmt.Fprintf(w, " %s", strings.ToUpper(field.Name))
-				} else {
-					fmt.Fprintf(w, " [%s]", strings.ToUpper(field.Name))
-				}
+		for _, field := range hg.metadata.Positionals {
+			if field.Required {
+				fmt.Fprintf(w, " %s", strings.ToUpper(field.Name))
+			} else {
+				fmt.Fprintf(w, " [%s]", strings.ToUpper(field.Name))
 			}
 		}
 	}
