@@ -78,3 +78,139 @@ func TestCommandSystemIntegration(t *testing.T) {
 		// 4. Both options are properly set in the result struct
 	})
 }
+
+// subcommandDetectionTests verifies that the migrated subcommand detection
+// (using core ActiveCommand()) produces correct struct field values.
+var subcommandDetectionTests = []struct {
+	name  string
+	args  []string
+	check func(t *testing.T, cmd interface{})
+}{
+	{
+		name: "single_subcommand_with_options",
+		args: []string{"server", "--port", "9090"},
+		check: func(t *testing.T, cmd interface{}) {
+			t.Helper()
+			r := cmd.(*struct {
+				Server *struct {
+					Port int `arg:"--port"`
+				} `arg:"subcommand:server"`
+				Client *struct {
+					URL string `arg:"--url"`
+				} `arg:"subcommand:client"`
+			})
+			if r.Server == nil {
+				t.Fatal("Server should be non-nil")
+			}
+			if r.Server.Port != 9090 {
+				t.Errorf("Port = %d, want 9090", r.Server.Port)
+			}
+			if r.Client != nil {
+				t.Error("Client should be nil")
+			}
+		},
+	},
+	{
+		name: "no_subcommand_invoked",
+		args: []string{},
+		check: func(t *testing.T, cmd interface{}) {
+			t.Helper()
+			r := cmd.(*struct {
+				Server *struct {
+					Port int `arg:"--port"`
+				} `arg:"subcommand:server"`
+				Client *struct {
+					URL string `arg:"--url"`
+				} `arg:"subcommand:client"`
+			})
+			if r.Server != nil {
+				t.Error("Server should be nil")
+			}
+			if r.Client != nil {
+				t.Error("Client should be nil")
+			}
+		},
+	},
+	{
+		name: "second_subcommand_invoked",
+		args: []string{"client", "--url", "http://example.com"},
+		check: func(t *testing.T, cmd interface{}) {
+			t.Helper()
+			r := cmd.(*struct {
+				Server *struct {
+					Port int `arg:"--port"`
+				} `arg:"subcommand:server"`
+				Client *struct {
+					URL string `arg:"--url"`
+				} `arg:"subcommand:client"`
+			})
+			if r.Server != nil {
+				t.Error("Server should be nil")
+			}
+			if r.Client == nil {
+				t.Fatal("Client should be non-nil")
+			}
+			if r.Client.URL != "http://example.com" {
+				t.Errorf("URL = %q, want %q", r.Client.URL, "http://example.com")
+			}
+		},
+	},
+	{
+		name: "subcommand_with_defaults",
+		args: []string{"server"},
+		check: func(t *testing.T, cmd interface{}) {
+			t.Helper()
+			r := cmd.(*struct {
+				Server *struct {
+					Port int `arg:"--port" default:"8080"`
+				} `arg:"subcommand:server"`
+				Client *struct {
+					URL string `arg:"--url"`
+				} `arg:"subcommand:client"`
+			})
+			if r.Server == nil {
+				t.Fatal("Server should be non-nil")
+			}
+			if r.Server.Port != 8080 {
+				t.Errorf("Port = %d, want 8080 (default)", r.Server.Port)
+			}
+		},
+	},
+}
+
+func TestSubcommandDetection(t *testing.T) {
+	for _, tt := range subcommandDetectionTests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := &struct {
+				Server *struct {
+					Port int `arg:"--port"`
+				} `arg:"subcommand:server"`
+				Client *struct {
+					URL string `arg:"--url"`
+				} `arg:"subcommand:client"`
+			}{}
+
+			// For the defaults test, use the struct with defaults
+			if tt.name == "subcommand_with_defaults" {
+				cmdD := &struct {
+					Server *struct {
+						Port int `arg:"--port" default:"8080"`
+					} `arg:"subcommand:server"`
+					Client *struct {
+						URL string `arg:"--url"`
+					} `arg:"subcommand:client"`
+				}{}
+				if err := ParseArgs(cmdD, tt.args); err != nil {
+					t.Fatalf("ParseArgs: %v", err)
+				}
+				tt.check(t, cmdD)
+				return
+			}
+
+			if err := ParseArgs(cmd, tt.args); err != nil {
+				t.Fatalf("ParseArgs: %v", err)
+			}
+			tt.check(t, cmd)
+		})
+	}
+}

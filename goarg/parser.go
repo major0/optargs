@@ -135,50 +135,15 @@ func (p *Parser) Parse(args []string) error {
 		}
 	}
 
-	// Subcommand dispatch: detect which subcommand was invoked and run
-	// its Options() iteration + PostParse. Non-invoked subcommand fields
-	// are reset to nil so callers can detect the active subcommand.
+	// Subcommand dispatch: use core's ActiveCommand() to detect which
+	// subcommand was dispatched, iterate its Options(), run PostParse,
+	// and walk recursively for nested subcommands.
 	if len(p.metadata.Subcommands) > 0 {
-		invokedName := ""
-		// Scan original args for a subcommand name (case-insensitive),
-		// matching the same detection strategy as the previous implementation.
-		for _, arg := range args {
-			if strings.HasPrefix(arg, "-") {
-				continue
-			}
-			if _, _, err := ci.findSubcommandField(destValue, arg); err == nil {
-				invokedName = arg
-				break
-			}
-		}
+		invokedName, childParser := coreParser.ActiveCommand()
 
-		if invokedName != "" {
-			fieldValue, subMeta, _ := ci.findSubcommandField(destValue, invokedName)
-
-			// Get the child parser registered by RegisterSubcommands
-			childParser, ok := coreParser.GetCommand(invokedName)
-			if !ok {
-				return p.translateError(fmt.Errorf("subcommand parser not found for %s", invokedName), invokedName)
-			}
-
-			// Iterate child Options() — Handle callbacks fire for subcommand options
-			for _, err := range childParser.Options() {
-				if err != nil {
-					return p.translateError(err, "")
-				}
-			}
-
-			// PostParse on the subcommand
-			subDestValue := fieldValue.Elem()
-			childCI := &CoreIntegration{
-				metadata:    subMeta,
-				shortOpts:   make(map[byte]*optargs.Flag),
-				longOpts:    make(map[string]*optargs.Flag),
-				positionals: []PositionalArg{},
-			}
-			childCI.buildPositionalArgs()
-			if err := childCI.PostParse(childParser, subDestValue); err != nil {
-				return p.translateError(err, "")
+		if invokedName != "" && childParser != nil {
+			if err := ci.dispatchSubcommand(childParser, invokedName, destValue, p); err != nil {
+				return err
 			}
 		}
 

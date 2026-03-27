@@ -95,3 +95,81 @@ func TestPropertyHandleCallbackCorrectness(t *testing.T) {
 		}
 	})
 }
+
+// Feature: goarg-optargs-integration, Property 5: Non-invoked subcommand fields are nil
+func TestPropertySubcommandNilOut(t *testing.T) {
+	type ServerCmd struct {
+		Port int `arg:"--port"`
+	}
+	type ClientCmd struct {
+		URL string `arg:"--url"`
+	}
+	type BackupCmd struct {
+		Path string `arg:"--path"`
+	}
+
+	// Sub-property A: Invoking one subcommand nils out the others.
+	t.Run("two_subcommands", func(t *testing.T) {
+		f := func(port uint16) bool {
+			type Args struct {
+				Server *ServerCmd `arg:"subcommand:server"`
+				Client *ClientCmd `arg:"subcommand:client"`
+			}
+			a := Args{}
+			args := []string{"server", "--port", fmt.Sprint(port)}
+			if err := ParseArgs(&a, args); err != nil {
+				return false
+			}
+			return a.Server != nil && a.Client == nil && a.Server.Port == int(port)
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Sub-property B: Three subcommands — two non-invoked are nil.
+	t.Run("three_subcommands", func(t *testing.T) {
+		f := func(url string) bool {
+			if len(url) == 0 || len(url) > 50 {
+				return true
+			}
+			if len(url) > 0 && url[0] == '-' {
+				return true
+			}
+
+			type Args struct {
+				Server *ServerCmd `arg:"subcommand:server"`
+				Client *ClientCmd `arg:"subcommand:client"`
+				Backup *BackupCmd `arg:"subcommand:backup"`
+			}
+			a := Args{}
+			args := []string{"client", "--url", url}
+			if err := ParseArgs(&a, args); err != nil {
+				return false
+			}
+			return a.Client != nil && a.Server == nil && a.Backup == nil && a.Client.URL == url
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Sub-property C: No subcommand invoked — all fields are nil.
+	t.Run("no_subcommand", func(t *testing.T) {
+		f := func(_ uint8) bool {
+			type Args struct {
+				Verbose bool      `arg:"-v,--verbose"`
+				Server  *ServerCmd `arg:"subcommand:server"`
+				Client  *ClientCmd `arg:"subcommand:client"`
+			}
+			a := Args{}
+			if err := ParseArgs(&a, []string{"-v"}); err != nil {
+				return false
+			}
+			return a.Server == nil && a.Client == nil
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 50}); err != nil {
+			t.Error(err)
+		}
+	})
+}

@@ -384,6 +384,41 @@ func (ci *CoreIntegration) RegisterSubcommands(coreParser *optargs.Parser, destV
 	return nil
 }
 
+// dispatchSubcommand iterates the child parser's Options(), runs PostParse
+// on the subcommand struct, and recursively walks ActiveCommand() for
+// nested subcommands.
+func (ci *CoreIntegration) dispatchSubcommand(childParser *optargs.Parser, invokedName string, destValue reflect.Value, p *Parser) error {
+	fieldValue, subMeta, err := ci.findSubcommandField(destValue, invokedName)
+	if err != nil {
+		return p.translateError(err, invokedName)
+	}
+
+	// Iterate child Options() — Handle callbacks fire for subcommand options
+	for _, err := range childParser.Options() {
+		if err != nil {
+			return p.translateError(err, "")
+		}
+	}
+
+	// PostParse on the subcommand
+	subDestValue := fieldValue.Elem()
+	childCI := &CoreIntegration{
+		metadata: subMeta,
+	}
+	childCI.buildPositionalArgs()
+	if err := childCI.PostParse(childParser, subDestValue); err != nil {
+		return p.translateError(err, "")
+	}
+
+	// Recursively dispatch nested subcommands via ActiveCommand()
+	nestedName, nestedParser := childParser.ActiveCommand()
+	if nestedName != "" && nestedParser != nil {
+		return childCI.dispatchSubcommand(nestedParser, nestedName, subDestValue, p)
+	}
+
+	return nil
+}
+
 // PostParse executes the complete post-parse sequence: positional argument
 // processing, environment variable resolution, default value application,
 // and required field validation.
