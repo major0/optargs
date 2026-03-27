@@ -229,7 +229,7 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 		return fmt.Errorf("option requires an argument: %s", option)
 
 	case strings.Contains(errMsg, "invalid argument") || strings.Contains(errMsg, "invalid syntax") || strings.Contains(errMsg, "invalid value"):
-		// Handle type conversion errors (both old TypeConverter and new optargs.Convert format)
+		// Handle type conversion errors from optargs.Convert
 		if context.FieldName != "" {
 			return fmt.Errorf("invalid argument for --%s", context.FieldName)
 		}

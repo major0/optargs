@@ -133,7 +133,7 @@ func TestTagParser_ParseField(t *testing.T) {
 				Short:    "p",
 				Long:     "port",
 				Help:     "server port",
-				Default:  int64(8080),
+				Default:  8080,
 				ArgType:  optargs.RequiredArgument,
 				CoreFlag: &optargs.Flag{Name: "port", HasArg: optargs.RequiredArgument},
 			},
@@ -611,21 +611,8 @@ func TestTagParser_EnvironmentVariables(t *testing.T) {
 			t.Fatalf("ParseField() unexpected error: %v", err)
 		}
 
-		// Test GetEnvironmentValue method
-		// First, ensure the env var doesn't exist
-		value, exists := parser.GetEnvironmentValue(result)
-		if exists {
-			t.Errorf("Expected TEST_VAR to not exist, but got value: %s", value)
-		}
-
-		// Set the environment variable and test again
-		t.Setenv("TEST_VAR", "test_value")
-		value, exists = parser.GetEnvironmentValue(result)
-		if !exists {
-			t.Errorf("Expected TEST_VAR to exist after setting")
-		}
-		if value != "test_value" {
-			t.Errorf("Expected value 'test_value', got '%s'", value)
+		if result.Env != "TEST_VAR" {
+			t.Errorf("Expected Env='TEST_VAR', got '%s'", result.Env)
 		}
 	})
 }
@@ -655,7 +642,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 				Type: reflect.TypeOf(0),
 				Tag:  `arg:"--count" default:"42"`,
 			},
-			expected: int64(42),
+			expected: 42,
 		},
 		{
 			name: "int64_default",

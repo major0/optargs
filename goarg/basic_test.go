@@ -1,9 +1,11 @@
 package goarg
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
+	"testing/quick"
 )
 
 func TestBasicParsing(t *testing.T) {
@@ -293,4 +295,101 @@ func TestDefaultValues(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Feature: goarg-optargs-integration, Property 11: Parsing equivalence
+func TestPropertyParsingEquivalence(t *testing.T) {
+	// For any valid argument combination, the migrated implementation
+	// (using optargs.Convert and ActiveCommand) produces correct field values.
+
+	// Sub-property A: Int fields round-trip through parsing.
+	t.Run("int_round_trip", func(t *testing.T) {
+		f := func(n int) bool {
+			type S struct {
+				Val int `arg:"--val"`
+			}
+			s := S{}
+			args := []string{"--val", fmt.Sprint(n)}
+			if err := ParseArgs(&s, args); err != nil {
+				return false
+			}
+			return s.Val == n
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Sub-property B: String fields preserve exact value.
+	t.Run("string_preserve", func(t *testing.T) {
+		f := func(val string) bool {
+			if len(val) == 0 || len(val) > 100 || val[0] == '-' {
+				return true
+			}
+			type S struct {
+				Val string `arg:"--val"`
+			}
+			s := S{}
+			if err := ParseArgs(&s, []string{"--val", val}); err != nil {
+				return false
+			}
+			return s.Val == val
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Sub-property C: Bool flags set to true when present.
+	t.Run("bool_flag", func(t *testing.T) {
+		f := func(_ uint8) bool {
+			type S struct {
+				Flag bool `arg:"-f,--flag"`
+			}
+			s := S{}
+			if err := ParseArgs(&s, []string{"--flag"}); err != nil {
+				return false
+			}
+			return s.Flag
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 50}); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Sub-property D: Default values applied when no args given.
+	t.Run("defaults_applied", func(t *testing.T) {
+		f := func(n uint16) bool {
+			// Use a fixed default to verify it's applied
+			type S struct {
+				Port int `arg:"--port" default:"8080"`
+			}
+			s := S{}
+			if err := ParseArgs(&s, []string{}); err != nil {
+				return false
+			}
+			return s.Port == 8080
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 50}); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Sub-property E: Slice fields accumulate multiple values.
+	t.Run("slice_accumulate", func(t *testing.T) {
+		f := func(a, b, c int) bool {
+			type S struct {
+				Vals []int `arg:"--val"`
+			}
+			s := S{}
+			args := []string{"--val", fmt.Sprint(a), "--val", fmt.Sprint(b), "--val", fmt.Sprint(c)}
+			if err := ParseArgs(&s, args); err != nil {
+				return false
+			}
+			return len(s.Vals) == 3 && s.Vals[0] == a && s.Vals[1] == b && s.Vals[2] == c
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	})
 }

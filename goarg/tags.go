@@ -2,9 +2,7 @@ package goarg
 
 import (
 	"fmt"
-	"os"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/major0/optargs"
@@ -244,68 +242,12 @@ func (tp *TagParser) parseArgTag(metadata *FieldMetadata, argTag string) error {
 }
 
 // parseDefaultValue parses a default value string into the appropriate type
+// using optargs.Convert and optargs.ConvertSlice.
 func (tp *TagParser) parseDefaultValue(defaultStr string, fieldType reflect.Type) (interface{}, error) {
-	switch fieldType.Kind() {
-	case reflect.String:
-		return defaultStr, nil
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		val, err := strconv.ParseInt(defaultStr, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid int default value: %s", defaultStr)
-		}
-		return val, nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		val, err := strconv.ParseUint(defaultStr, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid uint default value: %s", defaultStr)
-		}
-		return val, nil
-	case reflect.Float32, reflect.Float64:
-		val, err := strconv.ParseFloat(defaultStr, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid float default value: %s", defaultStr)
-		}
-		return val, nil
-	case reflect.Bool:
-		val, err := strconv.ParseBool(defaultStr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid bool default value: %s", defaultStr)
-		}
-		return val, nil
-	case reflect.Slice:
-		// For slices, split by comma
-		if defaultStr == "" {
-			return reflect.MakeSlice(fieldType, 0, 0).Interface(), nil
-		}
-		parts := strings.Split(defaultStr, ",")
-		slice := reflect.MakeSlice(fieldType, len(parts), len(parts))
-		elemType := fieldType.Elem()
-
-		for i, part := range parts {
-			part = strings.TrimSpace(part)
-			elemVal, err := tp.parseDefaultValue(part, elemType)
-			if err != nil {
-				return nil, fmt.Errorf("invalid slice element default value: %s", part)
-			}
-
-			// Convert the value to the correct type for assignment
-			elemReflectVal := reflect.ValueOf(elemVal)
-			if elemReflectVal.Type() != elemType {
-				// Handle type conversion for numeric types
-				if elemReflectVal.CanConvert(elemType) {
-					elemReflectVal = elemReflectVal.Convert(elemType)
-				} else {
-					return nil, fmt.Errorf("cannot convert %v to %v", elemReflectVal.Type(), elemType)
-				}
-			}
-
-			slice.Index(i).Set(elemReflectVal)
-		}
-		return slice.Interface(), nil
-	default:
-		// For other types, return as string and let type conversion handle it
-		return defaultStr, nil
+	if fieldType.Kind() == reflect.Slice {
+		return optargs.ConvertSlice(defaultStr, fieldType)
 	}
+	return optargs.Convert(defaultStr, fieldType)
 }
 
 // mapToOptArgsCore maps field metadata to OptArgs Core structures
@@ -384,14 +326,4 @@ func (tp *TagParser) ValidateFieldMetadata(metadata *FieldMetadata) error {
 	}
 
 	return nil
-}
-
-// GetEnvironmentValue gets the value from environment variable if specified
-func (tp *TagParser) GetEnvironmentValue(metadata *FieldMetadata) (string, bool) {
-	if metadata.Env == "" {
-		return "", false
-	}
-
-	value, exists := os.LookupEnv(metadata.Env)
-	return value, exists
 }
