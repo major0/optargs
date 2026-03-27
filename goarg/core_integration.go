@@ -205,6 +205,7 @@ func (ci *CoreIntegration) isFieldSet(fieldValue reflect.Value, fieldType reflec
 // buildShortOptMap builds a map from struct metadata short options to Flag pointers.
 // Each flag's HasArg is set based on the field's ArgType. Short and long flags for
 // the same field share the same *optargs.Flag pointer so Handle is set once.
+// Populates Help, ArgName, and DefaultValue metadata on each Flag.
 func (ci *CoreIntegration) buildShortOptMap() map[byte]*optargs.Flag {
 	shortOpts := make(map[byte]*optargs.Flag)
 
@@ -214,9 +215,17 @@ func (ci *CoreIntegration) buildShortOptMap() map[byte]*optargs.Flag {
 			continue
 		}
 
+		defaultStr := ""
+		if field.Default != nil {
+			defaultStr = fmt.Sprintf("%v", field.Default)
+		}
+
 		flag := &optargs.Flag{
-			Name:   field.Short,
-			HasArg: field.ArgType,
+			Name:         field.Short,
+			HasArg:       field.ArgType,
+			Help:         field.Help,
+			ArgName:      strings.ToUpper(field.Name),
+			DefaultValue: defaultStr,
 		}
 		shortOpts[field.Short[0]] = flag
 
@@ -230,7 +239,8 @@ func (ci *CoreIntegration) buildShortOptMap() map[byte]*optargs.Flag {
 
 // buildLongOptMap builds a map from struct metadata long options to Flag pointers.
 // For fields that have both short and long options, the same *optargs.Flag pointer
-// from buildShortOptMap is reused so Handle is set once.
+// from buildShortOptMap is reused so Handle is set once. Long-only flags get their
+// own Flag with metadata populated.
 func (ci *CoreIntegration) buildLongOptMap() map[string]*optargs.Flag {
 	longOpts := make(map[string]*optargs.Flag)
 
@@ -244,9 +254,16 @@ func (ci *CoreIntegration) buildLongOptMap() map[string]*optargs.Flag {
 			// Reuse the shared pointer created by buildShortOptMap.
 			longOpts[field.Long] = field.CoreFlag
 		} else {
+			defaultStr := ""
+			if field.Default != nil {
+				defaultStr = fmt.Sprintf("%v", field.Default)
+			}
 			longOpts[field.Long] = &optargs.Flag{
-				Name:   field.Long,
-				HasArg: field.ArgType,
+				Name:         field.Long,
+				HasArg:       field.ArgType,
+				Help:         field.Help,
+				ArgName:      strings.ToUpper(field.Name),
+				DefaultValue: defaultStr,
 			}
 		}
 	}
@@ -275,6 +292,24 @@ func (ci *CoreIntegration) makeHandler(field *FieldMetadata, destValue reflect.V
 func (ci *CoreIntegration) CreateParserWithHandlers(args []string, destValue reflect.Value) (*optargs.Parser, error) {
 	shortOpts := ci.buildShortOptMap()
 	longOpts := ci.buildLongOptMap()
+
+	// Set Peer links between short and long flags for the same field.
+	for i := range ci.metadata.Options {
+		field := &ci.metadata.Options[i]
+		if field.Short == "" || field.Long == "" {
+			continue
+		}
+		sf := shortOpts[field.Short[0]]
+		lf := longOpts[field.Long]
+		if sf != nil && lf != nil && sf == lf {
+			// Shared pointer — no Peer needed (same flag).
+			continue
+		}
+		if sf != nil && lf != nil {
+			sf.Peer = lf
+			lf.Peer = sf
+		}
+	}
 
 	// Set Handle callbacks on each flag. Because short and long flags for
 	// the same field share the same *optargs.Flag pointer, iterating over
@@ -375,6 +410,11 @@ func (ci *CoreIntegration) RegisterSubcommands(coreParser *optargs.Parser, destV
 		}
 
 		coreParser.AddCmd(name, childParser)
+
+		// Set description from subcommand help metadata.
+		if help, ok := ci.metadata.SubcommandHelp[name]; ok {
+			childParser.Description = help
+		}
 
 		// Recursively register nested subcommands.
 		if err := child.RegisterSubcommands(childParser, fieldValue); err != nil {

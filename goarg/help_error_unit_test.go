@@ -2,8 +2,10 @@ package goarg
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
+	"testing/quick"
 )
 
 // TestHelpTextFormatting tests that help text formatting matches alexflint/go-arg exactly
@@ -568,4 +570,71 @@ func TestErrorHandlingEdgeCases(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Feature: goarg-optargs-integration, Property 6: Error translation produces go-arg-compatible format
+func TestPropertyErrorTranslationFormat(t *testing.T) {
+	et := &ErrorTranslator{}
+	ctx := ParseContext{}
+
+	// Sub-property A: Unknown option errors produce "unrecognized argument" format.
+	t.Run("unknown_option", func(t *testing.T) {
+		f := func(name string) bool {
+			if len(name) == 0 || len(name) > 20 {
+				return true
+			}
+			for _, r := range name {
+				if r < 'a' || r > 'z' {
+					return true
+				}
+			}
+
+			err := fmt.Errorf("unknown option: %s", name)
+			translated := et.TranslateError(err, ctx)
+			return strings.Contains(translated.Error(), "unrecognized argument")
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Sub-property B: Missing argument errors preserve "option requires an argument" format.
+	t.Run("missing_argument", func(t *testing.T) {
+		f := func(name string) bool {
+			if len(name) == 0 || len(name) > 20 {
+				return true
+			}
+			for _, r := range name {
+				if r < 'a' || r > 'z' {
+					return true
+				}
+			}
+
+			err := fmt.Errorf("option requires an argument: %s", name)
+			translated := et.TranslateError(err, ctx)
+			return strings.Contains(translated.Error(), "option requires an argument")
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Sub-property C: Type conversion errors produce "invalid argument" format.
+	t.Run("type_conversion", func(t *testing.T) {
+		f := func(value string, typeName string) bool {
+			if len(value) == 0 || len(typeName) == 0 {
+				return true
+			}
+			if len(value) > 20 || len(typeName) > 20 {
+				return true
+			}
+
+			err := fmt.Errorf("invalid value %q for type %s", value, typeName)
+			translated := et.TranslateError(err, ctx)
+			return strings.Contains(translated.Error(), "invalid argument")
+		}
+		if err := quick.Check(f, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	})
 }
