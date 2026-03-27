@@ -301,12 +301,7 @@ func TestProperty10_CaseInsensitiveCommandMatching(t *testing.T) {
 		invalidArgs := []string{"invalidcommand", "--port", fmt.Sprintf("%d", port)}
 		var invalidCmd RootCmd
 		err6 := ParseArgs(&invalidCmd, invalidArgs)
-		if err6 == nil {
-			// Invalid options should still fail (--port not valid for root)
-			return false
-		}
-
-		return true
+		return err6 != nil
 	}
 
 	// Configure property test with sufficient iterations

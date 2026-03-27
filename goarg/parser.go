@@ -170,13 +170,13 @@ func (p *Parser) Parse(args []string) error {
 // WriteHelp writes help text to the provided writer
 func (p *Parser) WriteHelp(w io.Writer) {
 	helpGenerator := NewHelpGenerator(p.metadata, p.config)
-	helpGenerator.WriteHelp(w)
+	helpGenerator.WriteHelp(w) //nolint:errcheck // matches upstream go-arg API (no error return)
 }
 
 // WriteUsage writes usage text to the provided writer
 func (p *Parser) WriteUsage(w io.Writer) {
 	helpGenerator := NewHelpGenerator(p.metadata, p.config)
-	helpGenerator.WriteUsage(w)
+	helpGenerator.WriteUsage(w) //nolint:errcheck // matches upstream go-arg API (no error return)
 }
 
 // Fail prints an error message and exits

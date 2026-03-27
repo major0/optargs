@@ -88,25 +88,6 @@ func assertArgs(t *testing.T, got, want []string) {
 	}
 }
 
-// requireFirstOptError iterates parser options and returns the first error, if
-// any. It fails the test only when the error expectation is violated.
-func requireFirstOptError(t *testing.T, parser *Parser, expectErr bool) {
-	t.Helper()
-	var optErr error
-	for _, err := range parser.Options() {
-		if err != nil {
-			optErr = err
-			break
-		}
-	}
-	if expectErr && optErr == nil {
-		t.Fatal("expected error but got none")
-	}
-	if !expectErr && optErr != nil {
-		t.Fatalf("unexpected error: %v", optErr)
-	}
-}
-
 // setupChain creates a parent→child parser chain. Parent gets empty args;
 // child gets the provided args. Returns the child parser.
 func setupChain(t *testing.T, parentOpts, childOpts []Flag, childArgs []string) *Parser {
@@ -157,24 +138,6 @@ func childOf(t *testing.T, parentOpts, childOpts string) (*Parser, *Parser) {
 	}
 	parent.AddCmd("child", child)
 	return parent, child
-}
-
-// childErr drains root.Options() (failing on error), then returns the
-// first error from child.Options().
-func childErr(t *testing.T, root, child *Parser) error {
-	t.Helper()
-	for _, err := range root.Options() {
-		if err != nil {
-			t.Fatalf("root error: %v", err)
-		}
-	}
-	var first error
-	for _, err := range child.Options() {
-		if err != nil && first == nil {
-			first = err
-		}
-	}
-	return first
 }
 
 // collectNamedOptions iterates a parser and returns a map of option name → arg value.

@@ -2,6 +2,7 @@ package goarg
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
 	"testing/quick"
@@ -14,12 +15,15 @@ import (
 func TestProperty6HelpGenerationCompatibility(t *testing.T) {
 	// Feature: goarg-compatibility, Property 6: Help Generation Compatibility
 
-	property := func() bool {
+	property := func(seed int) bool {
 		// Generate a random struct configuration for testing
-		testStruct := generateRandomTestStruct()
+		if seed < 0 {
+			seed = -seed
+		}
+		testStruct := generateRandomTestStruct(seed)
 
 		// Create parser with random configuration
-		config := generateRandomConfig()
+		config := generateRandomConfig(seed)
 
 		parser, err := NewParser(config, testStruct)
 		if err != nil {
@@ -84,7 +88,7 @@ type RequiredStruct struct {
 }
 
 // generateRandomTestStruct creates a random struct for testing help generation
-func generateRandomTestStruct() interface{} {
+func generateRandomTestStruct(seed int) interface{} {
 	// For property testing, we'll use a variety of predefined struct types
 	// that cover different combinations of features
 
@@ -96,13 +100,12 @@ func generateRandomTestStruct() interface{} {
 		&RequiredStruct{},
 	}
 
-	// Return a random struct from our collection
-	idx := len(structs) % len(structs) // Simple selection for property testing
+	idx := seed % len(structs)
 	return structs[idx]
 }
 
 // generateRandomConfig creates a random configuration for testing
-func generateRandomConfig() Config {
+func generateRandomConfig(seed int) Config {
 	configs := []Config{
 		{
 			Program:     "testapp",
@@ -119,8 +122,7 @@ func generateRandomConfig() Config {
 		{}, // Empty config
 	}
 
-	// Return a random config
-	idx := len(configs) % len(configs)
+	idx := (seed / len(configs)) % len(configs)
 	return configs[idx]
 }
 
@@ -139,7 +141,7 @@ func validateHelpTextFormat(helpText, usageText string, config Config, metadata 
 	// If we have a program name, it should appear in usage
 	program := config.Program
 	if program == "" {
-		program = "testapp" // Default for testing
+		program = os.Args[0] // matches HelpGenerator behavior
 	}
 	if !strings.Contains(helpText, program) {
 		return false

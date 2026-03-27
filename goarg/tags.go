@@ -258,7 +258,7 @@ func (tp *TagParser) mapToOptArgsCore(metadata *FieldMetadata) error {
 	}
 
 	// Determine argument type based on field type
-	argType := optargs.NoArgument
+	var argType optargs.ArgType
 	switch metadata.Type.Kind() {
 	case reflect.Bool:
 		argType = optargs.NoArgument

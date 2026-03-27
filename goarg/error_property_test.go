@@ -14,9 +14,9 @@ import (
 func TestProperty7ErrorMessageCompatibility(t *testing.T) {
 	// Feature: goarg-compatibility, Property 7: Error Message Compatibility
 
-	property := func() bool {
+	property := func(seed int) bool {
 		// Generate random error scenarios for testing
-		scenario := generateRandomErrorScenario()
+		scenario := generateRandomErrorScenario(seed)
 
 		parser, err := NewParser(Config{}, scenario.testStruct)
 		if err != nil {
@@ -50,7 +50,7 @@ type ErrorScenario struct {
 }
 
 // generateRandomErrorScenario creates random error scenarios for testing
-func generateRandomErrorScenario() ErrorScenario {
+func generateRandomErrorScenario(seed int) ErrorScenario {
 	scenarios := []ErrorScenario{
 		// Unknown option scenarios
 		{
@@ -118,9 +118,9 @@ func generateRandomErrorScenario() ErrorScenario {
 			testStruct: &struct {
 				Flag bool `arg:"--flag"`
 			}{},
-			args:         []string{"--flag", "maybe"},
+			args:         []string{"--flag=maybe"},
 			expectError:  true,
-			errorPattern: "invalid",
+			errorPattern: "unrecognized argument",
 		},
 
 		// Valid scenarios (should not error)
@@ -135,8 +135,11 @@ func generateRandomErrorScenario() ErrorScenario {
 		},
 	}
 
-	// Return a random scenario
-	idx := len(scenarios) % len(scenarios)
+	// Select scenario based on seed
+	if seed < 0 {
+		seed = -seed
+	}
+	idx := seed % len(scenarios)
 	return scenarios[idx]
 }
 

@@ -151,10 +151,10 @@ func optionsEquivalent(a, b []Option) bool {
 	}
 	counts := make(map[key]int, len(a))
 	for _, o := range a {
-		counts[key{o.Name, o.HasArg, o.Arg}]++
+		counts[key(o)]++
 	}
 	for _, o := range b {
-		k := key{o.Name, o.HasArg, o.Arg}
+		k := key(o)
 		counts[k]--
 		if counts[k] < 0 {
 			return false
