@@ -2,6 +2,7 @@ package goarg
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 
@@ -37,10 +38,9 @@ func (ci *CoreIntegration) buildPositionalArgs() {
 	}
 }
 
-// setFieldValue sets a field value based on the parsed argument
+// setFieldValue sets a field value based on the parsed argument using
+// optargs.Convert for all type conversion.
 func (ci *CoreIntegration) setFieldValue(fieldValue reflect.Value, field *FieldMetadata, arg string) error {
-	typeConverter := &TypeConverter{}
-
 	// Handle boolean flags specially - they are set to true when present without argument
 	if field.Type.Kind() == reflect.Bool && arg == "" {
 		fieldValue.SetBool(true)
@@ -49,38 +49,35 @@ func (ci *CoreIntegration) setFieldValue(fieldValue reflect.Value, field *FieldM
 
 	// Handle slice types - append to existing values
 	if field.Type.Kind() == reflect.Slice {
-		// Convert the argument to the element type
 		elemType := field.Type.Elem()
-		converted, err := typeConverter.ConvertValue(arg, elemType)
+		converted, err := optargs.Convert(arg, elemType)
 		if err != nil {
 			return fmt.Errorf("failed to convert slice element: %w", err)
 		}
-
-		// Append to existing slice
-		newSlice := reflect.Append(fieldValue, reflect.ValueOf(converted))
-		fieldValue.Set(newSlice)
+		fieldValue.Set(reflect.Append(fieldValue, reflect.ValueOf(converted)))
 		return nil
 	}
 
-	// For all other types, use the type converter
-	converted, err := typeConverter.ConvertValue(arg, field.Type)
+	// For all other types, delegate to core
+	converted, err := optargs.Convert(arg, field.Type)
 	if err != nil {
 		return fmt.Errorf("failed to convert value '%s' for field %s: %w", arg, field.Name, err)
 	}
 
-	return typeConverter.SetField(fieldValue, converted)
+	fieldValue.Set(reflect.ValueOf(converted))
+	return nil
 }
 
-// setScalarValue sets a scalar value (helper for slice and pointer handling)
+// setScalarValue converts a string to the target type using optargs.Convert
+// and sets the field value.
 func (ci *CoreIntegration) setScalarValue(fieldValue reflect.Value, fieldType reflect.Type, arg string) error {
-	typeConverter := &TypeConverter{}
-
-	converted, err := typeConverter.ConvertValue(arg, fieldType)
+	converted, err := optargs.Convert(arg, fieldType)
 	if err != nil {
 		return fmt.Errorf("failed to convert scalar value: %w", err)
 	}
 
-	return typeConverter.SetField(fieldValue, converted)
+	fieldValue.Set(reflect.ValueOf(converted))
+	return nil
 }
 
 // processPositionalArgs processes positional arguments from remaining args
@@ -151,7 +148,7 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 			continue
 		}
 
-		envValue, exists := ci.getEnvironmentValue(&field)
+		envValue, exists := os.LookupEnv(field.Env)
 		if !exists {
 			continue
 		}
@@ -164,10 +161,9 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 	return nil
 }
 
-// setDefaultValues sets default values for unset fields
+// setDefaultValues sets default values for unset fields using optargs.Convert
+// and optargs.ConvertSlice for type conversion.
 func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
-	typeConverter := &TypeConverter{}
-
 	for _, field := range ci.metadata.Fields {
 		fieldValue := destValue.FieldByName(field.Name)
 		if !fieldValue.IsValid() || !fieldValue.CanSet() {
@@ -179,17 +175,24 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 			continue
 		}
 
-		// Get default value from struct tag
-		defaultValue := typeConverter.GetDefault(reflect.StructField{
-			Name: field.Name,
-			Type: field.Type,
-			Tag:  reflect.StructTag(field.Tag),
-		})
+		// Get default value string from struct tag
+		defaultTag, exists := reflect.StructTag(field.Tag).Lookup("default")
+		if !exists {
+			continue
+		}
 
-		if defaultValue != nil {
-			if err := typeConverter.SetField(fieldValue, defaultValue); err != nil {
+		if field.Type.Kind() == reflect.Slice {
+			converted, err := optargs.ConvertSlice(defaultTag, field.Type)
+			if err != nil {
 				return fmt.Errorf("failed to set default value for field %s: %w", field.Name, err)
 			}
+			fieldValue.Set(reflect.ValueOf(converted))
+		} else {
+			converted, err := optargs.Convert(defaultTag, field.Type)
+			if err != nil {
+				return fmt.Errorf("failed to set default value for field %s: %w", field.Name, err)
+			}
+			fieldValue.Set(reflect.ValueOf(converted))
 		}
 	}
 
@@ -198,14 +201,7 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 
 // isFieldSet checks if a field has been set (not zero value)
 func (ci *CoreIntegration) isFieldSet(fieldValue reflect.Value, fieldType reflect.Type) bool {
-	zero := reflect.Zero(fieldType)
-	return !reflect.DeepEqual(fieldValue.Interface(), zero.Interface())
-}
-
-// getEnvironmentValue gets the value from environment variable
-func (ci *CoreIntegration) getEnvironmentValue(field *FieldMetadata) (string, bool) {
-	tagParser := &TagParser{}
-	return tagParser.GetEnvironmentValue(field)
+	return !isZeroValue(fieldValue)
 }
 
 // buildShortOptMap builds a map from struct metadata short options to Flag pointers.
@@ -403,6 +399,80 @@ func (ci *CoreIntegration) PostParse(coreParser *optargs.Parser, destValue refle
 	if err := ci.setDefaultValues(destValue); err != nil {
 		return err
 	}
-	tc := &TypeConverter{}
-	return tc.ValidateRequired(destValue.Addr().Interface(), ci.metadata)
+	return validateRequired(destValue.Addr().Interface(), ci.metadata)
+}
+
+// validateRequired validates that all required fields have been set.
+func validateRequired(dest interface{}, metadata *StructMetadata) error {
+	destValue := reflect.ValueOf(dest)
+	if destValue.Kind() != reflect.Ptr {
+		return fmt.Errorf("destination must be a pointer")
+	}
+
+	destElem := destValue.Elem()
+	if destElem.Kind() != reflect.Struct {
+		return fmt.Errorf("destination must be a pointer to a struct")
+	}
+
+	for _, field := range metadata.Fields {
+		if !field.Required {
+			continue
+		}
+
+		fieldValue := destElem.FieldByName(field.Name)
+		if !fieldValue.IsValid() {
+			continue
+		}
+
+		if isZeroValue(fieldValue) {
+			if field.Long != "" {
+				return fmt.Errorf("--%s is required", field.Long)
+			} else if field.Short != "" {
+				return fmt.Errorf("-%s is required", field.Short)
+			}
+			return fmt.Errorf("%s is required", field.Name)
+		}
+	}
+
+	return nil
+}
+
+// isZeroValue checks if a reflect.Value is the zero value for its type.
+func isZeroValue(v reflect.Value) bool {
+	if !v.IsValid() {
+		return true
+	}
+
+	switch v.Kind() {
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.String:
+		return v.String() == ""
+	case reflect.Ptr, reflect.Interface:
+		return v.IsNil()
+	case reflect.Slice, reflect.Map, reflect.Chan:
+		return v.IsNil() || v.Len() == 0
+	case reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			if !isZeroValue(v.Index(i)) {
+				return false
+			}
+		}
+		return true
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			if !isZeroValue(v.Field(i)) {
+				return false
+			}
+		}
+		return true
+	default:
+		return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
+	}
 }
