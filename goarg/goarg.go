@@ -11,6 +11,11 @@ import (
 	"github.com/major0/optargs"
 )
 
+// defaultOutput is where help, usage, and failure messages are printed
+// when Config.Out is not set. Matches upstream go-arg default (os.Stdout
+// for MustParse, os.Stderr for Fail).
+var defaultOutput io.Writer = os.Stderr
+
 // Parser provides the main parsing interface - identical to alexflint/go-arg
 type Parser struct {
 	config   Config
@@ -22,18 +27,24 @@ type Parser struct {
 
 	// Error translation
 	errorTranslator *ErrorTranslator
+
+	// Active subcommand chain, populated during Parse
+	subcommandNames []string
+	subcommandDest  interface{}
 }
 
 // Config matches alexflint/go-arg configuration options exactly
 type Config struct {
-	Program     string
-	Description string
-	Version     string
-	Epilogue    string
-	IgnoreEnv   bool
-	// Additional fields for full alexflint/go-arg compatibility
-	IgnoreDefault bool
-	Exit          func(int)
+	Program           string
+	Description       string
+	Version           string
+	Epilogue          string
+	IgnoreEnv         bool
+	IgnoreDefault     bool
+	StrictSubcommands bool
+	EnvPrefix         string
+	Exit              func(int)
+	Out               io.Writer
 }
 
 // Parse parses command line arguments into the destination struct
@@ -163,6 +174,7 @@ func (p *Parser) Parse(args []string) error {
 			if err := ci.dispatchSubcommand(childParser, invokedName, destValue, p); err != nil {
 				return err
 			}
+			p.recordSubcommandChain(destValue, ci)
 		}
 
 		// Nil out non-invoked subcommand fields so callers can detect
@@ -199,8 +211,8 @@ func (p *Parser) WriteUsage(w io.Writer) {
 
 // Fail prints an error message and exits
 func (p *Parser) Fail(msg string) {
-	fmt.Fprintln(os.Stderr, msg)
-	p.WriteUsage(os.Stderr)
+	fmt.Fprintln(p.output(), msg)
+	p.WriteUsage(p.output())
 	p.config.Exit(1)
 }
 
@@ -218,16 +230,17 @@ func (p *Parser) handleMustParseError(err error) {
 	if err == nil {
 		return
 	}
+	out := p.output()
 	switch {
 	case errors.Is(err, ErrHelp):
-		p.WriteHelp(os.Stdout)
+		p.WriteHelp(out)
 		p.config.Exit(0)
 	case errors.Is(err, ErrVersion):
-		fmt.Fprintln(os.Stdout, p.config.Version)
+		fmt.Fprintln(out, p.config.Version)
 		p.config.Exit(0)
 	default:
-		fmt.Fprintln(os.Stderr, err)
-		p.WriteUsage(os.Stderr)
+		fmt.Fprintln(out, err)
+		p.WriteUsage(out)
 		p.config.Exit(1)
 	}
 }

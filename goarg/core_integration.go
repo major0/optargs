@@ -371,6 +371,10 @@ func (ci *CoreIntegration) CreateParserWithHandlers(args []string, destValue ref
 		return nil, fmt.Errorf("failed to create OptArgs parser: %w", err)
 	}
 
+	if ci.config.StrictSubcommands {
+		parser.SetStrictSubcommands(true)
+	}
+
 	ci.buildPositionalArgs()
 
 	return parser, nil
