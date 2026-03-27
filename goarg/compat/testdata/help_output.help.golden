@@ -1,0 +1,9 @@
+Usage: test [--verbose] [--count COUNT] [--output OUTPUT]
+
+Options:
+  --verbose, -v          enable verbose output
+  --count COUNT, -c COUNT
+                         number of items
+  --output OUTPUT, -o OUTPUT
+                         output file
+  --help, -h             display this help and exit

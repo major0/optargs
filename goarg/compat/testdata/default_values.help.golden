@@ -1,0 +1,6 @@
+Usage: test [--port PORT] [--host HOST]
+
+Options:
+  --port PORT, -p PORT   listen port [default: 8080]
+  --host HOST            bind host [default: localhost]
+  --help, -h             display this help and exit

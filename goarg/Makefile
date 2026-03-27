@@ -69,12 +69,15 @@ static-check: fmt vet mod-tidy mod-verify lint build-check
 clean:
 	rm -f coverage.out coverage.html
 
-# Compatibility targets (stubs — populated by Task 10)
+# Compatibility targets
 compat-test:
-	@echo "Compatibility tests not yet configured (see Task 10)"
+	go test -run TestCompat -v -count=1 ./...
 
 compat-update:
-	@echo "Compatibility golden file update not yet configured (see Task 10)"
+	go test -v -count=1 -update ./compat/...
 
 compat-diff:
-	@echo "Compatibility diff not yet configured (see Task 10)"
+	@echo "=== Expected Diffs ==="
+	@go test -run TestCompatErrors -v -count=1 ./... 2>&1 | grep "expected diff" || true
+	@go test -run TestCompatValues -v -count=1 ./... 2>&1 | grep "expected diff" || true
+	@echo "=== Help formatting diffs are systematic — see expected_diffs.go ==="

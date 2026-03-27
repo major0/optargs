@@ -103,6 +103,9 @@ jobs:
     - name: Validate coverage
       working-directory: goarg
       run: ../scripts/validate_coverage.sh coverage.out
+    - name: Compatibility tests
+      working-directory: goarg
+      run: make compat-test
     - name: Lint
       working-directory: goarg
       run: |

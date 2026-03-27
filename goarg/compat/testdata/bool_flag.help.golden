@@ -1,0 +1,5 @@
+Usage: test [--verbose]
+
+Options:
+  --verbose, -v          verbose output
+  --help, -h             display this help and exit
