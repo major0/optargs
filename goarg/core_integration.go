@@ -537,11 +537,15 @@ func (ci *CoreIntegration) PostParse(coreParser *optargs.Parser, destValue refle
 	if err := ci.processPositionalArgs(coreParser, destValue); err != nil {
 		return err
 	}
-	if err := ci.processEnvironmentVariables(destValue); err != nil {
-		return err
+	if !ci.config.IgnoreEnv {
+		if err := ci.processEnvironmentVariables(destValue); err != nil {
+			return err
+		}
 	}
-	if err := ci.setDefaultValues(destValue); err != nil {
-		return err
+	if !ci.config.IgnoreDefault {
+		if err := ci.setDefaultValues(destValue); err != nil {
+			return err
+		}
 	}
 	return validateRequired(destValue.Addr().Interface(), ci.metadata)
 }

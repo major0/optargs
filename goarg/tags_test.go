@@ -553,7 +553,7 @@ func TestTagParser_EnvironmentVariables(t *testing.T) {
 			},
 			expected: FieldMetadata{
 				Name: "Secret",
-				Long: "secret", // Generated from field name
+				Long: "", // env-only: no CLI flag generated
 				Env:  "SECRET_KEY",
 				Help: "secret key",
 			},
@@ -786,8 +786,8 @@ func TestTagParser_ComplexTagFormats(t *testing.T) {
 			},
 			expected: FieldMetadata{
 				Name: "Invalid",
-				Long: "invalid", // Generated from field name
-				Env:  "VAR2",    // Last one wins
+				Long: "", // env-only: no CLI flag generated
+				Env:  "VAR2", // Last one wins
 			},
 		},
 		{

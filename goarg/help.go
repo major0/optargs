@@ -146,6 +146,27 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 		fmt.Fprintf(w, "Version: %s\n", hg.config.Version)
 	}
 
+	// Add environment-only variables section
+	if len(hg.metadata.EnvOnly) > 0 {
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "Environment variables:")
+		for _, field := range hg.metadata.EnvOnly {
+			label := fmt.Sprintf("  %s", field.Env)
+			if field.Help != "" {
+				fmt.Fprintf(w, "%-30s %s", label, field.Help)
+			} else {
+				fmt.Fprint(w, label)
+			}
+			if field.Required {
+				fmt.Fprint(w, " (required)")
+			}
+			if field.Default != nil && field.Default != "" {
+				fmt.Fprintf(w, " (default: %v)", field.Default)
+			}
+			fmt.Fprintln(w)
+		}
+	}
+
 	// Add epilogue if available
 	if hg.config.Epilogue != "" {
 		fmt.Fprintln(w)

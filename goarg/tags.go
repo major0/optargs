@@ -11,8 +11,9 @@ import (
 // StructMetadata represents parsed struct information
 type StructMetadata struct {
 	Fields           []FieldMetadata
-	Options          []FieldMetadata // non-positional, non-subcommand fields
+	Options          []FieldMetadata // non-positional, non-subcommand, has CLI flag
 	Positionals      []FieldMetadata // positional fields, in declaration order
+	EnvOnly          []FieldMetadata // env-only fields (no CLI flag)
 	Subcommands      map[string]*StructMetadata
 	SubcommandHelp   map[string]string // Maps subcommand name to help text
 	SubcommandFields map[string]string // Maps subcommand name to struct field name
@@ -90,6 +91,7 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 			metadata.Fields = append(metadata.Fields, subMeta.Fields...)
 			metadata.Options = append(metadata.Options, subMeta.Options...)
 			metadata.Positionals = append(metadata.Positionals, subMeta.Positionals...)
+			metadata.EnvOnly = append(metadata.EnvOnly, subMeta.EnvOnly...)
 			for k, v := range subMeta.Subcommands {
 				metadata.Subcommands[k] = v
 			}
@@ -152,6 +154,8 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 			metadata.Fields = append(metadata.Fields, *fieldMetadata)
 			if fieldMetadata.Positional {
 				metadata.Positionals = append(metadata.Positionals, *fieldMetadata)
+			} else if fieldMetadata.Short == "" && fieldMetadata.Long == "" && fieldMetadata.Env != "" {
+				metadata.EnvOnly = append(metadata.EnvOnly, *fieldMetadata)
 			} else {
 				metadata.Options = append(metadata.Options, *fieldMetadata)
 			}
@@ -342,10 +346,14 @@ func (tp *TagParser) ValidateFieldMetadata(metadata *FieldMetadata) error {
 		}
 	}
 
-	// Options should have at least one flag (short or long)
+	// Options should have at least one flag (short or long), unless
+	// the field is env-only (has Env but no explicit flags).
 	if !metadata.Positional && !metadata.IsSubcommand && metadata.Short == "" && metadata.Long == "" {
-		// Generate default long option from field name
-		metadata.Long = strings.ToLower(metadata.Name)
+		if metadata.Env == "" {
+			// Generate default long option from field name
+			metadata.Long = strings.ToLower(metadata.Name)
+		}
+		// else: env-only field, no CLI flag generated
 	}
 
 	// Validate short option is single character
