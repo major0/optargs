@@ -57,6 +57,11 @@ func (ci *CoreIntegration) setFieldValue(fieldValue reflect.Value, field *FieldM
 		return nil
 	}
 
+	// Handle map types - parse key=value pairs
+	if field.Type.Kind() == reflect.Map {
+		return setMapValue(fieldValue, field.Type, arg)
+	}
+
 	// For all other types, delegate to core
 	converted, err := optargs.Convert(arg, field.Type)
 	if err != nil {
@@ -199,6 +204,35 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 // isFieldSet checks if a field has been set (not zero value)
 func (ci *CoreIntegration) isFieldSet(fieldValue reflect.Value) bool {
 	return !isZeroValue(fieldValue)
+}
+
+// setMapValue parses a "key=value" string and inserts it into a map field.
+// Initializes the map if nil.
+func setMapValue(fieldValue reflect.Value, mapType reflect.Type, arg string) error {
+	idx := strings.Index(arg, "=")
+	if idx < 0 {
+		return fmt.Errorf("map value must be in key=value format, got %q", arg)
+	}
+	keyStr := arg[:idx]
+	valStr := arg[idx+1:]
+
+	keyType := mapType.Key()
+	valType := mapType.Elem()
+
+	key, err := optargs.Convert(keyStr, keyType)
+	if err != nil {
+		return fmt.Errorf("failed to convert map key: %w", err)
+	}
+	val, err := optargs.Convert(valStr, valType)
+	if err != nil {
+		return fmt.Errorf("failed to convert map value: %w", err)
+	}
+
+	if fieldValue.IsNil() {
+		fieldValue.Set(reflect.MakeMap(mapType))
+	}
+	fieldValue.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(val))
+	return nil
 }
 
 // formatDefault returns the display string for a field's default value.

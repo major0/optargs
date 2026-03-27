@@ -16,6 +16,16 @@ import (
 // for MustParse, os.Stderr for Fail).
 var defaultOutput io.Writer = os.Stderr
 
+// registrations holds globally registered destination structs for MustParse
+// without explicit dest arguments.
+var registrations []interface{}
+
+// Register adds a destination struct to the global registration list.
+// When MustParse is called without arguments, registered structs are used.
+func Register(dest any) {
+	registrations = append(registrations, dest)
+}
+
 // Parser provides the main parsing interface - identical to alexflint/go-arg
 type Parser struct {
 	config   Config
@@ -47,9 +57,12 @@ type Config struct {
 	Out               io.Writer
 }
 
-// Parse parses command line arguments into the destination struct
-func Parse(dest interface{}) error {
-	parser, err := NewParser(Config{}, dest)
+// Parse parses command line arguments into the destination struct(s)
+func Parse(dest ...interface{}) error {
+	if len(dest) == 0 {
+		return fmt.Errorf("at least one destination required")
+	}
+	parser, err := NewParser(Config{}, dest[0])
 	if err != nil {
 		return err
 	}
@@ -68,8 +81,13 @@ func ParseArgs(dest interface{}, args []string) error {
 // MustParse parses command line arguments, prints help/version on the
 // corresponding sentinel errors, and exits on any error. Returns the
 // parser on success so callers can inspect subcommand state.
-func MustParse(dest interface{}) *Parser {
-	p, err := NewParser(Config{}, dest)
+func MustParse(dest ...interface{}) *Parser {
+	if len(dest) == 0 {
+		fmt.Fprintln(os.Stderr, "at least one destination required")
+		os.Exit(2)
+		return nil
+	}
+	p, err := NewParser(Config{}, dest[0])
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)

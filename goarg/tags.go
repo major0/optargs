@@ -73,7 +73,36 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
 
-		// Skip unexported fields
+		// Skip unexported non-embedded fields. Embedded structs may
+		// contain exported fields even if the embedding field itself
+		// is unexported — recurse into those.
+		if !field.IsExported() && !field.Anonymous {
+			continue
+		}
+
+		// Embedded (anonymous) struct: recurse into its fields.
+		if field.Anonymous && field.Type.Kind() == reflect.Struct {
+			embedded := destElem.Field(i).Addr().Interface()
+			subMeta, err := tp.ParseStruct(embedded)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse embedded struct %s: %w", field.Name, err)
+			}
+			metadata.Fields = append(metadata.Fields, subMeta.Fields...)
+			metadata.Options = append(metadata.Options, subMeta.Options...)
+			metadata.Positionals = append(metadata.Positionals, subMeta.Positionals...)
+			for k, v := range subMeta.Subcommands {
+				metadata.Subcommands[k] = v
+			}
+			for k, v := range subMeta.SubcommandHelp {
+				metadata.SubcommandHelp[k] = v
+			}
+			for k, v := range subMeta.SubcommandFields {
+				metadata.SubcommandFields[k] = v
+			}
+			continue
+		}
+
+		// Skip unexported non-anonymous fields
 		if !field.IsExported() {
 			continue
 		}
@@ -264,6 +293,8 @@ func (tp *TagParser) mapToOptArgsCore(metadata *FieldMetadata) error {
 		reflect.Float32, reflect.Float64:
 		argType = optargs.RequiredArgument
 	case reflect.Slice:
+		argType = optargs.RequiredArgument
+	case reflect.Map:
 		argType = optargs.RequiredArgument
 	case reflect.Ptr:
 		// For pointer types, check the underlying type
