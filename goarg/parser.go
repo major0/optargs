@@ -104,10 +104,7 @@ func (p *Parser) Parse(args []string) error {
 	}
 
 	ci := &CoreIntegration{
-		metadata:    p.metadata,
-		shortOpts:   make(map[byte]*optargs.Flag),
-		longOpts:    make(map[string]*optargs.Flag),
-		positionals: []PositionalArg{},
+		metadata: p.metadata,
 	}
 	destValue := reflect.ValueOf(p.dest).Elem()
 

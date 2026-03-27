@@ -5,9 +5,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
+
+// ptrRe matches Go pointer addresses like 0x1234abcd.
+var ptrRe = regexp.MustCompile(`0x[0-9a-f]+`)
+
+func normalizePointers(s string) string {
+	return ptrRe.ReplaceAllString(s, "PTR")
+}
 
 // TestCaptureUpstream runs each scenario against upstream alexflint/go-arg
 // and writes golden files when -update is set.
@@ -85,7 +93,7 @@ func writeGolden(t *testing.T, scenario, kind, content string) {
 			return
 		}
 		content = strings.TrimRight(content, "\n") + "\n"
-		if existing != content {
+		if normalizePointers(existing) != normalizePointers(content) {
 			t.Errorf("golden mismatch for %s.%s:\n--- want ---\n%s--- got ---\n%s",
 				scenario, kind, existing, content)
 		}

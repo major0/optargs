@@ -58,8 +58,8 @@ func TestParserExtWriteUsageErr(t *testing.T) {
 // TestExtTagParser verifies the extended tag parser works.
 func TestExtTagParser(t *testing.T) {
 	type Args struct {
-		Verbose bool   `arg:"-v,--verbose" help:"verbose"`
-		Count   int    `arg:"-c,--count" help:"count"`
+		Verbose bool `arg:"-v,--verbose" help:"verbose"`
+		Count   int  `arg:"-c,--count" help:"count"`
 	}
 
 	etp := &ExtTagParser{}

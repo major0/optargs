@@ -12,8 +12,6 @@ import (
 // CoreIntegration handles direct translation to OptArgs Core
 type CoreIntegration struct {
 	metadata    *StructMetadata
-	shortOpts   map[byte]*optargs.Flag
-	longOpts    map[string]*optargs.Flag
 	positionals []PositionalArg
 }
 
@@ -398,9 +396,7 @@ func (ci *CoreIntegration) RegisterSubcommands(coreParser *optargs.Parser, destV
 		}
 
 		child := &CoreIntegration{
-			metadata:  subMeta,
-			shortOpts: make(map[byte]*optargs.Flag),
-			longOpts:  make(map[string]*optargs.Flag),
+			metadata: subMeta,
 		}
 
 		childParser, err := child.CreateParserWithHandlers([]string{}, fieldValue)
