@@ -18,8 +18,6 @@ type Parser struct {
 
 	// Direct OptArgs Core integration
 	coreParser *optargs.Parser
-	shortOpts  map[byte]*optargs.Flag
-	longOpts   map[string]*optargs.Flag
 
 	// Error translation
 	errorTranslator *ErrorTranslator
@@ -95,8 +93,6 @@ func NewParser(config Config, dest interface{}) (*Parser, error) {
 		config:          config,
 		dest:            dest,
 		metadata:        metadata,
-		shortOpts:       make(map[byte]*optargs.Flag),
-		longOpts:        make(map[string]*optargs.Flag),
 		errorTranslator: &ErrorTranslator{},
 	}, nil
 }
@@ -109,8 +105,8 @@ func (p *Parser) Parse(args []string) error {
 
 	ci := &CoreIntegration{
 		metadata:    p.metadata,
-		shortOpts:   p.shortOpts,
-		longOpts:    p.longOpts,
+		shortOpts:   make(map[byte]*optargs.Flag),
+		longOpts:    make(map[string]*optargs.Flag),
 		positionals: []PositionalArg{},
 	}
 	destValue := reflect.ValueOf(p.dest).Elem()

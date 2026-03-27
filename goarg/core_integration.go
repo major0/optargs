@@ -142,7 +142,7 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 		}
 
 		// Only set from environment if field is not already set
-		if ci.isFieldSet(fieldValue, field.Type) {
+		if ci.isFieldSet(fieldValue) {
 			continue
 		}
 
@@ -169,7 +169,7 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 		}
 
 		// Only set default if field is not already set
-		if ci.isFieldSet(fieldValue, field.Type) {
+		if ci.isFieldSet(fieldValue) {
 			continue
 		}
 
@@ -198,8 +198,16 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 }
 
 // isFieldSet checks if a field has been set (not zero value)
-func (ci *CoreIntegration) isFieldSet(fieldValue reflect.Value, fieldType reflect.Type) bool {
+func (ci *CoreIntegration) isFieldSet(fieldValue reflect.Value) bool {
 	return !isZeroValue(fieldValue)
+}
+
+// formatDefault returns the display string for a field's default value.
+func formatDefault(field *FieldMetadata) string {
+	if field.Default == nil {
+		return ""
+	}
+	return fmt.Sprintf("%v", field.Default)
 }
 
 // buildShortOptMap builds a map from struct metadata short options to Flag pointers.
@@ -215,17 +223,12 @@ func (ci *CoreIntegration) buildShortOptMap() map[byte]*optargs.Flag {
 			continue
 		}
 
-		defaultStr := ""
-		if field.Default != nil {
-			defaultStr = fmt.Sprintf("%v", field.Default)
-		}
-
 		flag := &optargs.Flag{
 			Name:         field.Short,
 			HasArg:       field.ArgType,
 			Help:         field.Help,
 			ArgName:      strings.ToUpper(field.Name),
-			DefaultValue: defaultStr,
+			DefaultValue: formatDefault(field),
 		}
 		shortOpts[field.Short[0]] = flag
 
@@ -254,16 +257,12 @@ func (ci *CoreIntegration) buildLongOptMap() map[string]*optargs.Flag {
 			// Reuse the shared pointer created by buildShortOptMap.
 			longOpts[field.Long] = field.CoreFlag
 		} else {
-			defaultStr := ""
-			if field.Default != nil {
-				defaultStr = fmt.Sprintf("%v", field.Default)
-			}
 			longOpts[field.Long] = &optargs.Flag{
 				Name:         field.Long,
 				HasArg:       field.ArgType,
 				Help:         field.Help,
 				ArgName:      strings.ToUpper(field.Name),
-				DefaultValue: defaultStr,
+				DefaultValue: formatDefault(field),
 			}
 		}
 	}

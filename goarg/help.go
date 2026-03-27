@@ -22,6 +22,14 @@ func NewHelpGenerator(metadata *StructMetadata, config Config) *HelpGenerator {
 	}
 }
 
+// programName returns the configured program name or falls back to os.Args[0].
+func (hg *HelpGenerator) programName() string {
+	if hg.config.Program != "" {
+		return hg.config.Program
+	}
+	return os.Args[0]
+}
+
 // WriteHelp writes help text to the provided writer
 func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 	if hg.metadata == nil {
@@ -29,11 +37,7 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 		return nil
 	}
 
-	// Generate help text compatible with alexflint/go-arg format
-	program := hg.config.Program
-	if program == "" {
-		program = os.Args[0]
-	}
+	program := hg.programName()
 
 	// Usage line
 	fmt.Fprintf(w, "Usage: %s", program)
@@ -147,10 +151,7 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 
 // WriteUsage writes usage text to the provided writer
 func (hg *HelpGenerator) WriteUsage(w io.Writer) error {
-	program := hg.config.Program
-	if program == "" {
-		program = os.Args[0]
-	}
+	program := hg.programName()
 
 	fmt.Fprintf(w, "Usage: %s", program)
 
@@ -282,69 +283,57 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 
 // extractOptionFromError extracts the option name from an error message
 func extractOptionFromError(errMsg string) string {
-	// Clean up the error message first
 	errMsg = strings.TrimPrefix(errMsg, "parsing error: ")
 
 	// Look for patterns like "--option" or "-o"
 	if idx := strings.Index(errMsg, "--"); idx != -1 {
-		start := idx
-		end := start + 2
-		for end < len(errMsg) && (errMsg[end] != ' ' && errMsg[end] != '\t' && errMsg[end] != '\n' && errMsg[end] != ':') {
-			end++
-		}
-		return errMsg[start:end]
+		return extractWord(errMsg, idx)
 	}
-
 	if idx := strings.Index(errMsg, "-"); idx != -1 {
-		start := idx
-		end := start + 1
-		for end < len(errMsg) && (errMsg[end] != ' ' && errMsg[end] != '\t' && errMsg[end] != '\n' && errMsg[end] != ':') {
-			end++
-		}
-		return errMsg[start:end]
+		return extractWord(errMsg, idx)
 	}
 
-	// If no option found, try to extract from "unknown option: optname" format
-	if strings.Contains(errMsg, "unknown option: ") {
-		parts := strings.Split(errMsg, "unknown option: ")
-		if len(parts) > 1 {
-			optName := strings.TrimSpace(parts[1])
-			// For single character options, use single dash; for longer options, use double dash
-			if !strings.HasPrefix(optName, "-") {
-				if len(optName) == 1 {
-					return "-" + optName
-				} else {
-					return "--" + optName
-				}
-			}
-			return optName
+	// Try known "prefix: optname" patterns
+	for _, prefix := range []string{"unknown option: ", "option requires an argument: "} {
+		if name, ok := extractAfterPrefix(errMsg, prefix); ok {
+			return name
 		}
 	}
 
-	// If no option found, try to extract from "option requires an argument: optname" format
-	if strings.Contains(errMsg, "option requires an argument: ") {
-		parts := strings.Split(errMsg, "option requires an argument: ")
-		if len(parts) > 1 {
-			optName := strings.TrimSpace(parts[1])
-			// For single character options, use single dash; for longer options, use double dash
-			if !strings.HasPrefix(optName, "-") {
-				if len(optName) == 1 {
-					return "-" + optName
-				} else {
-					return "--" + optName
-				}
-			}
-			return optName
-		}
-	}
-
-	// If no option found, return the original message
 	return errMsg
+}
+
+// extractWord returns the contiguous non-whitespace, non-colon token starting at idx.
+func extractWord(s string, idx int) string {
+	end := idx + 1
+	for end < len(s) && s[end] != ' ' && s[end] != '\t' && s[end] != '\n' && s[end] != ':' {
+		end++
+	}
+	return s[idx:end]
+}
+
+// extractAfterPrefix extracts an option name after a known error prefix,
+// adding dash prefixes if needed.
+func extractAfterPrefix(errMsg, prefix string) (string, bool) {
+	if !strings.Contains(errMsg, prefix) {
+		return "", false
+	}
+	parts := strings.Split(errMsg, prefix)
+	if len(parts) < 2 {
+		return "", false
+	}
+	optName := strings.TrimSpace(parts[1])
+	if strings.HasPrefix(optName, "-") {
+		return optName, true
+	}
+	if len(optName) == 1 {
+		return "-" + optName, true
+	}
+	return "--" + optName, true
 }
 
 // ParseContext provides context for error translation
 type ParseContext struct {
 	StructType reflect.Type
 	FieldName  string
-	TagValue   string
 }

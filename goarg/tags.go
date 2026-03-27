@@ -16,9 +16,6 @@ type StructMetadata struct {
 	Subcommands      map[string]*StructMetadata
 	SubcommandHelp   map[string]string // Maps subcommand name to help text
 	SubcommandFields map[string]string // Maps subcommand name to struct field name
-	Program          string
-	Description      string
-	Version          string
 }
 
 // FieldMetadata represents a single struct field's CLI mapping
