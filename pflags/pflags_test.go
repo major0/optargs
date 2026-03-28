@@ -1716,3 +1716,49 @@ func TestParseAll(t *testing.T) {
 		t.Errorf("seen = %v, want 2 entries", seen)
 	}
 }
+
+// TestSortFlags tests the SortFlags field.
+func TestSortFlags(t *testing.T) {
+	// Default: sorted
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "zebra", "", "z flag")
+	fs.StringVar(new(string), "alpha", "", "a flag")
+
+	sorted := fs.FlagUsages()
+	if strings.Index(sorted, "alpha") > strings.Index(sorted, "zebra") {
+		t.Errorf("sorted output should have alpha before zebra:\n%s", sorted)
+	}
+
+	// Unsorted: definition order
+	fs2 := NewFlagSet("test", ContinueOnError)
+	fs2.SortFlags = false
+	fs2.StringVar(new(string), "zebra", "", "z flag")
+	fs2.StringVar(new(string), "alpha", "", "a flag")
+
+	unsorted := fs2.FlagUsages()
+	if strings.Index(unsorted, "zebra") > strings.Index(unsorted, "alpha") {
+		t.Errorf("unsorted output should have zebra before alpha (definition order):\n%s", unsorted)
+	}
+}
+
+// TestFlagUsagesWrapped tests column wrapping.
+func TestFlagUsagesWrapped(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "output", "default.txt", "this is a very long usage description that should be wrapped at a reasonable column width")
+
+	// No wrapping
+	noWrap := fs.FlagUsagesWrapped(0)
+	if strings.Count(noWrap, "\n") > 1 {
+		t.Errorf("no-wrap should be single line, got:\n%s", noWrap)
+	}
+
+	// Wrapped at 40 cols
+	wrapped := fs.FlagUsagesWrapped(40)
+	if len(wrapped) == 0 {
+		t.Error("wrapped output should not be empty")
+	}
+	// Should have more lines than unwrapped
+	if strings.Count(wrapped, "\n") <= strings.Count(noWrap, "\n") {
+		t.Errorf("wrapped should have more lines than unwrapped:\nwrapped:\n%s\nunwrapped:\n%s", wrapped, noWrap)
+	}
+}

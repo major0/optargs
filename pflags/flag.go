@@ -52,6 +52,10 @@ type FlagSet struct {
 	// a custom error handler.
 	Usage func()
 
+	// SortFlags controls whether flags are sorted alphabetically in help text.
+	// Default is true (matching upstream pflag).
+	SortFlags bool
+
 	name              string
 	parsed            bool
 	args              []string // arguments after flags
@@ -82,6 +86,7 @@ func NewFlagSet(name string, errorHandling ErrorHandling) *FlagSet {
 	f := &FlagSet{
 		name:          name,
 		errorHandling: errorHandling,
+		SortFlags:     true,
 		interspersed:  true,
 		argsLenAtDash: -1,
 		flags:         make(map[string]*Flag),
@@ -394,7 +399,9 @@ func (f *FlagSet) PrintDefaults() {
 		}
 		names = append(names, name)
 	}
-	sortStrings(names)
+	if f.SortFlags {
+		sortStrings(names)
+	}
 
 	for _, name := range names {
 		fl := f.flags[name]
@@ -442,12 +449,62 @@ func (f *FlagSet) PrintDefaults() {
 // flags in the set. This is the same output as PrintDefaults but returned as
 // a string instead of written to the output.
 func (f *FlagSet) FlagUsages() string {
+	return f.FlagUsagesWrapped(0)
+}
+
+// FlagUsagesWrapped returns a string containing the usage information for all
+// flags in the FlagSet. Wrapped to cols columns (0 for no wrapping).
+func (f *FlagSet) FlagUsagesWrapped(cols int) string {
 	var buf bytes.Buffer
 	old := f.output
 	f.output = &buf
 	f.PrintDefaults()
 	f.output = old
-	return buf.String()
+
+	if cols <= 0 {
+		return buf.String()
+	}
+
+	// Wrap each line at cols
+	var result bytes.Buffer
+	for _, line := range strings.Split(buf.String(), "\n") {
+		if len(line) <= cols || cols == 0 {
+			result.WriteString(line)
+			result.WriteByte('\n')
+			continue
+		}
+		// Find the usage text start (after the flag prefix + padding)
+		// and wrap there
+		result.WriteString(wrap(line, cols))
+		result.WriteByte('\n')
+	}
+	// Remove trailing extra newline from split
+	s := result.String()
+	if len(s) > 0 && s[len(s)-1] == '\n' {
+		s = s[:len(s)-1]
+	}
+	return s
+}
+
+// wrap wraps a line at cols, indenting continuation lines.
+func wrap(line string, cols int) string {
+	if len(line) <= cols {
+		return line
+	}
+	// Find a good break point
+	breakAt := cols
+	for breakAt > 0 && line[breakAt] != ' ' {
+		breakAt--
+	}
+	if breakAt == 0 {
+		breakAt = cols // no space found, hard break
+	}
+	// Indent continuation to align with usage text
+	indent := "                                 " // 33 spaces — typical flag prefix width
+	if len(indent) > cols/2 {
+		indent = strings.Repeat(" ", cols/4)
+	}
+	return line[:breakAt] + "\n" + indent + strings.TrimLeft(line[breakAt:], " ")
 }
 
 // sortStrings sorts a slice of strings in place.
