@@ -60,9 +60,6 @@ type FlagSet struct {
 	flags     map[string]*Flag  // flags by name
 	shorthand map[string]string // shorthand to name mapping
 	order     []string          // order of flag definition for help text
-
-	// OptArgs Core integration
-	coreIntegration *CoreIntegration
 }
 
 // NormalizedName is a flag name that has been normalized according to rules
@@ -81,7 +78,6 @@ func NewFlagSet(name string, errorHandling ErrorHandling) *FlagSet {
 		order:         make([]string, 0),
 	}
 	f.Usage = f.defaultUsage
-	f.coreIntegration = NewCoreIntegration(f)
 	return f
 }
 
@@ -317,11 +313,6 @@ func (f *FlagSet) addFlag(flag *Flag) error {
 
 	f.flags[normalName] = flag
 	f.order = append(f.order, normalName)
-
-	// Register flag with OptArgs Core integration
-	if err := f.coreIntegration.RegisterFlag(flag); err != nil {
-		return fmt.Errorf("failed to register flag with OptArgs Core: %w", err)
-	}
 
 	return nil
 }

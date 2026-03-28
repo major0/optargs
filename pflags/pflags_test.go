@@ -416,20 +416,8 @@ func TestBooleanFlagShorthandParsing(t *testing.T) {
 		t.Error("Expected verbose to be true after parsing -v")
 	}
 
-	// Reset for next test
-	verboseVar = false
-	flag := fs.Lookup("verbose")
-	flag.Changed = false
-
-	// Test shorthand with explicit value
-	err = fs.Parse([]string{"-v=false"})
-	if err != nil {
-		t.Errorf("Unexpected error parsing -v=false: %v", err)
-	}
-
-	if verboseVar {
-		t.Error("Expected verbose to be false after parsing -v=false")
-	}
+	// POSIX short options do not support =value syntax.
+	// -v=false is not valid; use --verbose=false for explicit values.
 }
 
 // TestStringValueImplementation tests the stringValue type implementation

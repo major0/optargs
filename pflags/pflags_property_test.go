@@ -8,6 +8,7 @@ import (
 	"testing"
 	"testing/quick"
 	"time"
+	"unicode"
 )
 
 // Property test generators for different flag types
@@ -28,6 +29,20 @@ func generateValidShorthand() string {
 func generateUsageText() string {
 	usages := []string{"help text", "usage description", "flag documentation", "command option", "parameter info"}
 	return usages[rand.Intn(len(usages))]
+}
+
+// isValidLongOptName returns true if s is a valid long option name:
+// non-empty, all graphic unicode characters, no spaces.
+func isValidLongOptName(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if !unicode.IsGraphic(r) || unicode.IsSpace(r) {
+			return false
+		}
+	}
+	return true
 }
 
 // TestProperty1_FlagCreationConsistency tests Property 1 from the design document:
@@ -268,7 +283,7 @@ func TestProperty5_FlagSetIsolation(t *testing.T) {
 // **Validates: Requirements 5.4, 5.5**
 func TestProperty6_ParseStateConsistency(t *testing.T) {
 	parseStateProperty := func(flagName, defaultValue, usage string) bool {
-		if flagName == "" || len(flagName) > 50 {
+		if !isValidLongOptName(flagName) || len(flagName) > 50 {
 			return true // Skip invalid inputs
 		}
 
@@ -1019,7 +1034,7 @@ func TestProperty13_SliceTypeValidation(t *testing.T) {
 func TestProperty11_OptArgsCoreIntegrationFidelity(t *testing.T) {
 	// Test basic flag parsing integration
 	basicIntegrationProperty := func(flagName, defaultValue, usage string, setValue string) bool {
-		if flagName == "" || len(flagName) > 50 {
+		if !isValidLongOptName(flagName) || len(flagName) > 50 {
 			return true // Skip invalid inputs
 		}
 
@@ -1059,7 +1074,7 @@ func TestProperty11_OptArgsCoreIntegrationFidelity(t *testing.T) {
 
 	// Test boolean flag integration (special case for OptArgs Core)
 	boolIntegrationProperty := func(flagName string, usage string) bool {
-		if flagName == "" || len(flagName) > 50 {
+		if !isValidLongOptName(flagName) || len(flagName) > 50 {
 			return true // Skip invalid inputs
 		}
 
@@ -1122,7 +1137,7 @@ func TestProperty11_OptArgsCoreIntegrationFidelity(t *testing.T) {
 
 	// Test shorthand flag integration
 	shorthandIntegrationProperty := func(flagName, shorthand, setValue string) bool {
-		if flagName == "" || len(flagName) > 50 || len(shorthand) != 1 {
+		if !isValidLongOptName(flagName) || len(flagName) > 50 || len(shorthand) != 1 {
 			return true // Skip invalid inputs
 		}
 
@@ -1170,7 +1185,7 @@ func TestProperty11_OptArgsCoreIntegrationFidelity(t *testing.T) {
 
 	// Test error handling integration
 	errorHandlingProperty := func(flagName string) bool {
-		if flagName == "" || len(flagName) > 50 {
+		if !isValidLongOptName(flagName) || len(flagName) > 50 {
 			return true // Skip invalid inputs
 		}
 
