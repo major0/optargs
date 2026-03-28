@@ -588,8 +588,10 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 			}
 		}
 
-		cleanupDone = true
-		p.Args = append(p.nonOpts, p.Args...)
+		if !cleanupDone {
+			cleanupDone = true
+			p.Args = append(p.nonOpts, p.Args...)
+		}
 	}
 }
 
