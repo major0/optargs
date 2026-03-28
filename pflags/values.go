@@ -11,6 +11,9 @@ import (
 type stringValue string
 
 func newStringValue(val string, p *string) *stringValue {
+	if p == nil {
+		p = new(string)
+	}
 	*p = val
 	return (*stringValue)(p)
 }
@@ -30,6 +33,9 @@ func (s *stringValue) String() string { return string(*s) }
 type boolValue bool
 
 func newBoolValue(val bool, p *bool) *boolValue {
+	if p == nil {
+		p = new(bool)
+	}
 	*p = val
 	return (*boolValue)(p)
 }
@@ -56,6 +62,9 @@ func (b *boolValue) IsBoolFlag() bool { return true }
 type intValue int
 
 func newIntValue(val int, p *int) *intValue {
+	if p == nil {
+		p = new(int)
+	}
 	*p = val
 	return (*intValue)(p)
 }
@@ -79,6 +88,9 @@ func (i *intValue) String() string { return strconv.Itoa(int(*i)) }
 type int64Value int64
 
 func newInt64Value(val int64, p *int64) *int64Value {
+	if p == nil {
+		p = new(int64)
+	}
 	*p = val
 	return (*int64Value)(p)
 }
@@ -102,6 +114,9 @@ func (i *int64Value) String() string { return strconv.FormatInt(int64(*i), 10) }
 type uintValue uint
 
 func newUintValue(val uint, p *uint) *uintValue {
+	if p == nil {
+		p = new(uint)
+	}
 	*p = val
 	return (*uintValue)(p)
 }
@@ -125,6 +140,9 @@ func (i *uintValue) String() string { return strconv.FormatUint(uint64(*i), 10) 
 type uint64Value uint64
 
 func newUint64Value(val uint64, p *uint64) *uint64Value {
+	if p == nil {
+		p = new(uint64)
+	}
 	*p = val
 	return (*uint64Value)(p)
 }
@@ -148,6 +166,9 @@ func (i *uint64Value) String() string { return strconv.FormatUint(uint64(*i), 10
 type float64Value float64
 
 func newFloat64Value(val float64, p *float64) *float64Value {
+	if p == nil {
+		p = new(float64)
+	}
 	*p = val
 	return (*float64Value)(p)
 }
@@ -171,6 +192,9 @@ func (f *float64Value) String() string { return strconv.FormatFloat(float64(*f),
 type durationValue time.Duration
 
 func newDurationValue(val time.Duration, p *time.Duration) *durationValue {
+	if p == nil {
+		p = new(time.Duration)
+	}
 	*p = val
 	return (*durationValue)(p)
 }
@@ -194,6 +218,9 @@ func (d *durationValue) String() string { return (*time.Duration)(d).String() }
 type stringSliceValue []string
 
 func newStringSliceValue(val []string, p *[]string) *stringSliceValue {
+	if p == nil {
+		p = new([]string)
+	}
 	*p = val
 	return (*stringSliceValue)(p)
 }
@@ -228,6 +255,9 @@ func (s *stringSliceValue) String() string {
 type intSliceValue []int
 
 func newIntSliceValue(val []int, p *[]int) *intSliceValue {
+	if p == nil {
+		p = new([]int)
+	}
 	*p = val
 	return (*intSliceValue)(p)
 }
