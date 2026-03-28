@@ -418,7 +418,9 @@ func TestVisitAllAndVisit(t *testing.T) {
 	}
 
 	// Set one flag, Visit should see it
-	fs.Set("string", "hello")
+	if err := fs.Set("string", "hello"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	changedNames = map[string]bool{}
 	fs.Visit(func(f *Flag) { changedNames[f.Name] = true })
 	if !changedNames["string"] || len(changedNames) != 1 {
@@ -896,4 +898,50 @@ func TestAdvancedGNUComplexScenarios(t *testing.T) {
 			t.Errorf("log:level=app = %q", logLevel)
 		}
 	})
+}
+
+// TestErrorHandlingPanicOnError tests that PanicOnError panics on parse failure.
+func TestErrorHandlingPanicOnError(t *testing.T) {
+	fs := NewFlagSet("test", PanicOnError)
+	var buf bytes.Buffer
+	fs.SetOutput(&buf)
+	fs.StringVar(new(string), "known", "", "")
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for PanicOnError")
+		}
+		err, ok := r.(error)
+		if !ok {
+			t.Fatalf("expected error in panic, got %T: %v", r, r)
+		}
+		if !strings.Contains(err.Error(), "unknown flag") {
+			t.Errorf("panic error = %q, want 'unknown flag'", err.Error())
+		}
+		// Should have printed error + usage to output
+		out := buf.String()
+		if !strings.Contains(out, "unknown flag") {
+			t.Errorf("output missing error, got:\n%s", out)
+		}
+		if !strings.Contains(out, "Usage") {
+			t.Errorf("output missing usage, got:\n%s", out)
+		}
+	}()
+
+	fs.Parse([]string{"--unknown"}) //nolint:errcheck // testing panic path, not error return
+}
+
+// TestErrorHandlingContinueOnError tests that ContinueOnError returns the error.
+func TestErrorHandlingContinueOnError(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "known", "", "")
+
+	err := fs.Parse([]string{"--unknown"})
+	if err == nil {
+		t.Fatal("expected error for ContinueOnError")
+	}
+	if !strings.Contains(err.Error(), "unknown flag") {
+		t.Errorf("error = %q, want 'unknown flag'", err.Error())
+	}
 }

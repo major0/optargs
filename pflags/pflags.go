@@ -141,6 +141,11 @@ func translateError(err error) error {
 // Parse parses flag definitions from the argument list, which should not
 // include the command name. Must be called after all flags in the FlagSet
 // are defined and before flags are accessed by the program.
+//
+// ErrorHandling behavior on parse failure:
+//   - ContinueOnError: return the error
+//   - ExitOnError: print error + usage to output, call os.Exit(2)
+//   - PanicOnError: print error + usage to output, panic
 func (f *FlagSet) Parse(arguments []string) error {
 	shortOpts := f.buildShortOpts()
 	longOpts := f.buildLongOpts()
@@ -148,19 +153,39 @@ func (f *FlagSet) Parse(arguments []string) error {
 	config := optargs.ParserConfig{}
 	parser, err := optargs.NewParser(config, shortOpts, longOpts, arguments)
 	if err != nil {
-		return translateError(err)
+		return f.failf("%v", translateError(err))
 	}
 
 	// Consume the iterator — handlers do the work, we only propagate errors.
 	for _, err := range parser.Options() {
 		if err != nil {
-			return translateError(err)
+			return f.failf("%v", translateError(err))
 		}
 	}
 
 	f.args = parser.Args
 	f.parsed = true
 	return nil
+}
+
+// failf handles a parse error according to the FlagSet's ErrorHandling mode.
+// For ContinueOnError it returns the error. For ExitOnError and PanicOnError
+// it prints the error and usage before exiting or panicking.
+func (f *FlagSet) failf(format string, a ...interface{}) error {
+	err := fmt.Errorf(format, a...)
+	switch f.errorHandling {
+	case ContinueOnError:
+		return err
+	case ExitOnError:
+		fmt.Fprintln(f.out(), err) //nolint:errcheck // writing to output
+		f.Usage()
+		os.Exit(2)
+	case PanicOnError:
+		fmt.Fprintln(f.out(), err) //nolint:errcheck // writing to output
+		f.Usage()
+		panic(err)
+	}
+	return err
 }
 
 // CommandLine is the default set of command-line flags, parsed from os.Args.
@@ -257,7 +282,7 @@ func VarP(value Value, name, shorthand, usage string) {
 }
 
 func Parse() {
-	CommandLine.Parse(os.Args[1:])
+	CommandLine.Parse(os.Args[1:]) //nolint:errcheck // ExitOnError handles errors
 }
 
 func Parsed() bool {

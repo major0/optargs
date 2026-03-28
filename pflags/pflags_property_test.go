@@ -60,7 +60,7 @@ func TestProperty11_OptArgsCoreIntegrationFidelity(t *testing.T) {
 		if !isValidLongOptName(flagName) || len(flagName) > 50 || len(shorthand) != 1 {
 			return true
 		}
-		if !((shorthand[0] >= 'a' && shorthand[0] <= 'z') || (shorthand[0] >= 'A' && shorthand[0] <= 'Z')) {
+		if (shorthand[0] < 'a' || shorthand[0] > 'z') && (shorthand[0] < 'A' || shorthand[0] > 'Z') {
 			return true
 		}
 

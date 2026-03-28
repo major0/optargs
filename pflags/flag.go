@@ -127,9 +127,9 @@ func (f *FlagSet) Arg(i int) string {
 // defaultUsage is the default function to print a usage message.
 func (f *FlagSet) defaultUsage() {
 	if f.name == "" {
-		fmt.Fprintf(f.out(), "Usage:\n")
+		fmt.Fprintf(f.out(), "Usage:\n") //nolint:errcheck
 	} else {
-		fmt.Fprintf(f.out(), "Usage of %s:\n", f.name)
+		fmt.Fprintf(f.out(), "Usage of %s:\n", f.name) //nolint:errcheck
 	}
 	f.PrintDefaults()
 }
@@ -142,38 +142,35 @@ func (f *FlagSet) PrintDefaults() {
 			return
 		}
 
-		format := "  -%s"
+		format := "      --%s"
 		if len(flag.Shorthand) > 0 {
 			format = "  -%s, --%s"
-		} else {
-			format = "      --%s"
 		}
 
+		w := f.out()
 		if len(flag.Shorthand) > 0 {
-			fmt.Fprintf(f.out(), format, flag.Shorthand, flag.Name)
+			fmt.Fprintf(w, format, flag.Shorthand, flag.Name) //nolint:errcheck
 		} else {
-			fmt.Fprintf(f.out(), format, flag.Name)
+			fmt.Fprintf(w, format, flag.Name) //nolint:errcheck
 		}
 
 		name, usage := UnquoteUsage(flag)
 		if len(name) > 0 {
-			fmt.Fprintf(f.out(), " %s", name)
+			fmt.Fprintf(w, " %s", name) //nolint:errcheck
 		}
 
-		// Boolean flags of one ASCII letter are so common we
-		// treat them specially, putting their usage on the same line.
 		if len(usage) > 0 {
-			fmt.Fprintf(f.out(), "\t%s", usage)
+			fmt.Fprintf(w, "\t%s", usage) //nolint:errcheck
 		}
 
 		if !isZeroValue(flag, flag.DefValue) {
 			if flag.Value.Type() == "string" {
-				fmt.Fprintf(f.out(), " (default %q)", flag.DefValue)
+				fmt.Fprintf(w, " (default %q)", flag.DefValue) //nolint:errcheck
 			} else {
-				fmt.Fprintf(f.out(), " (default %s)", flag.DefValue)
+				fmt.Fprintf(w, " (default %s)", flag.DefValue) //nolint:errcheck
 			}
 		}
-		fmt.Fprint(f.out(), "\n")
+		fmt.Fprint(w, "\n") //nolint:errcheck
 	})
 }
 
@@ -297,7 +294,7 @@ func (f *FlagSet) Visit(fn func(*Flag)) {
 }
 
 // addFlag will add the flag to the FlagSet
-func (f *FlagSet) addFlag(flag *Flag) error {
+func (f *FlagSet) addFlag(flag *Flag) {
 	normalName := f.normalizeFlagName(flag.Name)
 	if f.flags[normalName] != nil {
 		panic(fmt.Sprintf("flag redefined: %s", flag.Name))
@@ -313,8 +310,6 @@ func (f *FlagSet) addFlag(flag *Flag) error {
 
 	f.flags[normalName] = flag
 	f.order = append(f.order, normalName)
-
-	return nil
 }
 
 // Var defines a flag with the specified name and usage string. The type and
