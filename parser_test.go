@@ -290,6 +290,93 @@ func TestParserLongOptsMissingOptArg(t *testing.T) {
 	}
 }
 
+// TestOptionalArgumentLookahead is a regression test for the bug where
+// OptionalArgument long opts unconditionally consumed the next argument,
+// even when it was another option or the -- terminator.
+func TestOptionalArgumentLookahead(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantArg string // expected arg for --opt; empty means no arg
+		wantHas bool   // expected HasArg for --opt
+	}{
+		{
+			name:    "space delimited arg",
+			args:    []string{"--opt", "a"},
+			wantArg: "a",
+			wantHas: true,
+		},
+		{
+			name:    "equals delimited arg",
+			args:    []string{"--opt=a"},
+			wantArg: "a",
+			wantHas: true,
+		},
+		{
+			name:    "equals delimited arg starting with dash",
+			args:    []string{"--opt=--"},
+			wantArg: "--",
+			wantHas: true,
+		},
+		{
+			name:    "no arg followed by short option",
+			args:    []string{"--opt", "-a"},
+			wantArg: "",
+			wantHas: false,
+		},
+		{
+			name:    "no arg followed by long option",
+			args:    []string{"--opt", "--arg"},
+			wantArg: "",
+			wantHas: false,
+		},
+		{
+			name:    "no arg followed by double-hyphen terminator",
+			args:    []string{"--opt", "--"},
+			wantArg: "",
+			wantHas: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			longOpts := map[string]*Flag{
+				"opt": {Name: "opt", HasArg: OptionalArgument},
+				"arg": {Name: "arg", HasArg: NoArgument},
+			}
+			shortOpts := map[byte]*Flag{
+				'a': {Name: "a", HasArg: NoArgument},
+			}
+			parser, err := NewParser(ParserConfig{}, shortOpts, longOpts, tt.args)
+			if err != nil {
+				t.Fatalf("NewParser: %v", err)
+			}
+
+			var gotOpt Option
+			found := false
+			for opt, err := range parser.Options() {
+				if err != nil {
+					t.Fatalf("Options: %v", err)
+				}
+				if opt.Name == "opt" {
+					gotOpt = opt
+					found = true
+				}
+			}
+
+			if !found {
+				t.Fatal("--opt not found in parsed options")
+			}
+			if gotOpt.HasArg != tt.wantHas {
+				t.Errorf("HasArg = %t, want %t", gotOpt.HasArg, tt.wantHas)
+			}
+			if gotOpt.Arg != tt.wantArg {
+				t.Errorf("Arg = %q, want %q", gotOpt.Arg, tt.wantArg)
+			}
+		})
+	}
+}
+
 // --- Tests merged from parser_coverage_test.go ---
 
 // TestFindShortOptUnknownArgType verifies the error path when a Flag has

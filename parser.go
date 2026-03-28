@@ -266,18 +266,33 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Optio
 // resolveLongOpt handles argument consumption for an exact long-option match.
 func (p *Parser) resolveLongOpt(name string, flag *Flag, args []string) ([]string, *Flag, Option, error) {
 	option := Option{Name: name}
+
 	if flag.HasArg == NoArgument {
 		return args, flag, option, nil
 	}
+
+	// For RequiredArgument: consume the next arg unconditionally.
+	// For OptionalArgument: consume only if all three conditions hold:
+	//   1. No = delimited arg was present (guaranteed — findLongOpt
+	//      handles = splitting before calling resolveLongOpt)
+	//   2. Another argument exists after the current option
+	//   3. That argument does NOT start with '-' (avoids consuming
+	//      short options, long options, or the -- terminator)
 	if len(args) > 0 {
-		option.Arg = args[0]
-		option.HasArg = true
-		return args[1:], flag, option, nil
+		if flag.HasArg == RequiredArgument || args[0][0] != '-' {
+			option.Arg = args[0]
+			option.HasArg = true
+			return args[1:], flag, option, nil
+		}
+		// OptionalArgument with a '-' prefixed next arg — don't consume
+		return args, flag, option, nil
 	}
+
 	if flag.HasArg == RequiredArgument {
 		return args, nil, option, p.optError("option requires an argument: " + name)
 	}
-	// OptionalArgument with no arg available
+
+	// OptionalArgument with no remaining args
 	return args, flag, option, nil
 }
 
