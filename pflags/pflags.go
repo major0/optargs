@@ -66,28 +66,62 @@ func (f *FlagSet) buildShortOpts() map[byte]*optargs.Flag {
 	return shortOpts
 }
 
+// normalizeArgs applies the normalize func to long option names in the
+// argument list. This translates --my_flag to --my-flag (or whatever the
+// normalize func does) so the core parser can match against registered flags.
+// Short options and non-option args are left unchanged.
+func (f *FlagSet) normalizeArgs(args []string) []string {
+	out := make([]string, len(args))
+	terminated := false
+	for i, arg := range args {
+		if terminated || arg == "--" {
+			out[i] = arg
+			terminated = true
+			continue
+		}
+		if strings.HasPrefix(arg, "--") {
+			// Split on = to handle --name=value
+			name := arg[2:]
+			eqIdx := strings.Index(name, "=")
+			if eqIdx >= 0 {
+				flagName := name[:eqIdx]
+				normalized := string(f.normalizeNameFunc(f, flagName))
+				out[i] = "--" + normalized + name[eqIdx:]
+			} else {
+				normalized := string(f.normalizeNameFunc(f, name))
+				out[i] = "--" + normalized
+			}
+		} else {
+			out[i] = arg
+		}
+	}
+	return out
+}
+
 // buildLongOpts constructs the long option map for optargs.NewParser
 // from the FlagSet's registered flags. Also registers --no-<name>
 // negation flags for boolean flags.
 func (f *FlagSet) buildLongOpts() map[string]*optargs.Flag {
 	longOpts := make(map[string]*optargs.Flag)
-	for name, flag := range f.flags {
+	for normalizedName, flag := range f.flags {
+		handler := f.makeHandler(flag)
+		hasArg := mapArgumentType(flag.Value.Type())
+
 		coreFlag := &optargs.Flag{
-			Name:   name,
-			HasArg: mapArgumentType(flag.Value.Type()),
-			Handle: f.makeHandler(flag),
+			Name:   normalizedName,
+			HasArg: hasArg,
+			Handle: handler,
 		}
-		longOpts[name] = coreFlag
+		longOpts[normalizedName] = coreFlag
 
 		// Register negation flag for booleans
-		if flag.Value.Type() == "bool" {
-			negName := "no-" + name
-			negFlag := &optargs.Flag{
+		if isBoolFlag(flag.Value) {
+			negName := "no-" + normalizedName
+			longOpts[negName] = &optargs.Flag{
 				Name:   negName,
 				HasArg: optargs.OptionalArgument,
 				Handle: f.makeNegationHandler(flag),
 			}
-			longOpts[negName] = negFlag
 		}
 	}
 	return longOpts
@@ -198,11 +232,18 @@ func (f *FlagSet) Parse(arguments []string) error {
 		}
 	}
 
+	// If a normalize func is set, normalize long option names in the
+	// arguments so the core parser can match them against registered flags.
+	if f.normalizeNameFunc != nil {
+		arguments = f.normalizeArgs(arguments)
+	}
+
 	shortOpts := f.buildShortOpts()
 	longOpts := f.buildLongOpts()
 
 	config := optargs.ParserConfig{}
 	config.SetLongOnly(f.longOnly)
+	config.SetInterspersed(f.interspersed)
 
 	parser, err := optargs.NewParser(config, shortOpts, longOpts, arguments)
 	if err != nil {

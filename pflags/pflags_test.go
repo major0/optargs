@@ -1413,3 +1413,76 @@ func TestArgsLenAtDash(t *testing.T) {
 		})
 	}
 }
+
+// TestSetNormalizeFunc tests flag name normalization.
+func TestSetNormalizeFunc(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+
+	// Normalize underscores to hyphens
+	fs.SetNormalizeFunc(func(f *FlagSet, name string) NormalizedName {
+		return NormalizedName(strings.ReplaceAll(name, "_", "-"))
+	})
+
+	var s string
+	fs.StringVar(&s, "my-flag", "", "")
+
+	// Should be accessible via underscore variant
+	if f := fs.Lookup("my_flag"); f == nil {
+		t.Error("Lookup('my_flag') should find 'my-flag' via normalization")
+	}
+
+	// Parse with underscore variant
+	if err := fs.Parse([]string{"--my_flag", "val"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s != "val" {
+		t.Errorf("flag value = %q, want %q", s, "val")
+	}
+
+	// GetNormalizeFunc should return the function
+	if fs.GetNormalizeFunc() == nil {
+		t.Error("GetNormalizeFunc() should not be nil")
+	}
+}
+
+// TestSetInterspersed tests interspersed option/non-option arg handling.
+func TestSetInterspersed(t *testing.T) {
+	// Default: interspersed enabled (GNU behavior)
+	fs1 := NewFlagSet("test", ContinueOnError)
+	var v1 string
+	fs1.StringVar(&v1, "name", "", "")
+	if err := fs1.Parse([]string{"pos1", "--name", "val", "pos2"}); err != nil {
+		t.Fatalf("interspersed parse: %v", err)
+	}
+	if v1 != "val" {
+		t.Errorf("interspersed: name = %q, want %q", v1, "val")
+	}
+	if fs1.NArg() != 2 {
+		t.Errorf("interspersed: NArg = %d, want 2", fs1.NArg())
+	}
+
+	// Disabled: POSIX behavior — stop at first non-option
+	fs2 := NewFlagSet("test", ContinueOnError)
+	fs2.SetInterspersed(false)
+	var v2 string
+	fs2.StringVar(&v2, "name", "", "")
+	if err := fs2.Parse([]string{"pos1", "--name", "val"}); err != nil {
+		t.Fatalf("non-interspersed parse: %v", err)
+	}
+	if v2 != "" {
+		t.Errorf("non-interspersed: name = %q, want empty (should stop at pos1)", v2)
+	}
+	// All remaining args should be positional
+	if fs2.NArg() != 3 {
+		t.Errorf("non-interspersed: NArg = %d, want 3 (args=%v)", fs2.NArg(), fs2.Args())
+	}
+
+	// Getter
+	if !fs1.GetInterspersed() {
+		t.Error("default should be interspersed")
+	}
+	if fs2.GetInterspersed() {
+		t.Error("should not be interspersed after SetInterspersed(false)")
+	}
+}
+

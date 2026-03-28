@@ -57,6 +57,22 @@ func (c *ParserConfig) LongOnly() bool {
 	return c.longOptsOnly
 }
 
+// SetInterspersed controls whether non-option arguments can appear between
+// options. When false, option processing stops at the first non-option
+// argument (POSIX behavior). Default is true (GNU behavior).
+func (c *ParserConfig) SetInterspersed(interspersed bool) {
+	if interspersed {
+		c.parseMode = ParseDefault
+	} else {
+		c.parseMode = ParsePosixlyCorrect
+	}
+}
+
+// Interspersed returns whether interspersed option/non-option args are allowed.
+func (c *ParserConfig) Interspersed() bool {
+	return c.parseMode == ParseDefault
+}
+
 // Parser is the core argument parser. It processes command-line arguments
 // according to POSIX getopt(3) and GNU getopt_long(3) conventions.
 //

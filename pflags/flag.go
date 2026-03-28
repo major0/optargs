@@ -115,6 +115,41 @@ func (f *FlagSet) LongOnly() bool {
 	return f.longOnly
 }
 
+// SetNormalizeFunc allows you to add a function which can translate flag names.
+// Flags added to the FlagSet will be translated and then when anything tries to
+// look up the flag that will also be translated. So it would be possible to create
+// a flag named "getURL" and have it translated to "geturl". A user could then pass
+// "--getUrl" which may also be translated to "geturl" and everything will work.
+func (f *FlagSet) SetNormalizeFunc(n func(f *FlagSet, name string) NormalizedName) {
+	f.normalizeNameFunc = n
+	// Re-normalize existing flags under the new function.
+	newFlags := make(map[string]*Flag, len(f.flags))
+	newOrder := make([]string, 0, len(f.order))
+	for _, flag := range f.flags {
+		normalName := f.normalizeFlagName(flag.Name)
+		newFlags[normalName] = flag
+		newOrder = append(newOrder, normalName)
+	}
+	f.flags = newFlags
+	f.order = newOrder
+}
+
+// GetNormalizeFunc returns the previously set NormalizeFunc, or nil if none was set.
+func (f *FlagSet) GetNormalizeFunc() func(f *FlagSet, name string) NormalizedName {
+	return f.normalizeNameFunc
+}
+
+// SetInterspersed sets whether to support interspersed option/non-option arguments.
+// When false, option processing stops at the first non-option argument (POSIX behavior).
+func (f *FlagSet) SetInterspersed(interspersed bool) {
+	f.interspersed = interspersed
+}
+
+// GetInterspersed returns whether interspersed option/non-option arguments are supported.
+func (f *FlagSet) GetInterspersed() bool {
+	return f.interspersed
+}
+
 // Changed returns true if the named flag was set during Parse().
 func (f *FlagSet) Changed(name string) bool {
 	flag := f.Lookup(name)
