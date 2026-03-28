@@ -82,7 +82,7 @@ type versionedArgs struct {
 	Verbose bool `arg:"-v,--verbose"`
 }
 
-func (a *versionedArgs) Version() string    { return "1.2.3" }
+func (a *versionedArgs) Version() string     { return "1.2.3" }
 func (a *versionedArgs) Description() string { return "A versioned app" }
 func (a *versionedArgs) Epilogue() string    { return "See docs for more info." }
 

@@ -10,14 +10,14 @@ import (
 
 // StructMetadata represents parsed struct information
 type StructMetadata struct {
-	Fields              []FieldMetadata
-	Options             []FieldMetadata // non-positional, non-subcommand, has CLI flag
-	Positionals         []FieldMetadata // positional fields, in declaration order
-	EnvOnly             []FieldMetadata // env-only fields (no CLI flag)
-	Subcommands         map[string]*StructMetadata
-	SubcommandHelp      map[string]string // Maps subcommand name to help text
-	SubcommandFields    map[string]string // Maps subcommand name to struct field name
-	SubcommandFieldIdx  map[string]int    // Maps subcommand name to struct field index
+	Fields             []FieldMetadata
+	Options            []FieldMetadata // non-positional, non-subcommand, has CLI flag
+	Positionals        []FieldMetadata // positional fields, in declaration order
+	EnvOnly            []FieldMetadata // env-only fields (no CLI flag)
+	Subcommands        map[string]*StructMetadata
+	SubcommandHelp     map[string]string // Maps subcommand name to help text
+	SubcommandFields   map[string]string // Maps subcommand name to struct field name
+	SubcommandFieldIdx map[string]int    // Maps subcommand name to struct field index
 }
 
 // FieldMetadata represents a single struct field's CLI mapping

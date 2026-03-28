@@ -786,7 +786,7 @@ func TestTagParser_ComplexTagFormats(t *testing.T) {
 			},
 			expected: FieldMetadata{
 				Name: "Invalid",
-				Long: "", // env-only: no CLI flag generated
+				Long: "",     // env-only: no CLI flag generated
 				Env:  "VAR2", // Last one wins
 			},
 		},
