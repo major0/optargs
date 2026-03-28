@@ -1571,3 +1571,60 @@ func TestSetAnnotation(t *testing.T) {
 		t.Error("expected error for non-existent flag")
 	}
 }
+
+// TestAddFlag tests adding a single flag to a FlagSet.
+func TestAddFlag(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	flag := &Flag{
+		Name:     "output",
+		Usage:    "output file",
+		Value:    newStringValue("default", new(string)),
+		DefValue: "default",
+	}
+	fs.AddFlag(flag)
+
+	if f := fs.Lookup("output"); f == nil {
+		t.Error("flag not found after AddFlag")
+	}
+
+	// Duplicate should be silently ignored
+	flag2 := &Flag{
+		Name:     "output",
+		Usage:    "different",
+		Value:    newStringValue("other", new(string)),
+		DefValue: "other",
+	}
+	fs.AddFlag(flag2)
+	if fs.Lookup("output").Usage != "output file" {
+		t.Error("duplicate AddFlag should not overwrite")
+	}
+}
+
+// TestAddFlagSet tests merging two FlagSets.
+func TestAddFlagSet(t *testing.T) {
+	fs1 := NewFlagSet("parent", ContinueOnError)
+	fs1.StringVar(new(string), "verbose", "", "verbose output")
+	fs1.BoolVarP(new(bool), "debug", "d", false, "debug mode")
+
+	fs2 := NewFlagSet("child", ContinueOnError)
+	fs2.StringVar(new(string), "output", "", "output file")
+	fs2.StringVar(new(string), "verbose", "", "child verbose") // duplicate
+
+	fs1.AddFlagSet(fs2)
+
+	// output should be added
+	if fs1.Lookup("output") == nil {
+		t.Error("output flag should be added from child")
+	}
+	// verbose should keep parent's version
+	if fs1.Lookup("verbose").Usage != "verbose output" {
+		t.Error("duplicate should keep parent's flag")
+	}
+	// debug should still exist
+	if fs1.Lookup("debug") == nil {
+		t.Error("parent's debug flag should still exist")
+	}
+
+	// nil set should not panic
+	fs1.AddFlagSet(nil)
+}

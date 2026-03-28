@@ -292,6 +292,44 @@ func (f *FlagSet) SetAnnotation(name, key string, values []string) error {
 	return nil
 }
 
+// AddFlag adds the flag to the FlagSet. If a flag with the same name already
+// exists, the new flag is silently ignored (matching upstream pflag behavior).
+func (f *FlagSet) AddFlag(flag *Flag) {
+	normalName := f.normalizeFlagName(flag.Name)
+	if f.flags[normalName] != nil {
+		return // silently ignore duplicates
+	}
+	if len(flag.Shorthand) > 0 {
+		if _, exists := f.shorthand[flag.Shorthand]; exists {
+			return // silently ignore shorthand conflicts
+		}
+		f.shorthand[flag.Shorthand] = flag.Name
+	}
+	f.flags[normalName] = flag
+	f.order = append(f.order, normalName)
+}
+
+// AddFlagSet adds all flags from newSet to f. If a flag already exists in f,
+// the flag from newSet is silently ignored.
+func (f *FlagSet) AddFlagSet(newSet *FlagSet) {
+	if newSet == nil {
+		return
+	}
+	newSet.VisitAll(func(flag *Flag) {
+		f.AddFlag(flag)
+	})
+	// Also add short-only flags
+	for _, flag := range newSet.shortOnly {
+		if _, exists := f.shortOnly[flag.Shorthand]; exists {
+			continue
+		}
+		if _, exists := f.shorthand[flag.Shorthand]; exists {
+			continue
+		}
+		f.shortOnly[flag.Shorthand] = flag
+	}
+}
+
 // Name returns the name of the flag set.
 func (f *FlagSet) Name() string {
 	return f.name
