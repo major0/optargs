@@ -64,12 +64,14 @@ clean:
 
 pre-commit: static-check test
 
-# Compatibility testing targets (Task 11)
+# Compatibility testing targets
 compat-test:
-	@echo "TODO: compat/ not yet set up"
+	cd compat && go test -v ./...
+	go test -v -run TestCompat ./...
 
 compat-update:
-	@echo "TODO: compat/ not yet set up"
+	cd compat && go test -update ./...
 
 compat-diff:
-	@echo "TODO: compat/ not yet set up"
+	@echo "=== Upstream golden files ===" && ls -1 compat/testdata/*.golden 2>/dev/null || echo "No golden files"
+	@echo "=== Running compat tests ===" && go test -v -run TestCompat ./... 2>&1 || true

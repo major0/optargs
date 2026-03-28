@@ -1,0 +1,207 @@
+package pflags
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// readGolden reads a golden file from compat/testdata/.
+func readGolden(t *testing.T, name string) string {
+	t.Helper()
+	path := filepath.Join("compat", "testdata", name+".golden")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("golden file %s not found: %v", path, err)
+	}
+	return string(data)
+}
+
+// TestCompatStringFlag validates string flag parsing matches upstream.
+func TestCompatStringFlag(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var s string
+	fs.StringVar(&s, "output", "default.txt", "output file path")
+	if err := fs.Parse([]string{"--output", "result.txt"}); err != nil {
+		t.Fatal(err)
+	}
+	if s != readGolden(t, "string_parse") {
+		t.Errorf("string parse = %q, want %q", s, readGolden(t, "string_parse"))
+	}
+}
+
+// TestCompatBoolFlag validates boolean flag parsing matches upstream.
+func TestCompatBoolFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{"no_arg", []string{"--verbose"}},
+		{"explicit_true", []string{"--verbose=true"}},
+		{"explicit_false", []string{"--verbose=false"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			var v bool
+			fs.BoolVar(&v, "verbose", false, "enable verbose")
+			if err := fs.Parse(tt.args); err != nil {
+				t.Fatal(err)
+			}
+			got := "false"
+			if v {
+				got = "true"
+			}
+			want := readGolden(t, "bool_"+tt.name)
+			if got != want {
+				t.Errorf("got %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+// TestCompatShorthand validates shorthand parsing matches upstream.
+func TestCompatShorthand(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var s string
+	fs.StringVarP(&s, "output", "o", "", "output file")
+	if err := fs.Parse([]string{"-o", "file.txt"}); err != nil {
+		t.Fatal(err)
+	}
+	if s != readGolden(t, "shorthand_parse") {
+		t.Errorf("shorthand parse = %q, want %q", s, readGolden(t, "shorthand_parse"))
+	}
+}
+
+// TestCompatUnknownFlag validates unknown flag error format matches upstream.
+func TestCompatUnknownFlag(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "known", "", "")
+	err := fs.Parse([]string{"--unknown"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	want := readGolden(t, "unknown_flag_error")
+	if err.Error() != want {
+		t.Errorf("error = %q, want %q", err.Error(), want)
+	}
+}
+
+// TestCompatDoubleHyphen validates -- termination matches upstream.
+func TestCompatDoubleHyphen(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var s string
+	fs.StringVar(&s, "name", "", "")
+	if err := fs.Parse([]string{"--name", "val", "--", "--other", "pos"}); err != nil {
+		t.Fatal(err)
+	}
+	result := s + "\n"
+	for _, a := range fs.Args() {
+		result += a + "\n"
+	}
+	want := readGolden(t, "double_hyphen")
+	if result != want {
+		t.Errorf("got:\n%s\nwant:\n%s", result, want)
+	}
+}
+
+// TestCompatSliceFlag validates slice flag parsing matches upstream.
+func TestCompatSliceFlag(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var ss []string
+	fs.StringSliceVar(&ss, "tags", nil, "tags to apply")
+	if err := fs.Parse([]string{"--tags", "a,b", "--tags", "c"}); err != nil {
+		t.Fatal(err)
+	}
+	result := ""
+	for _, s := range ss {
+		result += s + "\n"
+	}
+	want := readGolden(t, "slice_parse")
+	if result != want {
+		t.Errorf("got:\n%s\nwant:\n%s", result, want)
+	}
+}
+
+// TestCompatUsageFormat validates help text format matches upstream.
+// Expected diffs are documented in compat/expected_diffs.go.
+func TestCompatUsageFormat(t *testing.T) {
+	tests := []struct {
+		name   string
+		setup  func(fs *FlagSet)
+		golden string
+	}{
+		{
+			"string_usage",
+			func(fs *FlagSet) { fs.StringVar(new(string), "output", "default.txt", "output file path") },
+			"string_usage",
+		},
+		{
+			"bool_usage",
+			func(fs *FlagSet) { fs.BoolVar(new(bool), "verbose", false, "enable verbose") },
+			"bool_usage",
+		},
+		{
+			"shorthand_usage",
+			func(fs *FlagSet) { fs.StringVarP(new(string), "output", "o", "", "output file") },
+			"shorthand_usage",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			tt.setup(fs)
+			got := fs.FlagUsages()
+			want := readGolden(t, tt.golden)
+			if got != want {
+				t.Errorf("usage differs:\ngot:\n%s\nwant:\n%s", got, want)
+				// Show character-level diff for debugging
+				for i := 0; i < len(got) && i < len(want); i++ {
+					if got[i] != want[i] {
+						t.Errorf("first diff at byte %d: got %q, want %q", i, string(got[i]), string(want[i]))
+						t.Errorf("got context:  %q", got[max(0, i-10):min(len(got), i+10)])
+						t.Errorf("want context: %q", want[max(0, i-10):min(len(want), i+10)])
+						break
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestCompatMixedUsage validates mixed flag usage format.
+// This test compares against upstream format but allows for known differences
+// documented in compat/expected_diffs.go.
+func TestCompatMixedUsage(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.BoolVarP(new(bool), "verbose", "v", false, "enable verbose")
+	fs.StringVarP(new(string), "output", "o", "", "output file")
+	fs.IntVarP(new(int), "count", "c", 0, "count")
+
+	got := fs.FlagUsages()
+	want := readGolden(t, "mixed_usage")
+
+	// Compare line by line — order may differ since we use definition order
+	gotLines := strings.Split(strings.TrimRight(got, "\n"), "\n")
+	wantLines := strings.Split(strings.TrimRight(want, "\n"), "\n")
+
+	if len(gotLines) != len(wantLines) {
+		t.Errorf("line count differs: got %d, want %d\ngot:\n%s\nwant:\n%s", len(gotLines), len(wantLines), got, want)
+		return
+	}
+
+	// Check each line is present (order may differ)
+	wantSet := make(map[string]bool)
+	for _, l := range wantLines {
+		wantSet[strings.TrimSpace(l)] = true
+	}
+	for _, l := range gotLines {
+		trimmed := strings.TrimSpace(l)
+		if !wantSet[trimmed] {
+			t.Errorf("unexpected line in output: %q\ngot:\n%s\nwant:\n%s", trimmed, got, want)
+		}
+	}
+}

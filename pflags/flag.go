@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
+	"strings"
 )
 
 // ErrorHandling defines how FlagSet.Parse behaves if the parse fails.
@@ -136,43 +138,69 @@ func (f *FlagSet) defaultUsage() {
 }
 
 // PrintDefaults prints, to standard error unless configured otherwise, the
-// default values of all defined flags in the set.
+// default values of all defined flags in the set. Output format matches
+// spf13/pflag: flags sorted alphabetically, usage aligned with spaces.
 func (f *FlagSet) PrintDefaults() {
-	f.VisitAll(func(flag *Flag) {
-		if flag.Hidden {
-			return
-		}
+	// Collect visible flags and compute max line width for alignment.
+	type flagLine struct {
+		flag   *Flag
+		prefix string // "  -o, --output string" or "      --verbose"
+	}
 
-		format := "      --%s"
-		if len(flag.Shorthand) > 0 {
-			format = "  -%s, --%s"
-		}
+	var lines []flagLine
+	maxLen := 0
 
-		w := f.out()
-		if len(flag.Shorthand) > 0 {
-			fmt.Fprintf(w, format, flag.Shorthand, flag.Name) //nolint:errcheck
+	// Collect in alphabetical order (matching upstream pflag)
+	names := make([]string, 0, len(f.order))
+	for _, name := range f.order {
+		fl := f.flags[name]
+		if fl.Hidden {
+			continue
+		}
+		names = append(names, name)
+	}
+	sortStrings(names)
+
+	for _, name := range names {
+		fl := f.flags[name]
+		var prefix string
+		if len(fl.Shorthand) > 0 {
+			prefix = fmt.Sprintf("  -%s, --%s", fl.Shorthand, fl.Name)
 		} else {
-			fmt.Fprintf(w, format, flag.Name) //nolint:errcheck
+			prefix = fmt.Sprintf("      --%s", fl.Name)
 		}
 
-		name, usage := UnquoteUsage(flag)
-		if len(name) > 0 {
-			fmt.Fprintf(w, " %s", name) //nolint:errcheck
+		typeName, _ := UnquoteUsage(fl)
+		if len(typeName) > 0 {
+			prefix += " " + typeName
 		}
+
+		lines = append(lines, flagLine{flag: fl, prefix: prefix})
+		if len(prefix) > maxLen {
+			maxLen = len(prefix)
+		}
+	}
+
+	w := f.out()
+	for _, line := range lines {
+		_, usage := UnquoteUsage(line.flag)
+		padding := strings.Repeat(" ", maxLen-len(line.prefix))
 
 		if len(usage) > 0 {
-			fmt.Fprintf(w, "\t%s", usage) //nolint:errcheck
+			fmt.Fprintf(w, "%s%s   %s", line.prefix, padding, usage) //nolint:errcheck
+		} else {
+			fmt.Fprint(w, line.prefix) //nolint:errcheck
 		}
 
-		if !isZeroValue(flag, flag.DefValue) {
-			if flag.Value.Type() == "string" {
-				fmt.Fprintf(w, " (default %q)", flag.DefValue) //nolint:errcheck
+		if !isZeroValue(line.flag, line.flag.DefValue) {
+			if line.flag.Value.Type() == "string" {
+				fmt.Fprintf(w, " (default %q)", line.flag.DefValue) //nolint:errcheck
 			} else {
-				fmt.Fprintf(w, " (default %s)", flag.DefValue) //nolint:errcheck
+				fmt.Fprintf(w, " (default %s)", line.flag.DefValue) //nolint:errcheck
 			}
 		}
 		fmt.Fprint(w, "\n") //nolint:errcheck
-	})
+	}
 }
 
 // FlagUsages returns a string containing the usage information for all defined
@@ -186,6 +214,9 @@ func (f *FlagSet) FlagUsages() string {
 	f.output = old
 	return buf.String()
 }
+
+// sortStrings sorts a slice of strings in place.
+func sortStrings(s []string) { sort.Strings(s) }
 
 // isZeroValue determines whether the string represents the zero
 // value for a flag.
