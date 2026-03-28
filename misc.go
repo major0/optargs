@@ -5,6 +5,35 @@ import (
 	"unicode"
 )
 
+// debug enables verbose slog.Debug logging in the parser hot paths.
+// Kept false by default so the argument-evaluation cost of slog.Debug
+// calls is completely eliminated in production. Set to true in tests
+// or via an init() hook when troubleshooting.
+var debug bool
+
+// SetDebug enables or disables verbose debug logging in the parser.
+func SetDebug(enabled bool) { debug = enabled }
+
+// shortOptStrings is a pre-allocated lookup table mapping every printable
+// ASCII byte to its single-character string representation. This avoids
+// a heap allocation on every call to string(byte) in the short-option
+// hot path.
+var shortOptStrings [128]string
+
+func init() {
+	for i := range shortOptStrings {
+		shortOptStrings[i] = string(rune(i))
+	}
+}
+
+// byteString returns the single-character string for c without allocating.
+func byteString(c byte) string {
+	if c < 128 {
+		return shortOptStrings[c]
+	}
+	return string(rune(c))
+}
+
 // Go's isGraph() behaves differently than the C version.
 func isGraph(c byte) bool {
 	r := rune(c)

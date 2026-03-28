@@ -59,8 +59,8 @@ func TestShortOptsGraph(t *testing.T) {
 			t.Errorf("unexpected error: %s", err)
 		}
 
-		shortOpt, ok := getopt.shortOpts[byte(i)]
-		if !ok {
+		shortOpt := getopt.shortOpts[byte(i)]
+		if shortOpt == nil {
 			t.Errorf("Did not find option %c in shortOpts", byte(i))
 		} else if shortOpt.Name != string(byte(i)) {
 			t.Errorf("Expected option %c, got %s", byte(i), getopt.shortOpts[byte(i)].Name)
@@ -215,8 +215,8 @@ func TestShortOptsFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
-	if len(getopt.shortOpts) != 3 {
-		t.Fatalf("Expected 3 shortOpts, got %d", len(getopt.shortOpts))
+	if getopt.shortOptN != 3 {
+		t.Fatalf("Expected 3 shortOpts, got %d", getopt.shortOptN)
 	}
 	wantArgs := map[byte]ArgType{'a': NoArgument, 'b': RequiredArgument, 'c': OptionalArgument}
 	for c, want := range wantArgs {

@@ -208,7 +208,9 @@ func getOpt(args []string, optstring string, longopts []Flag, longOnly bool) (*P
 	shortOpts := make(map[byte]*Flag)
 optPrefix:
 	for len(optstring) > 0 {
-		slog.Debug("GetOpt", "mode", true, "optstring", optstring)
+		if debug {
+			slog.Debug("GetOpt", "mode", true, "optstring", optstring)
+		}
 		switch optstring[0] {
 		case ':':
 			config.enableErrors = false
@@ -228,43 +230,55 @@ optPrefix:
 	// overwrite previous definitions. The code will not treat this as
 	// an error as this allows for the most flexibility.
 	for len(optstring) > 0 {
-		slog.Debug("GetOpt", "optstring", optstring, "len", len(optstring))
+		if debug {
+			slog.Debug("GetOpt", "optstring", optstring, "len", len(optstring))
+		}
 
 		c := optstring[0]
 		optstring = optstring[1:]
 		if !isGraph(c) {
-			return nil, errors.New("invalid short option: " + string(c))
+			return nil, errors.New("invalid short option: " + byteString(c))
 		}
 
-		slog.Debug("GetOpt", "c", string(c), "optstring", optstring, "len", len(optstring))
+		if debug {
+			slog.Debug("GetOpt", "c", byteString(c), "optstring", optstring, "len", len(optstring))
+		}
 		switch c {
 		case ':', '-', ';': // Disallowed by the spec
-			return nil, errors.New("prohibited short option: " + string(c))
+			return nil, errors.New("prohibited short option: " + byteString(c))
 		}
 
 		// look ahead to see if c is followed by ":" or "::"
 		var hasArg ArgType
 		switch {
 		case len(optstring) > 1 && optstring[0] == ':' && optstring[1] == ':':
-			slog.Debug("GetOpt", "c", string(c), "hasArg", "optional")
+			if debug {
+				slog.Debug("GetOpt", "c", byteString(c), "hasArg", "optional")
+			}
 			hasArg = OptionalArgument
 			optstring = optstring[2:]
 		case len(optstring) > 0 && optstring[0] == ':':
-			slog.Debug("GetOpt", "c", string(c), "hasArg", "required")
+			if debug {
+				slog.Debug("GetOpt", "c", byteString(c), "hasArg", "required")
+			}
 			hasArg = RequiredArgument
 			optstring = optstring[1:]
 		case c == 'W' && len(optstring) > 0 && optstring[0] == ';':
-			slog.Debug("GetOpt", "c", string(c), "gnuWords", true)
+			if debug {
+				slog.Debug("GetOpt", "c", byteString(c), "gnuWords", true)
+			}
 			config.gnuWords = true
 			hasArg = RequiredArgument
 			optstring = optstring[1:]
 		default:
-			slog.Debug("GetOpt", "c", string(c), "hasArg", "none")
+			if debug {
+				slog.Debug("GetOpt", "c", byteString(c), "hasArg", "none")
+			}
 			hasArg = NoArgument
 		}
 
 		shortOpts[c] = &Flag{
-			Name:   string(c),
+			Name:   byteString(c),
 			HasArg: hasArg,
 		}
 	}

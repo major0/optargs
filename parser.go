@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
-	"sort"
 	"strings"
 	"unicode"
 )
@@ -57,9 +56,15 @@ type ParserConfig struct {
 type Parser struct {
 	Args      []string
 	nonOpts   []string
-	shortOpts map[byte]*Flag
+	shortOpts [256]*Flag // direct-indexed by byte — zero hash overhead
+	shortOptN int        // number of registered short options
 	longOpts  map[string]*Flag
-	config    ParserConfig
+
+	// longOptsLower maps strings.ToLower(name) → *Flag for O(1)
+	// case-insensitive lookup. Only populated when longCaseIgnore is true.
+	longOptsLower map[string]*Flag
+
+	config ParserConfig
 
 	// Command support - simple map of command name to parser
 	Commands CommandRegistry
@@ -106,11 +111,12 @@ type Parser struct {
 // for post-construction attachment.
 func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string) (*Parser, error) {
 	parser := Parser{
-		Args:   args,
-		config: config,
+		Args:    args,
+		nonOpts: make([]string, 0, 8),
+		config:  config,
 	}
 
-	for c := range shortOpts {
+	for c, flag := range shortOpts {
 		if !isGraph(c) {
 			return nil, parser.optErrorf("invalid short option: %c", c)
 		}
@@ -118,8 +124,9 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 		case ':', ';', '-':
 			return nil, parser.optErrorf("prohibited short option: %c", c)
 		}
+		parser.shortOpts[c] = flag
+		parser.shortOptN++
 	}
-	parser.shortOpts = shortOpts
 
 	for s := range longOpts {
 		for _, r := range s {
@@ -129,6 +136,14 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 		}
 	}
 	parser.longOpts = longOpts
+
+	// Build lowercased shadow map for O(1) case-insensitive lookup.
+	if config.longCaseIgnore && len(longOpts) > 0 {
+		parser.longOptsLower = make(map[string]*Flag, len(longOpts))
+		for name, flag := range longOpts {
+			parser.longOptsLower[strings.ToLower(name)] = flag
+		}
+	}
 
 	// Initialize command registry
 	parser.Commands = NewCommandRegistry()
@@ -155,16 +170,31 @@ func (p *Parser) optErrorf(msg string, args ...any) error {
 	return p.optError(fmt.Sprintf(msg, args...))
 }
 
-// longOptCandidate holds a registered option that matched as a prefix of the input.
-type longOptCandidate struct {
-	name string // registered option name
-	flag *Flag  // option definition
-}
-
 func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Option, error) {
-	// Phase 1: Walk self + all ancestors, collecting every registered
-	// option whose name is a prefix of (or equal to) the input.
-	var candidates []longOptCandidate
+	// Fast path: exact match via direct map lookup (covers 95%+ of real usage).
+	// Walk self + ancestors for the exact key.
+	for current := p; current != nil; current = current.parent {
+		if flag, ok := current.longOpts[name]; ok {
+			return p.resolveLongOpt(name, flag, args)
+		}
+		// Case-insensitive O(1) lookup via the lowercased shadow map.
+		if current.longOptsLower != nil {
+			if flag, ok := current.longOptsLower[strings.ToLower(name)]; ok {
+				return p.resolveLongOpt(flag.Name, flag, args)
+			}
+		}
+	}
+
+	// Slow path: prefix matching. Find the longest matching prefix in a
+	// single pass — no slice allocation, no sort. Option names may contain
+	// '=' (e.g., "foo=bar"), so we cannot simply split on the first '='.
+	// Instead, for each registered option that is a prefix of the input,
+	// we check that the character immediately after the prefix is '=' (the
+	// name/value separator) or that the lengths match exactly.
+	var bestName string
+	var bestFlag *Flag
+	ambiguous := false
+
 	for current := p; current != nil; current = current.parent {
 		for opt, flag := range current.longOpts {
 			if len(opt) > len(name) {
@@ -173,67 +203,92 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Optio
 			if !hasPrefix(name, opt, current.config.longCaseIgnore) {
 				continue
 			}
-			candidates = append(candidates, longOptCandidate{name: opt, flag: flag})
-		}
-	}
-
-	if len(candidates) == 0 {
-		return args, nil, Option{}, p.optError("unknown option: " + name)
-	}
-
-	// Phase 2: Sort candidates by name length, longest first.
-	sort.Slice(candidates, func(i, j int) bool {
-		return len(candidates[i].name) > len(candidates[j].name)
-	})
-
-	// Phase 3: Iterate candidates longest-first. For each candidate:
-	// - If exact match (same length): handle as space-separated arg.
-	// - If next char after the candidate name is '=': split there.
-	// - Otherwise: skip to next-shortest candidate.
-	for _, c := range candidates {
-		if len(c.name) == len(name) {
-			// Exact match — argument comes from the next element in args.
-			option := Option{Name: c.name}
-			if c.flag.HasArg == NoArgument {
-				return args, c.flag, option, nil
-			}
-			if len(args) > 0 {
-				option.Arg = args[0]
-				option.HasArg = true
-				return args[1:], c.flag, option, nil
-			}
-			if c.flag.HasArg == RequiredArgument {
-				return args, nil, option, p.optError("option requires an argument: " + name)
-			}
-			// OptionalArgument with no arg available
-			return args, c.flag, option, nil
-		}
-
-		// Partial match — check for '=' boundary.
-		if name[len(c.name)] == '=' {
-			option := Option{Name: c.name}
-			if c.flag.HasArg == NoArgument {
-				// NoArgument option can't accept the '=value' portion.
-				// Skip to next-shortest candidate that might accept it.
+			// Candidate must sit at a valid boundary: either exact
+			// length match, or the next character is '='.
+			if len(opt) < len(name) && name[len(opt)] != '=' {
 				continue
 			}
-			option.Arg = name[len(c.name)+1:]
-			option.HasArg = true
-			return args, c.flag, option, nil
+			if len(opt) > len(bestName) {
+				bestName = opt
+				bestFlag = flag
+				ambiguous = false
+			} else if len(opt) == len(bestName) && opt != bestName {
+				ambiguous = true
+			}
 		}
-		// No '=' at boundary — this candidate doesn't match at a
-		// valid split point. Try next-shortest.
 	}
 
-	return args, nil, Option{}, p.optError("unknown option: " + name)
+	if bestFlag == nil {
+		return args, nil, Option{}, p.optError("unknown option: " + name)
+	}
+	if ambiguous {
+		return args, nil, Option{}, p.optError("ambiguous option: " + name)
+	}
+
+	if len(bestName) == len(name) {
+		return p.resolveLongOpt(bestName, bestFlag, args)
+	}
+
+	// Prefix match with '=' boundary.
+	if bestFlag.HasArg == NoArgument {
+		// NoArgument option can't accept the '=value' portion.
+		// Look for a shorter candidate that can.
+		var fallbackName string
+		var fallbackFlag *Flag
+		for current := p; current != nil; current = current.parent {
+			for opt, flag := range current.longOpts {
+				if len(opt) >= len(bestName) || len(opt) > len(name) {
+					continue
+				}
+				if !hasPrefix(name, opt, current.config.longCaseIgnore) {
+					continue
+				}
+				if len(opt) < len(name) && name[len(opt)] != '=' {
+					continue
+				}
+				if flag.HasArg == NoArgument {
+					continue
+				}
+				if len(opt) > len(fallbackName) {
+					fallbackName = opt
+					fallbackFlag = flag
+				}
+			}
+		}
+		if fallbackFlag != nil {
+			return args, fallbackFlag, Option{Name: fallbackName, HasArg: true, Arg: name[len(fallbackName)+1:]}, nil
+		}
+		return args, nil, Option{}, p.optError("unknown option: " + name)
+	}
+	return args, bestFlag, Option{Name: bestName, HasArg: true, Arg: name[len(bestName)+1:]}, nil
+}
+
+// resolveLongOpt handles argument consumption for an exact long-option match.
+func (p *Parser) resolveLongOpt(name string, flag *Flag, args []string) ([]string, *Flag, Option, error) {
+	option := Option{Name: name}
+	if flag.HasArg == NoArgument {
+		return args, flag, option, nil
+	}
+	if len(args) > 0 {
+		option.Arg = args[0]
+		option.HasArg = true
+		return args[1:], flag, option, nil
+	}
+	if flag.HasArg == RequiredArgument {
+		return args, nil, option, p.optError("option requires an argument: " + name)
+	}
+	// OptionalArgument with no arg available
+	return args, flag, option, nil
 }
 
 func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, string, *Flag, Option, error) {
-	slog.Debug("findShortOpt", "c", string(c), "word", word, "args", args)
+	if debug {
+		slog.Debug("findShortOpt", "c", byteString(c), "word", word, "args", args)
+	}
 
 	// POSIX disallows `-` as a short-opt option.
 	if c == '-' {
-		return args, word, nil, Option{}, p.optError("invalid option: " + string(c))
+		return args, word, nil, Option{}, p.optError("invalid option: " + byteString(c))
 	}
 
 	// Walk the parser chain: self first, then ancestors.
@@ -243,19 +298,23 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 			continue
 		}
 
-		option := Option{Name: string(matched)}
+		option := Option{Name: byteString(matched)}
 
 		switch flag.HasArg {
 		case NoArgument:
-			slog.Debug("findShortOpt", "hasArg", "none", "c", string(c))
+			if debug {
+				slog.Debug("findShortOpt", "hasArg", "none", "c", byteString(c))
+			}
 
 		case RequiredArgument:
-			slog.Debug("findShortOpt", "hasArg", "required", "c", string(c))
+			if debug {
+				slog.Debug("findShortOpt", "hasArg", "required", "c", byteString(c))
+			}
 			if len(word) > 0 {
 				option.Arg = word
 				word = ""
 			} else if len(args) == 0 {
-				return args, word, nil, option, p.optError("option requires an argument: " + string(c))
+				return args, word, nil, option, p.optError("option requires an argument: " + byteString(c))
 			} else {
 				option.Arg = args[0]
 				args = args[1:]
@@ -263,7 +322,9 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 			option.HasArg = true
 
 		case OptionalArgument:
-			slog.Debug("findShortOpt", "hasArg", "optional", "c", string(c))
+			if debug {
+				slog.Debug("findShortOpt", "hasArg", "optional", "c", byteString(c))
+			}
 			if len(word) > 0 {
 				option.Arg = word
 				word = ""
@@ -278,18 +339,20 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 			return args, word, nil, option, p.optErrorf("unknown argument type: %d", flag.HasArg)
 		}
 
-		slog.Debug("findShortOpt", "args", args, "word", word, "option", option, "err", "yield")
+		if debug {
+			slog.Debug("findShortOpt", "args", args, "word", word, "option", option, "err", "yield")
+		}
 		return args, word, flag, option, nil
 	}
 
-	return args, word, nil, Option{}, p.optError("unknown option: " + string(c))
+	return args, word, nil, Option{}, p.optError("unknown option: " + byteString(c))
 }
 
-// lookupShortOpt finds a short option in this parser's shortOpts map,
+// lookupShortOpt finds a short option in this parser's shortOpts array,
 // respecting the case-sensitivity configuration. Returns the matched key
 // and the flag definition.
 func (p *Parser) lookupShortOpt(c byte) (byte, *Flag) {
-	if flag, ok := p.shortOpts[c]; ok {
+	if flag := p.shortOpts[c]; flag != nil {
 		return c, flag
 	}
 	if !p.config.shortCaseIgnore {
@@ -304,7 +367,7 @@ func (p *Parser) lookupShortOpt(c byte) (byte, *Flag) {
 	} else {
 		return 0, nil
 	}
-	if flag, ok := p.shortOpts[alt]; ok {
+	if flag := p.shortOpts[alt]; flag != nil {
 		return alt, flag
 	}
 	return 0, nil
@@ -327,7 +390,7 @@ func (p *Parser) tryLongOnly(word string, remaining []string) (matched bool, arg
 	}
 
 	// Long match failed — fall back to short options per getopt_long_only(3).
-	if len(p.shortOpts) == 0 {
+	if p.shortOptN == 0 {
 		err = p.optError(err.Error())
 		return true, remaining, nil, option, err
 	}
@@ -341,7 +404,9 @@ func (p *Parser) tryLongOnly(word string, remaining []string) (matched bool, arg
 // an [Option] and an error. When a subcommand is encountered, the iterator
 // dispatches to the child parser automatically.
 func (p *Parser) Options() iter.Seq2[Option, error] {
-	slog.Debug("Iterator")
+	if debug {
+		slog.Debug("Iterator")
+	}
 	return func(yield func(Option, error) bool) {
 		var err error
 		cleanupDone := false
@@ -351,20 +416,28 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 			}
 		}()
 
-		slog.Debug("Options", "args", p.Args)
+		if debug {
+			slog.Debug("Options", "args", p.Args)
+		}
 	out:
 		for len(p.Args) > 0 {
-			slog.Debug("Options", "arg[0]", p.Args[0])
+			if debug {
+				slog.Debug("Options", "arg[0]", p.Args[0])
+			}
 			option := Option{}
 			switch {
 			case p.Args[0] == "--": // Stop parsing options
-				slog.Debug("Options", "break", true)
+				if debug {
+					slog.Debug("Options", "break", true)
+				}
 				p.Args = append(p.nonOpts, p.Args[1:]...)
 				cleanupDone = true
 				break out
 
 			case strings.HasPrefix(p.Args[0], "--"):
-				slog.Debug("Options", "prefix", "--")
+				if debug {
+					slog.Debug("Options", "prefix", "--")
+				}
 				var flag *Flag
 				p.Args, flag, option, err = p.findLongOpt(p.Args[0][2:], p.Args[1:])
 				if err != nil {
@@ -386,7 +459,9 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				}
 
 			case strings.HasPrefix(p.Args[0], "-"):
-				slog.Debug("Options", "prefix", "-")
+				if debug {
+					slog.Debug("Options", "prefix", "-")
+				}
 				if p.config.longOptsOnly {
 					var matched bool
 					var flag *Flag
@@ -418,7 +493,9 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				word := p.Args[0][1:]
 				p.Args = p.Args[1:]
 				for len(word) > 0 {
-					slog.Debug("Options", "word", word)
+					if debug {
+						slog.Debug("Options", "word", word)
+					}
 					var flag *Flag
 					p.Args, word, flag, option, err = p.findShortOpt(word[0], word[1:], p.Args)
 
@@ -549,8 +626,8 @@ func (p *Parser) GetAliases(targetParser *Parser) []string {
 // SetShortHandler only modifies options on this parser — it does not walk
 // the parent chain.
 func (p *Parser) SetShortHandler(c byte, handler func(string, string) error) error {
-	f, ok := p.shortOpts[c]
-	if !ok {
+	f := p.shortOpts[c]
+	if f == nil {
 		return fmt.Errorf("unknown option: -%c", c)
 	}
 	f.Handle = handler
