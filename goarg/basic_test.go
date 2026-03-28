@@ -2,7 +2,6 @@ package goarg
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"testing"
 	"testing/quick"
@@ -177,12 +176,8 @@ func TestEnvironmentVariables(t *testing.T) {
 	}
 
 	// Set environment variables for testing
-	os.Setenv("API_TOKEN", "test-token-123")
-	os.Setenv("DEBUG", "true")
-	defer func() {
-		os.Unsetenv("API_TOKEN")
-		os.Unsetenv("DEBUG")
-	}()
+	t.Setenv("API_TOKEN", "test-token-123")
+	t.Setenv("DEBUG", "true")
 
 	tests := []struct {
 		name     string

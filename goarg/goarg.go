@@ -229,7 +229,7 @@ func (p *Parser) WriteUsage(w io.Writer) {
 
 // Fail prints an error message and exits
 func (p *Parser) Fail(msg string) {
-	fmt.Fprintln(p.output(), msg)
+	fmt.Fprintln(p.output(), msg)  //nolint:errcheck // output-and-exit
 	p.WriteUsage(p.output())
 	p.config.Exit(1)
 }
@@ -254,10 +254,10 @@ func (p *Parser) handleMustParseError(err error) {
 		p.WriteHelp(out)
 		p.config.Exit(0)
 	case errors.Is(err, ErrVersion):
-		fmt.Fprintln(out, p.config.Version)
+		fmt.Fprintln(out, p.config.Version) //nolint:errcheck // output-and-exit
 		p.config.Exit(0)
 	default:
-		fmt.Fprintln(out, err)
+		fmt.Fprintln(out, err) //nolint:errcheck // output-and-exit
 		p.WriteUsage(out)
 		p.config.Exit(1)
 	}

@@ -31,6 +31,8 @@ func (hg *HelpGenerator) programName() string {
 }
 
 // WriteHelp writes help text to the provided writer
+//
+//nolint:errcheck // fmt.Fprint* errors writing help text are intentionally ignored
 func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 	if hg.metadata == nil {
 		fmt.Fprintln(w, "No help available")
@@ -177,6 +179,8 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 }
 
 // WriteUsage writes usage text to the provided writer
+//
+//nolint:errcheck // fmt.Fprint* errors writing usage text are intentionally ignored
 func (hg *HelpGenerator) WriteUsage(w io.Writer) error {
 	program := hg.programName()
 

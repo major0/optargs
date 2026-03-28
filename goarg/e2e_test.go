@@ -3,7 +3,6 @@ package goarg
 import (
 	"bytes"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 )
@@ -195,8 +194,7 @@ type ServerConfig struct {
 }
 
 func TestE2E_ServerConfigFromEnv(t *testing.T) {
-	os.Setenv("DATABASE_URL", "postgres://localhost/mydb")
-	defer os.Unsetenv("DATABASE_URL")
+	t.Setenv("DATABASE_URL", "postgres://localhost/mydb")
 
 	var cfg ServerConfig
 	err := ParseArgs(&cfg, []string{"--port", "9090"})

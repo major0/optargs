@@ -2,7 +2,6 @@ package goarg
 
 import (
 	"bytes"
-	"os"
 	"strings"
 	"testing"
 )
@@ -15,8 +14,7 @@ type EnvOnlyArgs struct {
 }
 
 func TestEnvOnlyFieldParsedFromEnv(t *testing.T) {
-	os.Setenv("API_TOKEN", "secret123")
-	defer os.Unsetenv("API_TOKEN")
+	t.Setenv("API_TOKEN", "secret123")
 
 	var a EnvOnlyArgs
 	err := ParseArgs(&a, []string{})
@@ -74,8 +72,7 @@ func TestEnvOnlyMetadata(t *testing.T) {
 // --- IgnoreEnv / IgnoreDefault tests ---
 
 func TestIgnoreEnv(t *testing.T) {
-	os.Setenv("API_TOKEN", "should-be-ignored")
-	defer os.Unsetenv("API_TOKEN")
+	t.Setenv("API_TOKEN", "should-be-ignored")
 
 	var a EnvOnlyArgs
 	p, err := NewParser(Config{IgnoreEnv: true}, &a)

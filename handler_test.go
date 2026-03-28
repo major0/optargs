@@ -461,43 +461,64 @@ func TestSetHandler(t *testing.T) {
 	// --- Dispatch tests: handler is called with correct name/arg ---
 	dispatchTests := []struct {
 		name     string
-		setup    func(h func(string, string) error) *Parser
+		setup    func(t *testing.T, h func(string, string) error) *Parser
 		wantName string
 		wantArg  string
 	}{
-		{"short_no_arg", func(h func(string, string) error) *Parser {
+		{"short_no_arg", func(t *testing.T, h func(string, string) error) *Parser {
+			t.Helper()
 			p, _ := GetOpt([]string{"-v"}, "vx")
-			p.SetShortHandler('v', h)
+			if err := p.SetShortHandler('v', h); err != nil {
+				t.Fatal(err)
+			}
 			return p
 		}, "v", ""},
-		{"short_required_arg", func(h func(string, string) error) *Parser {
+		{"short_required_arg", func(t *testing.T, h func(string, string) error) *Parser {
+			t.Helper()
 			p, _ := GetOpt([]string{"-o", "file.txt"}, "o:")
-			p.SetShortHandler('o', h)
+			if err := p.SetShortHandler('o', h); err != nil {
+				t.Fatal(err)
+			}
 			return p
 		}, "o", "file.txt"},
-		{"short_optional_arg_present", func(h func(string, string) error) *Parser {
+		{"short_optional_arg_present", func(t *testing.T, h func(string, string) error) *Parser {
+			t.Helper()
 			p, _ := GetOpt([]string{"-dlevel3"}, "d::")
-			p.SetShortHandler('d', h)
+			if err := p.SetShortHandler('d', h); err != nil {
+				t.Fatal(err)
+			}
 			return p
 		}, "d", "level3"},
-		{"long_no_arg", func(h func(string, string) error) *Parser {
+		{"long_no_arg", func(t *testing.T, h func(string, string) error) *Parser {
+			t.Helper()
 			p, _ := GetOptLong([]string{"--verbose"}, "", []Flag{{Name: "verbose", HasArg: NoArgument}})
-			p.SetLongHandler("verbose", h)
+			if err := p.SetLongHandler("verbose", h); err != nil {
+				t.Fatal(err)
+			}
 			return p
 		}, "verbose", ""},
-		{"long_required_arg_equals", func(h func(string, string) error) *Parser {
+		{"long_required_arg_equals", func(t *testing.T, h func(string, string) error) *Parser {
+			t.Helper()
 			p, _ := GetOptLong([]string{"--output=file.txt"}, "", []Flag{{Name: "output", HasArg: RequiredArgument}})
-			p.SetLongHandler("output", h)
+			if err := p.SetLongHandler("output", h); err != nil {
+				t.Fatal(err)
+			}
 			return p
 		}, "output", "file.txt"},
-		{"SetHandler_delegates_to_long", func(h func(string, string) error) *Parser {
+		{"SetHandler_delegates_to_long", func(t *testing.T, h func(string, string) error) *Parser {
+			t.Helper()
 			p, _ := GetOptLong([]string{"--verbose"}, "", []Flag{{Name: "verbose", HasArg: NoArgument}})
-			p.SetHandler("--verbose", h)
+			if err := p.SetHandler("--verbose", h); err != nil {
+				t.Fatal(err)
+			}
 			return p
 		}, "verbose", ""},
-		{"SetHandler_delegates_to_short", func(h func(string, string) error) *Parser {
+		{"SetHandler_delegates_to_short", func(t *testing.T, h func(string, string) error) *Parser {
+			t.Helper()
 			p, _ := GetOpt([]string{"-v"}, "v")
-			p.SetHandler("-v", h)
+			if err := p.SetHandler("-v", h); err != nil {
+				t.Fatal(err)
+			}
 			return p
 		}, "v", ""},
 	}
@@ -505,7 +526,7 @@ func TestSetHandler(t *testing.T) {
 	for _, tt := range dispatchTests {
 		t.Run(tt.name, func(t *testing.T) {
 			var gotName, gotArg string
-			p := tt.setup(func(name, arg string) error { gotName = name; gotArg = arg; return nil })
+			p := tt.setup(t, func(name, arg string) error { gotName = name; gotArg = arg; return nil })
 			opts, errs := collectOptions(p)
 			for _, e := range errs {
 				if e != nil {

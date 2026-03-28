@@ -33,7 +33,7 @@ func (p *Parser) FailSubcommand(msg string, subcommand ...string) error {
 		return err
 	}
 
-	fmt.Fprintln(p.output(), msg)
+	fmt.Fprintln(p.output(), msg) //nolint:errcheck // output-and-exit
 	hg := NewHelpGenerator(meta, p.config)
 	hg.WriteUsage(p.output()) //nolint:errcheck
 	p.config.Exit(1)
