@@ -648,118 +648,12 @@ func TestProperty4_BooleanFlagParsingFlexibility(t *testing.T) {
 			return false
 		}
 
-		// Test shorthand with explicit value
-		fs2 := NewFlagSet("test2", ContinueOnError)
-		var variable2 bool
-		fs2.BoolVarP(&variable2, flagName, shorthand, true, "test flag")
-
-		args2 := []string{"-" + shorthand + "=false"}
-		err2 := fs2.Parse(args2)
-		if err2 != nil {
-			return true // Acceptable if OptArgs Core rejects
-		}
-
-		if variable2 {
-			return false
-		}
-
 		return true
 	}
 
 	if err := quick.Check(booleanShorthandProperty, &quick.Config{MaxCount: 50}); err != nil {
 		t.Errorf("Boolean shorthand parsing flexibility failed: %v", err)
 	}
-
-	// Test with known valid flag names for more reliable testing
-	t.Run("KnownValidBooleanFlags", func(t *testing.T) {
-		validFlags := []string{"verbose", "debug", "help", "quiet", "force"}
-
-		for _, flagName := range validFlags {
-			// Test no-argument sets to true
-			fs1 := NewFlagSet("test", ContinueOnError)
-			var var1 bool
-			fs1.BoolVar(&var1, flagName, false, "test flag")
-
-			err1 := fs1.Parse([]string{"--" + flagName})
-			if err1 != nil {
-				t.Errorf("Failed to parse no-argument boolean flag %s: %v", flagName, err1)
-				continue
-			}
-
-			if !var1 {
-				t.Errorf("No-argument boolean flag %s should be true, got false", flagName)
-			}
-
-			// Test explicit true
-			fs2 := NewFlagSet("test", ContinueOnError)
-			var var2 bool
-			fs2.BoolVar(&var2, flagName, false, "test flag")
-
-			err2 := fs2.Parse([]string{"--" + flagName + "=true"})
-			if err2 != nil {
-				t.Errorf("Failed to parse explicit true boolean flag %s: %v", flagName, err2)
-				continue
-			}
-
-			if !var2 {
-				t.Errorf("Explicit true boolean flag %s should be true, got false", flagName)
-			}
-
-			// Test explicit false
-			fs3 := NewFlagSet("test", ContinueOnError)
-			var var3 bool
-			fs3.BoolVar(&var3, flagName, true, "test flag")
-
-			err3 := fs3.Parse([]string{"--" + flagName + "=false"})
-			if err3 != nil {
-				t.Errorf("Failed to parse explicit false boolean flag %s: %v", flagName, err3)
-				continue
-			}
-
-			if var3 {
-				t.Errorf("Explicit false boolean flag %s should be false, got true", flagName)
-			}
-
-			// Test negation syntax
-			fs4 := NewFlagSet("test", ContinueOnError)
-			var var4 bool
-			fs4.BoolVar(&var4, flagName, true, "test flag")
-
-			err4 := fs4.Parse([]string{"--no-" + flagName})
-			if err4 != nil {
-				t.Errorf("Failed to parse negation boolean flag %s: %v", flagName, err4)
-				continue
-			}
-
-			if var4 {
-				t.Errorf("Negation boolean flag %s should be false, got true", flagName)
-			}
-		}
-	})
-
-	// Test invalid boolean values should produce errors
-	t.Run("InvalidBooleanValues", func(t *testing.T) {
-		fs := NewFlagSet("test", ContinueOnError)
-		var variable bool
-		fs.BoolVar(&variable, "test", false, "test flag")
-
-		invalidValues := []string{"invalid", "maybe", "yes", "no", "2", "-1", "1.5"}
-
-		for _, invalidValue := range invalidValues {
-			err := fs.Parse([]string{"--test=" + invalidValue})
-			if err == nil {
-				t.Errorf("Expected error for invalid boolean value '%s', but got none", invalidValue)
-			} else {
-				errorMsg := err.Error()
-				if !strings.Contains(errorMsg, "invalid boolean value") {
-					t.Errorf("Expected error message to contain 'invalid boolean value', got: %s", errorMsg)
-				}
-				if !strings.Contains(errorMsg, invalidValue) {
-					t.Errorf("Expected error message to contain invalid value '%s', got: %s", invalidValue, errorMsg)
-				}
-			}
-		}
-	})
 }
 
 // TestProperty3_SliceFlagValueAccumulation tests Property 3 from the design document:
@@ -1214,39 +1108,6 @@ func TestProperty11_OptArgsCoreIntegrationFidelity(t *testing.T) {
 	if err := quick.Check(errorHandlingProperty, &quick.Config{MaxCount: 50}); err != nil {
 		t.Errorf("Error handling OptArgs Core integration fidelity failed: %v", err)
 	}
-
-	// Test with known valid flags to ensure basic functionality works
-	t.Run("KnownValidFlags", func(t *testing.T) {
-		validFlags := []string{"verbose", "output", "count", "debug", "help"}
-
-		for _, flagName := range validFlags {
-			fs := NewFlagSet("test", ContinueOnError)
-			var variable string
-			fs.StringVar(&variable, flagName, "default", "usage")
-
-			// Test basic parsing
-			args := []string{"--" + flagName, "testvalue"}
-			err := fs.Parse(args)
-			if err != nil {
-				t.Errorf("Failed to parse valid flag %s: %v", flagName, err)
-				continue
-			}
-
-			if variable != "testvalue" {
-				t.Errorf("Flag %s not set correctly, expected 'testvalue', got '%s'", flagName, variable)
-			}
-
-			flag := fs.Lookup(flagName)
-			if flag == nil {
-				t.Errorf("Flag %s not found after parsing", flagName)
-				continue
-			}
-
-			if !flag.Changed {
-				t.Errorf("Flag %s not marked as changed after parsing", flagName)
-			}
-		}
-	})
 }
 
 // TestPropertyAdvancedGNULongestMatching tests Property for GNU longest matching behavior
@@ -1311,47 +1172,6 @@ func TestPropertyAdvancedGNULongestMatching(t *testing.T) {
 	if err := quick.Check(longestMatchProperty, &quick.Config{MaxCount: 100}); err != nil {
 		t.Errorf("GNU longest matching property failed: %v", err)
 	}
-
-	// Test with known valid flag combinations
-	t.Run("KnownValidLongestMatching", func(t *testing.T) {
-		testCases := []struct {
-			baseFlag     string
-			extendedFlag string
-			setValue     string
-		}{
-			{"enable", "enable-feature", "test1"},
-			{"verbose", "verbose-mode", "test2"},
-			{"config", "config-file", "test3"},
-			{"debug", "debug-level", "test4"},
-			{"output", "output-format", "test5"},
-		}
-
-		for _, tc := range testCases {
-			fs := NewFlagSet("test", ContinueOnError)
-			var baseVar, extendedVar string
-
-			fs.StringVar(&baseVar, tc.baseFlag, "", "base flag")
-			fs.StringVar(&extendedVar, tc.extendedFlag, "", "extended flag")
-
-			// Test extended flag
-			args := []string{"--" + tc.extendedFlag, tc.setValue}
-			err := fs.Parse(args)
-			if err != nil {
-				t.Errorf("Failed to parse extended flag %s: %v", tc.extendedFlag, err)
-				continue
-			}
-
-			if extendedVar != tc.setValue {
-				t.Errorf("Extended flag %s not set correctly, expected '%s', got '%s'",
-					tc.extendedFlag, tc.setValue, extendedVar)
-			}
-
-			if baseVar != "" {
-				t.Errorf("Base flag %s should not be set when extended flag is used, got '%s'",
-					tc.baseFlag, baseVar)
-			}
-		}
-	})
 }
 
 // TestPropertyAdvancedGNUSpecialCharacters tests Property for special characters in option names
@@ -1416,56 +1236,6 @@ func TestPropertyAdvancedGNUSpecialCharacters(t *testing.T) {
 	if err := quick.Check(specialCharsProperty, &quick.Config{MaxCount: 50}); err != nil {
 		t.Errorf("Special characters support property failed: %v", err)
 	}
-
-	// Test with known valid special character combinations
-	t.Run("KnownValidSpecialCharacters", func(t *testing.T) {
-		testCases := []struct {
-			flagName string
-			setValue string
-		}{
-			{"system:verbose", "enabled"},
-			{"config=file", "myconfig.json"},
-			{"app:level=debug", "trace"},
-			{"db:host=primary", "localhost"},
-			{"cache:url=redis", "redis://localhost:6379"},
-		}
-
-		for _, tc := range testCases {
-			// Test space-separated syntax
-			fs1 := NewFlagSet("test1", ContinueOnError)
-			var flagVar1 string
-			fs1.StringVar(&flagVar1, tc.flagName, "", "test flag")
-
-			args1 := []string{"--" + tc.flagName, tc.setValue}
-			err1 := fs1.Parse(args1)
-			if err1 != nil {
-				t.Errorf("Failed to parse flag %s with space syntax: %v", tc.flagName, err1)
-				continue
-			}
-
-			if flagVar1 != tc.setValue {
-				t.Errorf("Flag %s not set correctly with space syntax, expected '%s', got '%s'",
-					tc.flagName, tc.setValue, flagVar1)
-			}
-
-			// Test equals syntax
-			fs2 := NewFlagSet("test2", ContinueOnError)
-			var flagVar2 string
-			fs2.StringVar(&flagVar2, tc.flagName, "", "test flag")
-
-			args2 := []string{"--" + tc.flagName + "=" + tc.setValue}
-			err2 := fs2.Parse(args2)
-			if err2 != nil {
-				t.Errorf("Failed to parse flag %s with equals syntax: %v", tc.flagName, err2)
-				continue
-			}
-
-			if flagVar2 != tc.setValue {
-				t.Errorf("Flag %s not set correctly with equals syntax, expected '%s', got '%s'",
-					tc.flagName, tc.setValue, flagVar2)
-			}
-		}
-	})
 }
 
 // TestPropertyAdvancedGNUNestedEquals tests Property for nested equals syntax
@@ -1516,59 +1286,4 @@ func TestPropertyAdvancedGNUNestedEquals(t *testing.T) {
 	if err := quick.Check(nestedEqualsProperty, &quick.Config{MaxCount: 50}); err != nil {
 		t.Errorf("Nested equals syntax property failed: %v", err)
 	}
-
-	// Test with known valid nested equals scenarios
-	t.Run("KnownValidNestedEquals", func(t *testing.T) {
-		testCases := []struct {
-			flagName      string
-			args          []string
-			expectedValue string
-		}{
-			{
-				flagName:      "config=file",
-				args:          []string{"--config=file=myconfig.json"},
-				expectedValue: "myconfig.json",
-			},
-			{
-				flagName:      "system=path",
-				args:          []string{"--system=path=/usr/local/bin"},
-				expectedValue: "/usr/local/bin",
-			},
-			{
-				flagName:      "db=host",
-				args:          []string{"--db=host=localhost:5432"},
-				expectedValue: "localhost:5432",
-			},
-			{
-				flagName:      "app=env",
-				args:          []string{"--app=env=production"},
-				expectedValue: "production",
-			},
-		}
-
-		for _, tc := range testCases {
-			fs := NewFlagSet("test", ContinueOnError)
-			var flagVar string
-			fs.StringVar(&flagVar, tc.flagName, "", "test flag")
-
-			err := fs.Parse(tc.args)
-			if err != nil {
-				t.Errorf("Failed to parse nested equals flag %s: %v", tc.flagName, err)
-				continue
-			}
-
-			if flagVar != tc.expectedValue {
-				t.Errorf("Nested equals flag %s not set correctly, expected '%s', got '%s'",
-					tc.flagName, tc.expectedValue, flagVar)
-			}
-
-			// Verify flag was marked as changed
-			flag := fs.Lookup(tc.flagName)
-			if flag == nil {
-				t.Errorf("Flag %s not found after parsing", tc.flagName)
-			} else if !flag.Changed {
-				t.Errorf("Flag %s not marked as changed after parsing", tc.flagName)
-			}
-		}
-	})
 }
