@@ -1628,3 +1628,91 @@ func TestAddFlagSet(t *testing.T) {
 	// nil set should not panic
 	fs1.AddFlagSet(nil)
 }
+
+// TestFunc tests callback-based flags.
+func TestFunc(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var calls []string
+	fs.Func("hook", "callback flag", func(val string) error {
+		calls = append(calls, val)
+		return nil
+	})
+
+	if err := fs.Parse([]string{"--hook", "a", "--hook", "b"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(calls) != 2 || calls[0] != "a" || calls[1] != "b" {
+		t.Errorf("calls = %v, want [a b]", calls)
+	}
+}
+
+// TestFuncP tests callback-based flags with shorthand.
+func TestFuncP(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var got string
+	fs.FuncP("hook", "h", "callback", func(val string) error {
+		got = val
+		return nil
+	})
+
+	if err := fs.Parse([]string{"-h", "val"}); err != nil {
+		t.Fatal(err)
+	}
+	if got != "val" {
+		t.Errorf("got = %q, want %q", got, "val")
+	}
+}
+
+// TestBoolFunc tests boolean callback flags.
+func TestBoolFunc(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var count int
+	fs.BoolFunc("verbose", "increment verbosity", func(val string) error {
+		count++
+		return nil
+	})
+
+	// No-arg usage
+	if err := fs.Parse([]string{"--verbose"}); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Errorf("count = %d, want 1", count)
+	}
+}
+
+// TestBoolFuncP tests boolean callback flags with shorthand.
+func TestBoolFuncP(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var count int
+	fs.BoolFuncP("verbose", "v", "increment verbosity", func(val string) error {
+		count++
+		return nil
+	})
+
+	if err := fs.Parse([]string{"-v"}); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Errorf("count = %d, want 1", count)
+	}
+}
+
+// TestParseAll tests the ParseAll callback mechanism.
+func TestParseAll(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "name", "", "")
+	fs.BoolVar(new(bool), "verbose", false, "")
+
+	var seen []string
+	err := fs.ParseAll([]string{"--name", "val", "--verbose"}, func(flag *Flag, value string) error {
+		seen = append(seen, flag.Name+"="+value)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(seen) != 2 {
+		t.Errorf("seen = %v, want 2 entries", seen)
+	}
+}

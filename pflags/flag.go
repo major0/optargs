@@ -67,6 +67,9 @@ type FlagSet struct {
 	shortOnly map[string]*Flag  // short-only flags (no long name), keyed by shorthand
 	shorthand map[string]string // shorthand to long name mapping
 	order     []string          // order of flag definition for help text
+
+	// parseAllFn is set by ParseAll to receive callbacks for each parsed flag.
+	parseAllFn func(flag *Flag, value string) error
 }
 
 // NormalizedName is a flag name that has been normalized according to rules

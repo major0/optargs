@@ -145,6 +145,11 @@ func (f *FlagSet) makeHandler(flag *Flag) func(string, string) error {
 			return err
 		}
 		flag.Changed = true
+		if f.parseAllFn != nil {
+			if err := f.parseAllFn(flag, val); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 }
@@ -273,6 +278,13 @@ func (f *FlagSet) Parse(arguments []string) error {
 	return nil
 }
 
+// ParseAll parses flag definitions from the argument list and calls fn for
+// each flag that is set. The arguments for fn are the flag and its value.
+func (f *FlagSet) ParseAll(arguments []string, fn func(flag *Flag, value string) error) error {
+	f.parseAllFn = fn
+	defer func() { f.parseAllFn = nil }()
+	return f.Parse(arguments)
+}
 // failf handles a parse error according to the FlagSet's ErrorHandling mode.
 // For ContinueOnError it returns the error. For ExitOnError and PanicOnError
 // it prints the error and usage before exiting or panicking.

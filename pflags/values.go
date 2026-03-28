@@ -300,3 +300,18 @@ func (i *intSliceValue) String() string {
 	}
 	return fmt.Sprintf("[%s]", strings.Join(strs, ","))
 }
+
+// -- func Value (wraps a callback function)
+type funcValue func(string) error
+
+func (f funcValue) Set(s string) error { return f(s) }
+func (f funcValue) Type() string       { return "" }
+func (f funcValue) String() string     { return "" }
+
+// -- boolFunc Value (wraps a boolean callback function)
+type boolFuncValue func(string) error
+
+func (f boolFuncValue) Set(s string) error { return f(s) }
+func (f boolFuncValue) Type() string       { return "bool" }
+func (f boolFuncValue) String() string     { return "" }
+func (f boolFuncValue) IsBoolFlag() bool   { return true }
