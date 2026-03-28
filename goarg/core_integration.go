@@ -92,9 +92,9 @@ func (ci *CoreIntegration) processPositionalArgs(parser *optargs.Parser, destVal
 
 	for _, positional := range ci.positionals {
 		field := positional.Field
-		fieldValue := destValue.FieldByName(field.Name)
+		fieldValue := fieldByMeta(destValue, field)
 
-		if !fieldValue.IsValid() || !fieldValue.CanSet() {
+		if !fieldValue.CanSet() {
 			return fmt.Errorf("cannot set positional field %s", field.Name)
 		}
 
@@ -140,8 +140,8 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 			continue
 		}
 
-		fieldValue := destValue.FieldByName(field.Name)
-		if !fieldValue.IsValid() || !fieldValue.CanSet() {
+		fieldValue := fieldByMeta(destValue, &field)
+		if !fieldValue.CanSet() {
 			continue
 		}
 
@@ -164,10 +164,15 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 }
 
 // setDefaultValues sets default values for unset fields using optargs.Convert
-// and optargs.ConvertSlice for type conversion.
+// and optargs.ConvertSlice for type conversion. Uses pre-parsed HasDefault
+// and DefaultTag from struct metadata to avoid re-parsing tags at runtime.
 func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 	for _, field := range ci.metadata.Fields {
-		fieldValue := destValue.FieldByName(field.Name)
+		if !field.HasDefault {
+			continue
+		}
+
+		fieldValue := fieldByMeta(destValue, &field)
 		if !fieldValue.IsValid() || !fieldValue.CanSet() {
 			continue
 		}
@@ -177,20 +182,14 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 			continue
 		}
 
-		// Get default value string from struct tag
-		defaultTag, exists := reflect.StructTag(field.Tag).Lookup("default")
-		if !exists {
-			continue
-		}
-
 		if field.Type.Kind() == reflect.Slice {
-			converted, err := optargs.ConvertSlice(defaultTag, field.Type)
+			converted, err := optargs.ConvertSlice(field.DefaultTag, field.Type)
 			if err != nil {
 				return fmt.Errorf("failed to set default value for field %s: %w", field.Name, err)
 			}
 			fieldValue.Set(reflect.ValueOf(converted))
 		} else {
-			converted, err := optargs.Convert(defaultTag, field.Type)
+			converted, err := optargs.Convert(field.DefaultTag, field.Type)
 			if err != nil {
 				return fmt.Errorf("failed to set default value for field %s: %w", field.Name, err)
 			}
@@ -204,6 +203,16 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 // isFieldSet checks if a field has been set (not zero value)
 func (ci *CoreIntegration) isFieldSet(fieldValue reflect.Value) bool {
 	return !isZeroValue(fieldValue)
+}
+
+// fieldByMeta returns the reflect.Value for a field using the cached index
+// when available (FieldIndex >= 0), falling back to FieldByName for fields
+// inherited from embedded structs (FieldIndex == -1).
+func fieldByMeta(destValue reflect.Value, field *FieldMetadata) reflect.Value {
+	if field.FieldIndex >= 0 {
+		return destValue.Field(field.FieldIndex)
+	}
+	return destValue.FieldByName(field.Name)
 }
 
 // setMapValue parses a "key=value" string and inserts it into a map field.
@@ -304,13 +313,18 @@ func (ci *CoreIntegration) buildLongOptMap() map[string]*optargs.Flag {
 }
 
 // makeHandler returns a Handle callback that sets the struct field value when
-// the option is parsed. Boolean flags with no argument are set to true, slice
-// fields append the converted element, and all other types delegate to
-// optargs.Convert via setFieldValue.
+// the option is parsed. Uses the pre-computed field index for O(1) access
+// instead of FieldByName.
 func (ci *CoreIntegration) makeHandler(field *FieldMetadata, destValue reflect.Value) func(string, string) error {
+	idx := field.FieldIndex
 	return func(name, arg string) error {
-		fieldValue := destValue.FieldByName(field.Name)
-		if !fieldValue.IsValid() || !fieldValue.CanSet() {
+		var fieldValue reflect.Value
+		if idx >= 0 {
+			fieldValue = destValue.Field(idx)
+		} else {
+			fieldValue = destValue.FieldByName(field.Name)
+		}
+		if !fieldValue.CanSet() {
 			return fmt.Errorf("cannot set field %s", field.Name)
 		}
 		return ci.setFieldValue(fieldValue, field, arg)
@@ -418,13 +432,13 @@ func (ci *CoreIntegration) CreateParserWithHandlers(args []string, destValue ref
 // (case-insensitive). It returns the field's reflect.Value, the subcommand's
 // StructMetadata, and an error if the subcommand is not found.
 func (ci *CoreIntegration) findSubcommandField(destValue reflect.Value, name string) (reflect.Value, *StructMetadata, error) {
-	// Try direct lookup first via the pre-built field name index.
-	if fieldName, ok := ci.metadata.SubcommandFields[name]; ok {
+	// Try direct lookup first via the pre-built field index.
+	if idx, ok := ci.metadata.SubcommandFieldIdx[name]; ok {
 		subMeta := ci.metadata.Subcommands[name]
 		if subMeta == nil {
 			return reflect.Value{}, nil, fmt.Errorf("subcommand metadata not found for %s", name)
 		}
-		fv := destValue.FieldByName(fieldName)
+		fv := destValue.Field(idx)
 		if !fv.IsValid() {
 			return reflect.Value{}, nil, fmt.Errorf("subcommand field not found for %s", name)
 		}
@@ -432,13 +446,13 @@ func (ci *CoreIntegration) findSubcommandField(destValue reflect.Value, name str
 	}
 
 	// Fall back to case-insensitive scan of the index.
-	for cmdName, fieldName := range ci.metadata.SubcommandFields {
+	for cmdName, idx := range ci.metadata.SubcommandFieldIdx {
 		if strings.EqualFold(cmdName, name) {
 			subMeta := ci.metadata.Subcommands[cmdName]
 			if subMeta == nil {
 				return reflect.Value{}, nil, fmt.Errorf("subcommand metadata not found for %s", cmdName)
 			}
-			fv := destValue.FieldByName(fieldName)
+			fv := destValue.Field(idx)
 			if !fv.IsValid() {
 				return reflect.Value{}, nil, fmt.Errorf("subcommand field not found for %s", cmdName)
 			}
@@ -567,7 +581,7 @@ func validateRequired(dest interface{}, metadata *StructMetadata) error {
 			continue
 		}
 
-		fieldValue := destElem.FieldByName(field.Name)
+		fieldValue := fieldByMeta(destElem, &field)
 		if !fieldValue.IsValid() {
 			continue
 		}

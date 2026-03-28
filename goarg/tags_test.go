@@ -159,7 +159,7 @@ func TestTagParser_ParseField(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parser.ParseField(tt.field)
+			result, err := parser.ParseField(tt.field, 0)
 
 			if tt.wantErr {
 				if err == nil {
@@ -347,7 +347,7 @@ func TestTagParser_SubcommandProcessing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parser.ParseField(tt.field)
+			result, err := parser.ParseField(tt.field, 0)
 
 			if tt.wantErr {
 				if err == nil {
@@ -480,7 +480,7 @@ func TestTagParser_PositionalArguments(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parser.ParseField(tt.field)
+			result, err := parser.ParseField(tt.field, 0)
 
 			if tt.wantErr {
 				if err == nil {
@@ -577,7 +577,7 @@ func TestTagParser_EnvironmentVariables(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parser.ParseField(tt.field)
+			result, err := parser.ParseField(tt.field, 0)
 			if err != nil {
 				t.Errorf("ParseField() unexpected error: %v", err)
 				return
@@ -606,7 +606,7 @@ func TestTagParser_EnvironmentVariables(t *testing.T) {
 			Tag:  `arg:"--test,env:TEST_VAR"`,
 		}
 
-		result, err := parser.ParseField(field)
+		result, err := parser.ParseField(field, 0)
 		if err != nil {
 			t.Fatalf("ParseField() unexpected error: %v", err)
 		}
@@ -729,7 +729,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parser.ParseField(tt.field)
+			result, err := parser.ParseField(tt.field, 0)
 
 			if tt.wantErr {
 				if err == nil {
@@ -809,7 +809,7 @@ func TestTagParser_ComplexTagFormats(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parser.ParseField(tt.field)
+			result, err := parser.ParseField(tt.field, 0)
 
 			if tt.wantErr {
 				if err == nil {
@@ -888,7 +888,7 @@ func TestTagParser_ErrorCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parser.ParseField(tt.field)
+			_, err := parser.ParseField(tt.field, 0)
 			if err == nil {
 				t.Errorf("ParseField() expected error for invalid input, got nil")
 			}

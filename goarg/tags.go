@@ -10,18 +10,20 @@ import (
 
 // StructMetadata represents parsed struct information
 type StructMetadata struct {
-	Fields           []FieldMetadata
-	Options          []FieldMetadata // non-positional, non-subcommand, has CLI flag
-	Positionals      []FieldMetadata // positional fields, in declaration order
-	EnvOnly          []FieldMetadata // env-only fields (no CLI flag)
-	Subcommands      map[string]*StructMetadata
-	SubcommandHelp   map[string]string // Maps subcommand name to help text
-	SubcommandFields map[string]string // Maps subcommand name to struct field name
+	Fields              []FieldMetadata
+	Options             []FieldMetadata // non-positional, non-subcommand, has CLI flag
+	Positionals         []FieldMetadata // positional fields, in declaration order
+	EnvOnly             []FieldMetadata // env-only fields (no CLI flag)
+	Subcommands         map[string]*StructMetadata
+	SubcommandHelp      map[string]string // Maps subcommand name to help text
+	SubcommandFields    map[string]string // Maps subcommand name to struct field name
+	SubcommandFieldIdx  map[string]int    // Maps subcommand name to struct field index
 }
 
 // FieldMetadata represents a single struct field's CLI mapping
 type FieldMetadata struct {
 	Name       string
+	FieldIndex int // struct field index for reflect.Value.Field(i) — avoids FieldByName
 	Type       reflect.Type
 	Tag        string
 	Short      string
@@ -31,6 +33,8 @@ type FieldMetadata struct {
 	Positional bool
 	Env        string
 	Default    interface{}
+	DefaultTag string // raw default tag string, pre-parsed
+	HasDefault bool   // true when a `default:` tag is present (even if empty)
 
 	// Subcommand support
 	IsSubcommand   bool
@@ -62,12 +66,13 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 
 	structType := destElem.Type()
 	metadata := &StructMetadata{
-		Fields:           []FieldMetadata{},
-		Options:          []FieldMetadata{},
-		Positionals:      []FieldMetadata{},
-		Subcommands:      make(map[string]*StructMetadata),
-		SubcommandHelp:   make(map[string]string),
-		SubcommandFields: make(map[string]string),
+		Fields:             []FieldMetadata{},
+		Options:            []FieldMetadata{},
+		Positionals:        []FieldMetadata{},
+		Subcommands:        make(map[string]*StructMetadata),
+		SubcommandHelp:     make(map[string]string),
+		SubcommandFields:   make(map[string]string),
+		SubcommandFieldIdx: make(map[string]int),
 	}
 
 	// Parse each field in the struct
@@ -88,6 +93,21 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse embedded struct %s: %w", field.Name, err)
 			}
+			// Mark embedded fields with FieldIndex = -1 so callers
+			// fall back to FieldByName for these (their indices are
+			// relative to the embedded struct, not the parent).
+			for j := range subMeta.Fields {
+				subMeta.Fields[j].FieldIndex = -1
+			}
+			for j := range subMeta.Options {
+				subMeta.Options[j].FieldIndex = -1
+			}
+			for j := range subMeta.Positionals {
+				subMeta.Positionals[j].FieldIndex = -1
+			}
+			for j := range subMeta.EnvOnly {
+				subMeta.EnvOnly[j].FieldIndex = -1
+			}
 			metadata.Fields = append(metadata.Fields, subMeta.Fields...)
 			metadata.Options = append(metadata.Options, subMeta.Options...)
 			metadata.Positionals = append(metadata.Positionals, subMeta.Positionals...)
@@ -101,6 +121,9 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 			for k, v := range subMeta.SubcommandFields {
 				metadata.SubcommandFields[k] = v
 			}
+			for k, v := range subMeta.SubcommandFieldIdx {
+				metadata.SubcommandFieldIdx[k] = v
+			}
 			continue
 		}
 
@@ -109,7 +132,7 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 			continue
 		}
 
-		fieldMetadata, err := tp.ParseField(field)
+		fieldMetadata, err := tp.ParseField(field, i)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse field %s: %w", field.Name, err)
 		}
@@ -123,6 +146,7 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 
 			// Record the struct field name for O(1) lookup later.
 			metadata.SubcommandFields[subcommandName] = field.Name
+			metadata.SubcommandFieldIdx[subcommandName] = i
 
 			// Parse the subcommand struct for metadata only
 			fieldValue := destElem.Field(i)
@@ -166,11 +190,12 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 }
 
 // ParseField parses a single struct field and returns its metadata
-func (tp *TagParser) ParseField(field reflect.StructField) (*FieldMetadata, error) {
+func (tp *TagParser) ParseField(field reflect.StructField, fieldIndex int) (*FieldMetadata, error) {
 	metadata := &FieldMetadata{
-		Name: field.Name,
-		Type: field.Type,
-		Tag:  string(field.Tag),
+		Name:       field.Name,
+		FieldIndex: fieldIndex,
+		Type:       field.Type,
+		Tag:        string(field.Tag),
 	}
 
 	// Parse the 'arg' tag
@@ -182,15 +207,12 @@ func (tp *TagParser) ParseField(field reflect.StructField) (*FieldMetadata, erro
 	}
 
 	// Parse the 'help' tag
-	helpTag := field.Tag.Get("help")
-	if helpTag != "" {
-		metadata.Help = helpTag
-	}
+	metadata.Help = field.Tag.Get("help")
 
-	// Parse the 'default' tag
-	defaultTag := field.Tag.Get("default")
-	if field.Tag.Get("default") != "" || strings.Contains(string(field.Tag), `default:"`) {
-		// Call parseDefaultValue even for empty default values (default:"")
+	// Parse the 'default' tag — use Lookup once to detect presence and value.
+	if defaultTag, exists := field.Tag.Lookup("default"); exists {
+		metadata.HasDefault = true
+		metadata.DefaultTag = defaultTag
 		defaultValue, err := tp.parseDefaultValue(defaultTag, field.Type)
 		if err != nil {
 			return nil, fmt.Errorf("invalid default value for field %s: %w", field.Name, err)
@@ -198,10 +220,9 @@ func (tp *TagParser) ParseField(field reflect.StructField) (*FieldMetadata, erro
 		metadata.Default = defaultValue
 	}
 
-	// Parse the 'env' tag
-	envTag := field.Tag.Get("env")
-	if envTag != "" {
-		metadata.Env = envTag
+	// Parse the 'env' tag — only if not already set from the arg tag
+	if metadata.Env == "" {
+		metadata.Env = field.Tag.Get("env")
 	}
 
 	// Validate field metadata
