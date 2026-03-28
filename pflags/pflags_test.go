@@ -1242,3 +1242,174 @@ func TestLongOnlyMode(t *testing.T) {
 		t.Error("LongOnly should be true after SetLongOnly(true)")
 	}
 }
+
+// TestChanged tests the Changed() method.
+func TestChanged(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "name", "", "")
+	fs.BoolVar(new(bool), "verbose", false, "")
+
+	if fs.Changed("name") {
+		t.Error("name should not be changed before parse")
+	}
+
+	if err := fs.Parse([]string{"--name", "val"}); err != nil {
+		t.Fatal(err)
+	}
+	if !fs.Changed("name") {
+		t.Error("name should be changed after parse")
+	}
+	if fs.Changed("verbose") {
+		t.Error("verbose should not be changed")
+	}
+	if fs.Changed("nonexistent") {
+		t.Error("nonexistent should return false")
+	}
+}
+
+// TestNFlag tests the NFlag() method.
+func TestNFlag(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "a", "", "")
+	fs.StringVar(new(string), "b", "", "")
+	fs.StringVar(new(string), "c", "", "")
+
+	if fs.NFlag() != 0 {
+		t.Errorf("NFlag before parse = %d, want 0", fs.NFlag())
+	}
+	if err := fs.Parse([]string{"--a", "1", "--c", "3"}); err != nil {
+		t.Fatal(err)
+	}
+	if fs.NFlag() != 2 {
+		t.Errorf("NFlag = %d, want 2", fs.NFlag())
+	}
+}
+
+// TestHasFlags tests HasFlags() and HasAvailableFlags().
+func TestHasFlags(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	if fs.HasFlags() {
+		t.Error("empty FlagSet should not have flags")
+	}
+	if fs.HasAvailableFlags() {
+		t.Error("empty FlagSet should not have available flags")
+	}
+
+	fs.StringVar(new(string), "name", "", "")
+	if !fs.HasFlags() {
+		t.Error("should have flags after registration")
+	}
+	if !fs.HasAvailableFlags() {
+		t.Error("should have available flags")
+	}
+
+	// Hide the only flag
+	fs.Lookup("name").Hidden = true
+	if !fs.HasFlags() {
+		t.Error("should still have flags (hidden counts)")
+	}
+	if fs.HasAvailableFlags() {
+		t.Error("should not have available flags (all hidden)")
+	}
+}
+
+// TestOutput tests the Output() getter.
+func TestOutput(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	// Default should be stderr
+	if fs.Output() == nil {
+		t.Error("Output() should not return nil")
+	}
+
+	var buf bytes.Buffer
+	fs.SetOutput(&buf)
+	if fs.Output() != &buf {
+		t.Error("Output() should return custom writer")
+	}
+}
+
+// TestShorthandLookup tests the ShorthandLookup() method.
+func TestShorthandLookup(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVarP(new(string), "output", "o", "", "")
+	fs.ShortVar(newBoolValue(false, new(bool)), "x", "extract")
+
+	// Regular shorthand
+	f := fs.ShorthandLookup("o")
+	if f == nil || f.Name != "output" {
+		t.Errorf("ShorthandLookup('o') = %v, want output flag", f)
+	}
+
+	// Short-only flag
+	f = fs.ShorthandLookup("x")
+	if f == nil || f.Name != "x" {
+		t.Errorf("ShorthandLookup('x') = %v, want x flag", f)
+	}
+
+	// Non-existent
+	if fs.ShorthandLookup("z") != nil {
+		t.Error("ShorthandLookup('z') should return nil")
+	}
+}
+
+// TestShorthandLookupPanic tests that ShorthandLookup panics for multi-char input.
+func TestShorthandLookupPanic(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for multi-char ShorthandLookup")
+		}
+	}()
+	fs.ShorthandLookup("ab")
+}
+
+// TestInit tests the Init() method.
+func TestInit(t *testing.T) {
+	fs := NewFlagSet("old", ContinueOnError)
+	fs.Init("new", PanicOnError)
+	if fs.Name() != "new" {
+		t.Errorf("Name() = %q, want %q", fs.Name(), "new")
+	}
+}
+
+// TestVarPF tests that VarPF returns the created flag.
+func TestVarPF(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	f := fs.VarPF(newStringValue("default", new(string)), "output", "o", "output file")
+	if f == nil {
+		t.Fatal("VarPF returned nil")
+	}
+	if f.Name != "output" {
+		t.Errorf("Name = %q, want %q", f.Name, "output")
+	}
+	if f.Shorthand != "o" {
+		t.Errorf("Shorthand = %q, want %q", f.Shorthand, "o")
+	}
+}
+
+// TestArgsLenAtDash tests the ArgsLenAtDash() method.
+func TestArgsLenAtDash(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want int
+	}{
+		{"no dash", []string{"--name", "val", "pos"}, -1},
+		{"dash with args before", []string{"--name", "val", "pos1", "--", "pos2"}, 1},
+		{"dash no args before", []string{"--name", "val", "--", "pos1"}, 0},
+		{"dash only", []string{"--"}, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			fs.StringVar(new(string), "name", "", "")
+			if err := fs.Parse(tt.args); err != nil {
+				t.Fatal(err)
+			}
+			if got := fs.ArgsLenAtDash(); got != tt.want {
+				t.Errorf("ArgsLenAtDash() = %d, want %d (args=%v)", got, tt.want, fs.Args())
+			}
+		})
+	}
+}

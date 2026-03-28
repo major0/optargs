@@ -54,6 +54,7 @@ type FlagSet struct {
 	name              string
 	parsed            bool
 	args              []string // arguments after flags
+	argsLenAtDash     int      // len(args) when -- was encountered; -1 if no --
 	errorHandling     ErrorHandling
 	output            io.Writer // nil means stderr; use out() accessor
 	interspersed      bool      // allow interspersed option/non-option args
@@ -78,6 +79,7 @@ func NewFlagSet(name string, errorHandling ErrorHandling) *FlagSet {
 		name:          name,
 		errorHandling: errorHandling,
 		interspersed:  true,
+		argsLenAtDash: -1,
 		flags:         make(map[string]*Flag),
 		shortOnly:     make(map[string]*Flag),
 		shorthand:     make(map[string]string),
@@ -111,6 +113,90 @@ func (f *FlagSet) SetLongOnly(enabled bool) {
 // LongOnly returns whether getopt_long_only(3) mode is enabled.
 func (f *FlagSet) LongOnly() bool {
 	return f.longOnly
+}
+
+// Changed returns true if the named flag was set during Parse().
+func (f *FlagSet) Changed(name string) bool {
+	flag := f.Lookup(name)
+	if flag == nil {
+		return false
+	}
+	return flag.Changed
+}
+
+// NFlag returns the number of flags that have been set.
+func (f *FlagSet) NFlag() int {
+	n := 0
+	f.Visit(func(*Flag) { n++ })
+	return n
+}
+
+// HasFlags returns true if the FlagSet has any flags defined.
+func (f *FlagSet) HasFlags() bool {
+	return len(f.flags) > 0 || len(f.shortOnly) > 0
+}
+
+// HasAvailableFlags returns true if the FlagSet has any non-hidden flags.
+func (f *FlagSet) HasAvailableFlags() bool {
+	for _, flag := range f.flags {
+		if !flag.Hidden {
+			return true
+		}
+	}
+	for _, flag := range f.shortOnly {
+		if !flag.Hidden {
+			return true
+		}
+	}
+	return false
+}
+
+// Output returns the destination for usage and error messages.
+// os.Stderr is returned if output was not set or was set to nil.
+func (f *FlagSet) Output() io.Writer {
+	return f.out()
+}
+
+// ShorthandLookup returns the Flag structure of the short handed flag,
+// returning nil if none exists. It panics if len(name) > 1.
+func (f *FlagSet) ShorthandLookup(name string) *Flag {
+	if len(name) > 1 {
+		panic("ShorthandLookup: name must be a single character")
+	}
+	// Check short-only flags first
+	if flag, ok := f.shortOnly[name]; ok {
+		return flag
+	}
+	// Check shorthand-to-long mapping
+	if longName, ok := f.shorthand[name]; ok {
+		return f.flags[f.normalizeFlagName(longName)]
+	}
+	return nil
+}
+
+// Init sets the name and error handling property for a flag set.
+func (f *FlagSet) Init(name string, errorHandling ErrorHandling) {
+	f.name = name
+	f.errorHandling = errorHandling
+}
+
+// VarPF is like VarP, but returns the flag created.
+func (f *FlagSet) VarPF(value Value, name, shorthand, usage string) *Flag {
+	flag := &Flag{
+		Name:      name,
+		Shorthand: shorthand,
+		Usage:     usage,
+		Value:     value,
+		DefValue:  value.String(),
+	}
+	f.addFlag(flag)
+	return flag
+}
+
+// ArgsLenAtDash returns the number of args before the -- terminator,
+// or -1 if no -- was encountered.
+func (f *FlagSet) ArgsLenAtDash() int {
+	return f.argsLenAtDash
 }
 
 // Name returns the name of the flag set.

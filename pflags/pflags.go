@@ -189,6 +189,15 @@ func translateError(err error) error {
 //   - ExitOnError: print error + usage to output, call os.Exit(2)
 //   - PanicOnError: print error + usage to output, panic
 func (f *FlagSet) Parse(arguments []string) error {
+	// Detect -- position for ArgsLenAtDash
+	dashPos := -1
+	for i, arg := range arguments {
+		if arg == "--" {
+			dashPos = i
+			break
+		}
+	}
+
 	shortOpts := f.buildShortOpts()
 	longOpts := f.buildLongOpts()
 
@@ -209,6 +218,17 @@ func (f *FlagSet) Parse(arguments []string) error {
 
 	f.args = parser.Args
 	f.parsed = true
+
+	// Compute argsLenAtDash: if -- was present, count how many positional
+	// args appeared before it. The args after -- are at the tail of f.args.
+	if dashPos >= 0 {
+		argsAfterDash := len(arguments) - dashPos - 1 // args after the -- token
+		f.argsLenAtDash = len(f.args) - argsAfterDash
+		if f.argsLenAtDash < 0 {
+			f.argsLenAtDash = 0
+		}
+	}
+
 	return nil
 }
 
