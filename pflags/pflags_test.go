@@ -885,6 +885,90 @@ func TestAdvancedGNUComplexScenarios(t *testing.T) {
 	})
 }
 
+// TestPOSIXDoubleHyphenTermination tests that -- terminates option processing.
+func TestPOSIXDoubleHyphenTermination(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		wantFlag string
+		wantArgs []string
+	}{
+		{"double-hyphen stops parsing", []string{"--name", "val", "--", "--other", "pos"}, "val", []string{"--other", "pos"}},
+		{"double-hyphen only", []string{"--", "a", "b"}, "", []string{"a", "b"}},
+		{"no double-hyphen", []string{"--name", "val", "pos"}, "val", []string{"pos"}},
+		{"double-hyphen no trailing", []string{"--name", "val", "--"}, "val", nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			var name string
+			fs.StringVar(&name, "name", "", "")
+
+			if err := fs.Parse(tt.args); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if name != tt.wantFlag {
+				t.Errorf("flag = %q, want %q", name, tt.wantFlag)
+			}
+			args := fs.Args()
+			if len(args) != len(tt.wantArgs) {
+				t.Errorf("Args() = %v, want %v", args, tt.wantArgs)
+				return
+			}
+			for i, a := range tt.wantArgs {
+				if args[i] != a {
+					t.Errorf("Arg(%d) = %q, want %q", i, args[i], a)
+				}
+			}
+		})
+	}
+}
+
+// TestPOSIXCombinedShortOptions tests -abc style combined short options.
+func TestPOSIXCombinedShortOptions(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantA   bool
+		wantB   bool
+		wantC   bool
+		wantVal string
+	}{
+		{"combined booleans", []string{"-abc"}, true, true, true, ""},
+		{"combined with trailing value", []string{"-abo", "file.txt"}, true, true, false, "file.txt"},
+		{"individual flags", []string{"-a", "-b", "-c"}, true, true, true, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			var a, b, c bool
+			var o string
+			fs.BoolVarP(&a, "alpha", "a", false, "")
+			fs.BoolVarP(&b, "beta", "b", false, "")
+			fs.BoolVarP(&c, "gamma", "c", false, "")
+			fs.StringVarP(&o, "output", "o", "", "")
+
+			if err := fs.Parse(tt.args); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if a != tt.wantA {
+				t.Errorf("alpha = %t, want %t", a, tt.wantA)
+			}
+			if b != tt.wantB {
+				t.Errorf("beta = %t, want %t", b, tt.wantB)
+			}
+			if c != tt.wantC {
+				t.Errorf("gamma = %t, want %t", c, tt.wantC)
+			}
+			if o != tt.wantVal {
+				t.Errorf("output = %q, want %q", o, tt.wantVal)
+			}
+		})
+	}
+}
+
 // TestFlagUsages tests that FlagUsages returns the same output as PrintDefaults.
 func TestFlagUsages(t *testing.T) {
 	fs := NewFlagSet("test", ContinueOnError)

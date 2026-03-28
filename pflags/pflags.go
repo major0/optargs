@@ -11,6 +11,7 @@ import (
 
 // buildShortOpts constructs the short option map for optargs.NewParser
 // from the FlagSet's registered flags and shorthand mappings.
+// Boolean short opts use NoArgument so they participate in POSIX compaction (-abc).
 func (f *FlagSet) buildShortOpts() map[byte]*optargs.Flag {
 	shortOpts := make(map[byte]*optargs.Flag)
 	for shortStr, longName := range f.shorthand {
@@ -19,9 +20,13 @@ func (f *FlagSet) buildShortOpts() map[byte]*optargs.Flag {
 			continue
 		}
 		shortChar := shortStr[0]
+		hasArg := mapArgumentType(flag.Value.Type())
+		if flag.Value.Type() == "bool" {
+			hasArg = optargs.NoArgument
+		}
 		coreFlag := &optargs.Flag{
 			Name:   string(shortChar),
-			HasArg: mapArgumentType(flag.Value.Type()),
+			HasArg: hasArg,
 			Handle: f.makeHandler(flag),
 		}
 		shortOpts[shortChar] = coreFlag
