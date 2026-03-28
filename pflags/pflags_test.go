@@ -1443,6 +1443,20 @@ func TestSetNormalizeFunc(t *testing.T) {
 	if fs.GetNormalizeFunc() == nil {
 		t.Error("GetNormalizeFunc() should not be nil")
 	}
+
+	// Parse with equals syntax and underscore
+	fs3 := NewFlagSet("test3", ContinueOnError)
+	fs3.SetNormalizeFunc(func(f *FlagSet, name string) NormalizedName {
+		return NormalizedName(strings.ReplaceAll(name, "_", "-"))
+	})
+	var s3 string
+	fs3.StringVar(&s3, "my-flag", "", "")
+	if err := fs3.Parse([]string{"--my_flag=val3"}); err != nil {
+		t.Fatalf("parse --my_flag=val3: %v", err)
+	}
+	if s3 != "val3" {
+		t.Errorf("s3 = %q, want %q", s3, "val3")
+	}
 }
 
 // TestSetInterspersed tests interspersed option/non-option arg handling.
@@ -1627,6 +1641,16 @@ func TestAddFlagSet(t *testing.T) {
 
 	// nil set should not panic
 	fs1.AddFlagSet(nil)
+
+	// Short-only flags should be merged
+	fs3 := NewFlagSet("source", ContinueOnError)
+	fs3.ShortVar(newBoolValue(false, new(bool)), "x", "extract")
+
+	fs4 := NewFlagSet("target", ContinueOnError)
+	fs4.AddFlagSet(fs3)
+	if fs4.ShorthandLookup("x") == nil {
+		t.Error("short-only flag 'x' should be merged from source")
+	}
 }
 
 // TestFunc tests callback-based flags.
@@ -1714,6 +1738,16 @@ func TestParseAll(t *testing.T) {
 	}
 	if len(seen) != 2 {
 		t.Errorf("seen = %v, want 2 entries", seen)
+	}
+
+	// Callback error should propagate
+	fs2 := NewFlagSet("test2", ContinueOnError)
+	fs2.StringVar(new(string), "name", "", "")
+	err2 := fs2.ParseAll([]string{"--name", "val"}, func(flag *Flag, value string) error {
+		return fmt.Errorf("callback error")
+	})
+	if err2 == nil || !strings.Contains(err2.Error(), "callback error") {
+		t.Errorf("expected callback error, got: %v", err2)
 	}
 }
 

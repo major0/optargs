@@ -171,7 +171,11 @@ func (f *FlagSet) Changed(name string) bool {
 // NFlag returns the number of flags that have been set.
 func (f *FlagSet) NFlag() int {
 	n := 0
-	f.Visit(func(*Flag) { n++ })
+	for _, name := range f.order {
+		if f.flags[name].Changed {
+			n++
+		}
+	}
 	return n
 }
 
@@ -475,7 +479,7 @@ func (f *FlagSet) FlagUsagesWrapped(cols int) string {
 		}
 		// Find the usage text start (after the flag prefix + padding)
 		// and wrap there
-		result.WriteString(wrap(line, cols))
+		result.WriteString(wrapLine(line, cols))
 		result.WriteByte('\n')
 	}
 	// Remove trailing extra newline from split
@@ -486,8 +490,8 @@ func (f *FlagSet) FlagUsagesWrapped(cols int) string {
 	return s
 }
 
-// wrap wraps a line at cols, indenting continuation lines.
-func wrap(line string, cols int) string {
+// wrapLine wraps a single line at cols, indenting continuation lines.
+func wrapLine(line string, cols int) string {
 	if len(line) <= cols {
 		return line
 	}
@@ -499,11 +503,13 @@ func wrap(line string, cols int) string {
 	if breakAt == 0 {
 		breakAt = cols // no space found, hard break
 	}
-	// Indent continuation to align with usage text
-	indent := "                                 " // 33 spaces — typical flag prefix width
-	if len(indent) > cols/2 {
-		indent = strings.Repeat(" ", cols/4)
+	// Indent continuation to align with typical usage text column
+	const defaultIndent = 33 // typical flag prefix width
+	indentWidth := defaultIndent
+	if indentWidth > cols/2 {
+		indentWidth = cols / 4
 	}
+	indent := strings.Repeat(" ", indentWidth)
 	return line[:breakAt] + "\n" + indent + strings.TrimLeft(line[breakAt:], " ")
 }
 
@@ -598,7 +604,7 @@ func (f *FlagSet) normalizeFlagName(name string) string {
 func (f *FlagSet) Set(name, value string) error {
 	flag, ok := f.flags[f.normalizeFlagName(name)]
 	if !ok {
-		return fmt.Errorf("no such flag -%v", name)
+		return fmt.Errorf("no such flag: %s", name)
 	}
 	err := flag.Value.Set(value)
 	if err != nil {
@@ -673,15 +679,7 @@ func (f *FlagSet) VarP(value Value, name, shorthand, usage string) {
 // ShortVar registers a short-only flag (no long name). The flag is accessible
 // only via its single-character shorthand and participates in POSIX compaction.
 func (f *FlagSet) ShortVar(value Value, shorthand, usage string) {
-	if len(shorthand) != 1 {
-		panic("ShortVar: shorthand must be exactly one character")
-	}
-	if _, exists := f.shortOnly[shorthand]; exists {
-		panic(fmt.Sprintf("short-only flag redefined: %s", shorthand))
-	}
-	if _, exists := f.shorthand[shorthand]; exists {
-		panic(fmt.Sprintf("shorthand %s already in use", shorthand))
-	}
+	f.validateShorthand(shorthand)
 	flag := &Flag{
 		Name:      shorthand,
 		Shorthand: shorthand,
@@ -723,15 +721,7 @@ func (f *FlagSet) AliasVarP(value Value, name, shorthand, usage string) {
 // AliasShortVar registers a short-only alias that writes to the same Value.
 // The alias is hidden from help text by default.
 func (f *FlagSet) AliasShortVar(value Value, shorthand string) {
-	if len(shorthand) != 1 {
-		panic("AliasShortVar: shorthand must be exactly one character")
-	}
-	if _, exists := f.shortOnly[shorthand]; exists {
-		panic(fmt.Sprintf("short-only flag redefined: %s", shorthand))
-	}
-	if _, exists := f.shorthand[shorthand]; exists {
-		panic(fmt.Sprintf("shorthand %s already in use", shorthand))
-	}
+	f.validateShorthand(shorthand)
 	flag := &Flag{
 		Name:      shorthand,
 		Shorthand: shorthand,
@@ -740,4 +730,17 @@ func (f *FlagSet) AliasShortVar(value Value, shorthand string) {
 		Hidden:    true,
 	}
 	f.shortOnly[shorthand] = flag
+}
+
+// validateShorthand panics if the shorthand is invalid or already in use.
+func (f *FlagSet) validateShorthand(shorthand string) {
+	if len(shorthand) != 1 {
+		panic("shorthand must be exactly one character")
+	}
+	if _, exists := f.shortOnly[shorthand]; exists {
+		panic(fmt.Sprintf("short-only flag redefined: %s", shorthand))
+	}
+	if _, exists := f.shorthand[shorthand]; exists {
+		panic(fmt.Sprintf("shorthand %s already in use", shorthand))
+	}
 }

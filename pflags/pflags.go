@@ -22,9 +22,9 @@ func isBoolFlag(v Value) bool {
 	return false
 }
 
-// shortArgType returns the core argument type for a short option.
+// shortOptArgType returns the core argument type for a short option.
 // Boolean flags use NoArgument for POSIX compaction; others use RequiredArgument.
-func shortArgType(v Value) optargs.ArgType {
+func shortOptArgType(v Value) optargs.ArgType {
 	if isBoolFlag(v) {
 		return optargs.NoArgument
 	}
@@ -37,30 +37,23 @@ func shortArgType(v Value) optargs.ArgType {
 func (f *FlagSet) buildShortOpts() map[byte]*optargs.Flag {
 	shortOpts := make(map[byte]*optargs.Flag)
 
-	// Regular flags with shorthands
+	addShort := func(shortChar byte, flag *Flag) {
+		shortOpts[shortChar] = &optargs.Flag{
+			Name:   string(shortChar),
+			HasArg: shortOptArgType(flag.Value),
+			Handle: f.makeHandler(flag),
+		}
+	}
+
 	for shortStr, longName := range f.shorthand {
 		flag := f.flags[f.normalizeFlagName(longName)]
 		if flag == nil {
 			continue
 		}
-		shortChar := shortStr[0]
-		coreFlag := &optargs.Flag{
-			Name:   string(shortChar),
-			HasArg: shortArgType(flag.Value),
-			Handle: f.makeHandler(flag),
-		}
-		shortOpts[shortChar] = coreFlag
+		addShort(shortStr[0], flag)
 	}
-
-	// Short-only flags
 	for shortStr, flag := range f.shortOnly {
-		shortChar := shortStr[0]
-		coreFlag := &optargs.Flag{
-			Name:   string(shortChar),
-			HasArg: shortArgType(flag.Value),
-			Handle: f.makeHandler(flag),
-		}
-		shortOpts[shortChar] = coreFlag
+		addShort(shortStr[0], flag)
 	}
 
 	return shortOpts
@@ -285,6 +278,7 @@ func (f *FlagSet) ParseAll(arguments []string, fn func(flag *Flag, value string)
 	defer func() { f.parseAllFn = nil }()
 	return f.Parse(arguments)
 }
+
 // failf handles a parse error according to the FlagSet's ErrorHandling mode.
 // For ContinueOnError it returns the error. For ExitOnError and PanicOnError
 // it prints the error and usage before exiting or panicking.
