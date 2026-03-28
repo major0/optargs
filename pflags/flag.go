@@ -33,15 +33,16 @@ type Value interface {
 
 // Flag represents the state of a flag.
 type Flag struct {
-	Name        string              // name as it appears on command line
-	Shorthand   string              // one-letter abbreviated flag
-	Usage       string              // help message
-	Value       Value               // value as set
-	DefValue    string              // default value (as text); for usage message
-	Changed     bool                // If the user set the value (or if left to default)
-	Hidden      bool                // used by cobra.Command to allow flags to be hidden from help/usage text
-	Deprecated  string              // If this flag is deprecated, this string is the new or now thing to use
-	Annotations map[string][]string // used by cobra.Command bash autocomple code
+	Name                string              // name as it appears on command line
+	Shorthand           string              // one-letter abbreviated flag
+	Usage               string              // help message
+	Value               Value               // value as set
+	DefValue            string              // default value (as text); for usage message
+	Changed             bool                // If the user set the value (or if left to default)
+	Hidden              bool                // used by cobra.Command to allow flags to be hidden from help/usage text
+	Deprecated          string              // If this flag is deprecated, this string is the new or now thing to use
+	ShorthandDeprecated string              // If the shorthand of this flag is deprecated, this string is the message
+	Annotations         map[string][]string // used by cobra.Command bash autocomple code
 }
 
 // FlagSet represents a set of defined flags.
@@ -232,6 +233,63 @@ func (f *FlagSet) VarPF(value Value, name, shorthand, usage string) *Flag {
 // or -1 if no -- was encountered.
 func (f *FlagSet) ArgsLenAtDash() int {
 	return f.argsLenAtDash
+}
+
+// MarkDeprecated indicates that a flag is deprecated. It will continue to
+// function but will not show up in help or usage messages. Using this flag
+// will also print the given usageMessage.
+func (f *FlagSet) MarkDeprecated(name string, usageMessage string) error {
+	flag := f.Lookup(name)
+	if flag == nil {
+		return fmt.Errorf("flag %q does not exist", name)
+	}
+	if usageMessage == "" {
+		return fmt.Errorf("deprecated message for flag %q must be set", name)
+	}
+	flag.Deprecated = usageMessage
+	flag.Hidden = true
+	return nil
+}
+
+// MarkHidden sets a flag to 'hidden' in your program. It will continue to
+// function but will not show up in help or usage messages.
+func (f *FlagSet) MarkHidden(name string) error {
+	flag := f.Lookup(name)
+	if flag == nil {
+		return fmt.Errorf("flag %q does not exist", name)
+	}
+	flag.Hidden = true
+	return nil
+}
+
+// MarkShorthandDeprecated will mark the shorthand of a flag deprecated.
+// It will continue to function but will not show up in help or usage messages.
+// Using the shorthand will also print the given usageMessage.
+func (f *FlagSet) MarkShorthandDeprecated(name string, usageMessage string) error {
+	flag := f.Lookup(name)
+	if flag == nil {
+		return fmt.Errorf("flag %q does not exist", name)
+	}
+	if usageMessage == "" {
+		return fmt.Errorf("deprecated message for shorthand of flag %q must be set", name)
+	}
+	flag.ShorthandDeprecated = usageMessage
+	return nil
+}
+
+// SetAnnotation allows one to set arbitrary annotations on a flag in the FlagSet.
+// This is sometimes used by spf13/cobra programs which want to generate additional
+// bash completion information.
+func (f *FlagSet) SetAnnotation(name, key string, values []string) error {
+	flag := f.Lookup(name)
+	if flag == nil {
+		return fmt.Errorf("flag %q does not exist", name)
+	}
+	if flag.Annotations == nil {
+		flag.Annotations = make(map[string][]string)
+	}
+	flag.Annotations[key] = values
+	return nil
 }
 
 // Name returns the name of the flag set.

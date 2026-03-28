@@ -1486,3 +1486,88 @@ func TestSetInterspersed(t *testing.T) {
 	}
 }
 
+
+// TestMarkDeprecated tests the MarkDeprecated method.
+func TestMarkDeprecated(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "old-flag", "", "old flag")
+
+	if err := fs.MarkDeprecated("old-flag", "use --new-flag instead"); err != nil {
+		t.Fatal(err)
+	}
+
+	f := fs.Lookup("old-flag")
+	if f.Deprecated != "use --new-flag instead" {
+		t.Errorf("Deprecated = %q", f.Deprecated)
+	}
+	if !f.Hidden {
+		t.Error("deprecated flag should be hidden")
+	}
+
+	// Non-existent flag
+	if err := fs.MarkDeprecated("nope", "msg"); err == nil {
+		t.Error("expected error for non-existent flag")
+	}
+	// Empty message
+	if err := fs.MarkDeprecated("old-flag", ""); err == nil {
+		t.Error("expected error for empty deprecation message")
+	}
+}
+
+// TestMarkHidden tests the MarkHidden method.
+func TestMarkHidden(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "internal", "", "")
+
+	if err := fs.MarkHidden("internal"); err != nil {
+		t.Fatal(err)
+	}
+	if !fs.Lookup("internal").Hidden {
+		t.Error("flag should be hidden")
+	}
+	if err := fs.MarkHidden("nope"); err == nil {
+		t.Error("expected error for non-existent flag")
+	}
+}
+
+// TestMarkShorthandDeprecated tests the MarkShorthandDeprecated method.
+func TestMarkShorthandDeprecated(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVarP(new(string), "output", "o", "", "")
+
+	if err := fs.MarkShorthandDeprecated("output", "use --output instead"); err != nil {
+		t.Fatal(err)
+	}
+	if fs.Lookup("output").ShorthandDeprecated != "use --output instead" {
+		t.Error("ShorthandDeprecated not set")
+	}
+	if err := fs.MarkShorthandDeprecated("nope", "msg"); err == nil {
+		t.Error("expected error for non-existent flag")
+	}
+	if err := fs.MarkShorthandDeprecated("output", ""); err == nil {
+		t.Error("expected error for empty message")
+	}
+}
+
+// TestSetAnnotation tests the SetAnnotation method.
+func TestSetAnnotation(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "output", "", "")
+
+	if err := fs.SetAnnotation("output", "cobra_annotation_bash_completion_one_required_flag", []string{"true"}); err != nil {
+		t.Fatal(err)
+	}
+
+	f := fs.Lookup("output")
+	if f.Annotations == nil {
+		t.Fatal("Annotations should not be nil")
+	}
+	vals := f.Annotations["cobra_annotation_bash_completion_one_required_flag"]
+	if len(vals) != 1 || vals[0] != "true" {
+		t.Errorf("annotation = %v", vals)
+	}
+
+	if err := fs.SetAnnotation("nope", "key", nil); err == nil {
+		t.Error("expected error for non-existent flag")
+	}
+}
