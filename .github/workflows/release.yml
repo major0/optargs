@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+      - 'goarg/v[0-9]+.[0-9]+.[0-9]+*'
+      - 'pflags/v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure annotated tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: .github/scripts/release-ensure-annotated.sh "${GITHUB_REF#refs/tags/}"
+
+      - name: Determine tag series
+        id: series
+        run: .github/scripts/release-detect-series.sh
+
+      - name: Find previous tag in series
+        id: prev
+        run: >-
+          .github/scripts/release-find-previous.sh
+          "${{ steps.series.outputs.tag }}"
+          "${{ steps.series.outputs.prefix }}"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          .github/scripts/release-create.sh
+          "${{ steps.series.outputs.tag }}"
+          "${{ steps.series.outputs.name }}"
+          "${{ steps.prev.outputs.tag }}"

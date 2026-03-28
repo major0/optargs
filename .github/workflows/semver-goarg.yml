@@ -1,12 +1,12 @@
-name: Release goarg
+name: Semver GoArg
 
 on:
   create:
+    branches:
+      - 'goarg/v[0-9]+.[0-9]+'
   push:
     branches:
       - 'goarg/v[0-9]+.[0-9]+'
-    tags:
-      - 'goarg/v[0-9]+.[0-9]+.[0-9]+*'
     paths:
       - 'goarg/**'
 
@@ -14,11 +14,13 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Semantic Version Release
+  semver:
+    name: Auto-tag GoArg
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Run Semantic Versioning
         id: semver
@@ -30,6 +32,6 @@ jobs:
       - name: Summary
         if: steps.semver.outputs.tag != ''
         run: |
-          echo "### Release Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Semver Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Tag**: ${{ steps.semver.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Type**: ${{ steps.semver.outputs.tag-type }}" >> "$GITHUB_STEP_SUMMARY"
