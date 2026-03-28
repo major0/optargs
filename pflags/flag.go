@@ -60,8 +60,9 @@ type FlagSet struct {
 	normalizeNameFunc func(f *FlagSet, name string) NormalizedName
 
 	// Flag storage and management
-	flags     map[string]*Flag  // flags by name
-	shorthand map[string]string // shorthand to name mapping
+	flags     map[string]*Flag  // flags by long name
+	shortOnly map[string]*Flag  // short-only flags (no long name), keyed by shorthand
+	shorthand map[string]string // shorthand to long name mapping
 	order     []string          // order of flag definition for help text
 }
 
@@ -77,6 +78,7 @@ func NewFlagSet(name string, errorHandling ErrorHandling) *FlagSet {
 		errorHandling: errorHandling,
 		interspersed:  true,
 		flags:         make(map[string]*Flag),
+		shortOnly:     make(map[string]*Flag),
 		shorthand:     make(map[string]string),
 		order:         make([]string, 0),
 	}
@@ -376,4 +378,76 @@ func (f *FlagSet) VarP(value Value, name, shorthand, usage string) {
 		DefValue:  value.String(),
 	}
 	f.addFlag(flag)
+}
+
+// ShortVar registers a short-only flag (no long name). The flag is accessible
+// only via its single-character shorthand and participates in POSIX compaction.
+func (f *FlagSet) ShortVar(value Value, shorthand, usage string) {
+	if len(shorthand) != 1 {
+		panic("ShortVar: shorthand must be exactly one character")
+	}
+	if _, exists := f.shortOnly[shorthand]; exists {
+		panic(fmt.Sprintf("short-only flag redefined: %s", shorthand))
+	}
+	if _, exists := f.shorthand[shorthand]; exists {
+		panic(fmt.Sprintf("shorthand %s already in use", shorthand))
+	}
+	flag := &Flag{
+		Name:      shorthand,
+		Shorthand: shorthand,
+		Usage:     usage,
+		Value:     value,
+		DefValue:  value.String(),
+	}
+	f.shortOnly[shorthand] = flag
+}
+
+// AliasVar registers an additional flag name that writes to the same Value
+// as an existing flag. The alias flag is hidden from help text by default.
+// This enables the ls --format=across / -x pattern where multiple flags
+// share a destination with last-occurrence-wins semantics.
+func (f *FlagSet) AliasVar(value Value, name, usage string) {
+	flag := &Flag{
+		Name:     name,
+		Usage:    usage,
+		Value:    value,
+		DefValue: value.String(),
+		Hidden:   true,
+	}
+	f.addFlag(flag)
+}
+
+// AliasVarP is like AliasVar but accepts a shorthand.
+func (f *FlagSet) AliasVarP(value Value, name, shorthand, usage string) {
+	flag := &Flag{
+		Name:      name,
+		Shorthand: shorthand,
+		Usage:     usage,
+		Value:     value,
+		DefValue:  value.String(),
+		Hidden:    true,
+	}
+	f.addFlag(flag)
+}
+
+// AliasShortVar registers a short-only alias that writes to the same Value.
+// The alias is hidden from help text by default.
+func (f *FlagSet) AliasShortVar(value Value, shorthand string) {
+	if len(shorthand) != 1 {
+		panic("AliasShortVar: shorthand must be exactly one character")
+	}
+	if _, exists := f.shortOnly[shorthand]; exists {
+		panic(fmt.Sprintf("short-only flag redefined: %s", shorthand))
+	}
+	if _, exists := f.shorthand[shorthand]; exists {
+		panic(fmt.Sprintf("shorthand %s already in use", shorthand))
+	}
+	flag := &Flag{
+		Name:      shorthand,
+		Shorthand: shorthand,
+		Value:     value,
+		DefValue:  value.String(),
+		Hidden:    true,
+	}
+	f.shortOnly[shorthand] = flag
 }

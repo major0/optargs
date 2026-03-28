@@ -9,28 +9,60 @@ import (
 	"github.com/major0/optargs"
 )
 
+// isBoolFlag returns true if the value is a boolean flag — either by type
+// or by implementing the boolFlag interface (IsBoolFlag() bool).
+func isBoolFlag(v Value) bool {
+	if v.Type() == "bool" {
+		return true
+	}
+	type boolFlagger interface{ IsBoolFlag() bool }
+	if bf, ok := v.(boolFlagger); ok {
+		return bf.IsBoolFlag()
+	}
+	return false
+}
+
+// shortArgType returns the core argument type for a short option.
+// Boolean flags use NoArgument for POSIX compaction; others use RequiredArgument.
+func shortArgType(v Value) optargs.ArgType {
+	if isBoolFlag(v) {
+		return optargs.NoArgument
+	}
+	return mapArgumentType(v.Type())
+}
+
 // buildShortOpts constructs the short option map for optargs.NewParser
 // from the FlagSet's registered flags and shorthand mappings.
 // Boolean short opts use NoArgument so they participate in POSIX compaction (-abc).
 func (f *FlagSet) buildShortOpts() map[byte]*optargs.Flag {
 	shortOpts := make(map[byte]*optargs.Flag)
+
+	// Regular flags with shorthands
 	for shortStr, longName := range f.shorthand {
 		flag := f.flags[f.normalizeFlagName(longName)]
 		if flag == nil {
 			continue
 		}
 		shortChar := shortStr[0]
-		hasArg := mapArgumentType(flag.Value.Type())
-		if flag.Value.Type() == "bool" {
-			hasArg = optargs.NoArgument
-		}
 		coreFlag := &optargs.Flag{
 			Name:   string(shortChar),
-			HasArg: hasArg,
+			HasArg: shortArgType(flag.Value),
 			Handle: f.makeHandler(flag),
 		}
 		shortOpts[shortChar] = coreFlag
 	}
+
+	// Short-only flags
+	for shortStr, flag := range f.shortOnly {
+		shortChar := shortStr[0]
+		coreFlag := &optargs.Flag{
+			Name:   string(shortChar),
+			HasArg: shortArgType(flag.Value),
+			Handle: f.makeHandler(flag),
+		}
+		shortOpts[shortChar] = coreFlag
+	}
+
 	return shortOpts
 }
 
@@ -62,13 +94,18 @@ func (f *FlagSet) buildLongOpts() map[string]*optargs.Flag {
 }
 
 // makeHandler returns a handler function for the given pflags Flag.
-// For boolean flags, no-arg sets "true", explicit =value calls Set(value).
-// For all other types, the handler calls Value.Set(arg) directly.
+// For boolean flags (type "bool" or IsBoolFlag()), no-arg sets "true" or
+// calls Set("") for custom bool flags. For all other types, the handler
+// calls Value.Set(arg) directly.
 func (f *FlagSet) makeHandler(flag *Flag) func(string, string) error {
 	return func(name, arg string) error {
 		val := arg
-		if flag.Value.Type() == "bool" && val == "" {
-			val = "true"
+		if isBoolFlag(flag.Value) && val == "" {
+			if flag.Value.Type() == "bool" {
+				val = "true"
+			}
+			// For custom IsBoolFlag types, call Set("") — the value
+			// implementation decides what no-arg means.
 		}
 		if err := flag.Value.Set(val); err != nil {
 			return err

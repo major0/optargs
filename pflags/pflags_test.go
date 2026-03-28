@@ -1044,3 +1044,145 @@ func TestErrorHandlingContinueOnError(t *testing.T) {
 		t.Errorf("error = %q, want 'unknown flag'", err.Error())
 	}
 }
+
+// TestShortOnlyFlags tests short-only flag registration and parsing.
+func TestShortOnlyFlags(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantX   bool
+		wantY   string
+		wantErr bool
+	}{
+		{"single bool", []string{"-x"}, true, "", false},
+		{"single string", []string{"-y", "val"}, false, "val", false},
+		{"compacted", []string{"-xy", "val"}, true, "val", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			var x bool
+			var y string
+			fs.ShortVar(newBoolValue(false, &x), "x", "extract")
+			fs.ShortVar(newStringValue("", &y), "y", "output")
+
+			err := fs.Parse(tt.args)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if x != tt.wantX {
+				t.Errorf("x = %t, want %t", x, tt.wantX)
+			}
+			if y != tt.wantY {
+				t.Errorf("y = %q, want %q", y, tt.wantY)
+			}
+		})
+	}
+}
+
+// TestShortOnlyConflict tests that short-only flags conflict with existing shorthands.
+func TestShortOnlyConflict(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.BoolVarP(new(bool), "verbose", "v", false, "")
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for shorthand conflict")
+		}
+	}()
+	fs.ShortVar(newBoolValue(false, new(bool)), "v", "")
+}
+
+// TestShortOnlyNotAccessibleByLongName tests that short-only flags
+// are not accessible via --x long option syntax.
+func TestShortOnlyNotAccessibleByLongName(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.ShortVar(newBoolValue(false, new(bool)), "x", "extract")
+
+	// --x should fail — short-only flags have no long name
+	err := fs.Parse([]string{"--x"})
+	if err == nil {
+		t.Error("expected error for --x on short-only flag")
+	}
+}
+
+// TestManyToOneMapping tests the ls --format=across / -x pattern.
+func TestManyToOneMapping(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"long primary", []string{"--format", "across"}, "across"},
+		{"short alias x", []string{"-x"}, "across"},
+		{"short alias C", []string{"-C"}, "columns"},
+		{"last wins short after short", []string{"-x", "-C"}, "columns"},
+		{"last wins long after short", []string{"-x", "--format", "long"}, "long"},
+		{"last wins short after long", []string{"--format", "long", "-x"}, "across"},
+		{"last wins long after long", []string{"--format", "across", "--format", "long"}, "long"},
+		{"last wins multiple mixed", []string{"-C", "-x", "--format", "long", "-C"}, "columns"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			var format string
+			formatVal := newStringValue("", &format)
+			fs.Var(formatVal, "format", "output format")
+
+			// -x is an alias that sets format to "across"
+			xVal := &fixedValue{dest: &format, fixed: "across"}
+			fs.AliasShortVar(xVal, "x")
+
+			// -C is an alias that sets format to "columns"
+			cVal := &fixedValue{dest: &format, fixed: "columns"}
+			fs.AliasShortVar(cVal, "C")
+
+			if err := fs.Parse(tt.args); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if format != tt.want {
+				t.Errorf("format = %q, want %q", format, tt.want)
+			}
+		})
+	}
+}
+
+// fixedValue is a Value that always sets a fixed string to a destination.
+// Used for many-to-one alias patterns like -x → "across".
+type fixedValue struct {
+	dest  *string
+	fixed string
+}
+
+func (v *fixedValue) String() string     { return *v.dest }
+func (v *fixedValue) Set(string) error   { *v.dest = v.fixed; return nil }
+func (v *fixedValue) Type() string       { return "string" }
+func (v *fixedValue) IsBoolFlag() bool   { return true }
+
+// TestManyToOneHelpText tests that alias flags are hidden from help output.
+func TestManyToOneHelpText(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var format string
+	formatVal := newStringValue("", &format)
+	fs.Var(formatVal, "format", "output format")
+
+	xVal := &fixedValue{dest: &format, fixed: "across"}
+	fs.AliasShortVar(xVal, "x")
+
+	usages := fs.FlagUsages()
+	if !strings.Contains(usages, "--format") {
+		t.Errorf("primary flag missing from help:\n%s", usages)
+	}
+	// Alias should be hidden
+	if strings.Contains(usages, "-x") {
+		t.Errorf("alias -x should be hidden from help:\n%s", usages)
+	}
+}
