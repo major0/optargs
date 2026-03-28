@@ -1186,3 +1186,59 @@ func TestManyToOneHelpText(t *testing.T) {
 		t.Errorf("alias -x should be hidden from help:\n%s", usages)
 	}
 }
+
+// TestLongOnlyMode tests getopt_long_only(3) behavior where single-dash
+// arguments are tried as long options first.
+func TestLongOnlyMode(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantS   string
+		wantV   bool
+		wantErr bool
+	}{
+		{"single-dash long", []string{"-output", "file.txt"}, "file.txt", false, false},
+		{"double-dash long", []string{"--output", "file.txt"}, "file.txt", false, false},
+		{"single-dash bool", []string{"-verbose"}, "", true, false},
+		{"short fallback", []string{"-v"}, "", true, false},
+		{"mixed", []string{"-verbose", "-output", "out.txt"}, "out.txt", true, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			fs.SetLongOnly(true)
+			var s string
+			var v bool
+			fs.StringVar(&s, "output", "", "")
+			fs.BoolVarP(&v, "verbose", "v", false, "")
+
+			err := fs.Parse(tt.args)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if s != tt.wantS {
+				t.Errorf("output = %q, want %q", s, tt.wantS)
+			}
+			if v != tt.wantV {
+				t.Errorf("verbose = %t, want %t", v, tt.wantV)
+			}
+		})
+	}
+
+	// Verify getter
+	fs := NewFlagSet("test", ContinueOnError)
+	if fs.LongOnly() {
+		t.Error("LongOnly should default to false")
+	}
+	fs.SetLongOnly(true)
+	if !fs.LongOnly() {
+		t.Error("LongOnly should be true after SetLongOnly(true)")
+	}
+}

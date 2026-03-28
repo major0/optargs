@@ -57,6 +57,7 @@ type FlagSet struct {
 	errorHandling     ErrorHandling
 	output            io.Writer // nil means stderr; use out() accessor
 	interspersed      bool      // allow interspersed option/non-option args
+	longOnly          bool      // getopt_long_only(3) mode
 	normalizeNameFunc func(f *FlagSet, name string) NormalizedName
 
 	// Flag storage and management
@@ -98,6 +99,18 @@ func (f *FlagSet) out() io.Writer {
 // If output is nil, os.Stderr is used.
 func (f *FlagSet) SetOutput(output io.Writer) {
 	f.output = output
+}
+
+// SetLongOnly enables or disables getopt_long_only(3) behavior.
+// When enabled, single-dash arguments (e.g., -verbose) are first tried
+// as long options; on failure, the parser falls back to short option parsing.
+func (f *FlagSet) SetLongOnly(enabled bool) {
+	f.longOnly = enabled
+}
+
+// LongOnly returns whether getopt_long_only(3) mode is enabled.
+func (f *FlagSet) LongOnly() bool {
+	return f.longOnly
 }
 
 // Name returns the name of the flag set.

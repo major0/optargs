@@ -193,6 +193,8 @@ func (f *FlagSet) Parse(arguments []string) error {
 	longOpts := f.buildLongOpts()
 
 	config := optargs.ParserConfig{}
+	config.SetLongOnly(f.longOnly)
+
 	parser, err := optargs.NewParser(config, shortOpts, longOpts, arguments)
 	if err != nil {
 		return f.failf("%v", translateError(err))

@@ -24,7 +24,7 @@ const (
 
 // ParserConfig holds configuration for a Parser instance.
 // All fields are unexported; configuration is set via optstring prefix
-// flags and constructor parameters.
+// flags and constructor parameters, or via setter methods.
 type ParserConfig struct {
 	enableErrors bool
 	parseMode    ParseMode
@@ -43,6 +43,18 @@ type ParserConfig struct {
 	// unknown options in a subcommand are not resolved by walking the
 	// parent chain. Automatically enabled when POSIXLY_CORRECT is set.
 	strictSubcommands bool
+}
+
+// SetLongOnly enables or disables getopt_long_only(3) behavior.
+// When enabled, single-dash arguments (e.g., -verbose) are first tried
+// as long options; on failure, the parser falls back to short option parsing.
+func (c *ParserConfig) SetLongOnly(enabled bool) {
+	c.longOptsOnly = enabled
+}
+
+// LongOnly returns whether getopt_long_only(3) mode is enabled.
+func (c *ParserConfig) LongOnly() bool {
+	return c.longOptsOnly
 }
 
 // Parser is the core argument parser. It processes command-line arguments
