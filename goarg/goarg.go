@@ -229,7 +229,7 @@ func (p *Parser) WriteUsage(w io.Writer) {
 
 // Fail prints an error message and exits
 func (p *Parser) Fail(msg string) {
-	fmt.Fprintln(p.output(), msg)  //nolint:errcheck // output-and-exit
+	fmt.Fprintln(p.output(), msg) //nolint:errcheck // output-and-exit
 	p.WriteUsage(p.output())
 	p.config.Exit(1)
 }
