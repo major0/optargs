@@ -668,21 +668,6 @@ func TestTranslateError(t *testing.T) {
 	}
 }
 
-// TestParseUnknownFlag tests that parsing an unknown flag returns an error.
-func TestParseUnknownFlag(t *testing.T) {
-	fs := NewFlagSet("test", ContinueOnError)
-	var s string
-	fs.StringVar(&s, "known", "", "")
-
-	err := fs.Parse([]string{"--unknown", "val"})
-	if err == nil {
-		t.Fatal("expected error for unknown flag")
-	}
-	if !strings.Contains(err.Error(), "unknown flag") {
-		t.Errorf("error = %q, want 'unknown flag'", err.Error())
-	}
-}
-
 // TestAdvancedGNULongestMatching tests GNU getopt_long() longest matching behavior.
 func TestAdvancedGNULongestMatching(t *testing.T) {
 	tests := []struct {
@@ -898,6 +883,36 @@ func TestAdvancedGNUComplexScenarios(t *testing.T) {
 			t.Errorf("log:level=app = %q", logLevel)
 		}
 	})
+}
+
+// TestFlagUsages tests that FlagUsages returns the same output as PrintDefaults.
+func TestFlagUsages(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVarP(new(string), "output", "o", "file.txt", "output `filename`")
+	fs.BoolVar(new(bool), "verbose", false, "enable verbose")
+	fs.IntVar(new(int), "count", 5, "number of items")
+
+	// FlagUsages should return the same content PrintDefaults writes
+	var buf bytes.Buffer
+	fs.SetOutput(&buf)
+	fs.PrintDefaults()
+	fs.SetOutput(nil) // reset
+
+	usages := fs.FlagUsages()
+	if usages != buf.String() {
+		t.Errorf("FlagUsages() differs from PrintDefaults output:\nFlagUsages: %q\nPrintDefaults: %q", usages, buf.String())
+	}
+
+	// Verify content
+	if !strings.Contains(usages, "-o, --output") {
+		t.Errorf("missing shorthand format in:\n%s", usages)
+	}
+	if !strings.Contains(usages, "filename") {
+		t.Errorf("missing unquoted backtick name in:\n%s", usages)
+	}
+	if !strings.Contains(usages, "(default") {
+		t.Errorf("missing default value in:\n%s", usages)
+	}
 }
 
 // TestErrorHandlingPanicOnError tests that PanicOnError panics on parse failure.

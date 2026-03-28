@@ -313,6 +313,10 @@ func PrintDefaults() {
 	CommandLine.PrintDefaults()
 }
 
+func FlagUsages() string {
+	return CommandLine.FlagUsages()
+}
+
 func Usage() {
 	CommandLine.Usage()
 }

@@ -3,6 +3,7 @@
 package pflags
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -172,6 +173,18 @@ func (f *FlagSet) PrintDefaults() {
 		}
 		fmt.Fprint(w, "\n") //nolint:errcheck
 	})
+}
+
+// FlagUsages returns a string containing the usage information for all defined
+// flags in the set. This is the same output as PrintDefaults but returned as
+// a string instead of written to the output.
+func (f *FlagSet) FlagUsages() string {
+	var buf bytes.Buffer
+	old := f.output
+	f.output = &buf
+	f.PrintDefaults()
+	f.output = old
+	return buf.String()
 }
 
 // isZeroValue determines whether the string represents the zero
