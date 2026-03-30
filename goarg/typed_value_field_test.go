@@ -313,3 +313,122 @@ func TestEnvVarSliceCommaSeparated(t *testing.T) {
 		t.Errorf("Workers = %v, want [1 99]", dest.Workers)
 	}
 }
+
+func TestCompatEmbeddedStructFields(t *testing.T) {
+	type CommonOpts struct {
+		Verbose bool `arg:"-v,--verbose"`
+		Debug   bool `arg:"-d,--debug"`
+	}
+	type Args struct {
+		CommonOpts
+		Name string `arg:"--name"`
+	}
+
+	dest := &Args{}
+	if err := ParseArgs(dest, []string{"--verbose", "--name", "alice"}); err != nil {
+		t.Fatal(err)
+	}
+	if !dest.Verbose {
+		t.Error("Verbose = false, want true")
+	}
+	if dest.Name != "alice" {
+		t.Errorf("Name = %q, want %q", dest.Name, "alice")
+	}
+}
+
+func TestNestedEmbeddedStructFields(t *testing.T) {
+	type Level2 struct {
+		Deep string `arg:"--deep"`
+	}
+	type Level1 struct {
+		Level2
+		Mid string `arg:"--mid"`
+	}
+	type Args struct {
+		Level1
+		Top string `arg:"--top"`
+	}
+
+	dest := &Args{}
+	if err := ParseArgs(dest, []string{"--deep", "d", "--mid", "m", "--top", "t"}); err != nil {
+		t.Fatal(err)
+	}
+	if dest.Deep != "d" {
+		t.Errorf("Deep = %q, want %q", dest.Deep, "d")
+	}
+	if dest.Mid != "m" {
+		t.Errorf("Mid = %q, want %q", dest.Mid, "m")
+	}
+	if dest.Top != "t" {
+		t.Errorf("Top = %q, want %q", dest.Top, "t")
+	}
+}
+
+func TestSubcommandReturnValue(t *testing.T) {
+	type ServerCmd struct {
+		Port int `arg:"-p,--port" default:"8080"`
+	}
+	type Args struct {
+		Verbose bool       `arg:"-v,--verbose"`
+		Server  *ServerCmd `arg:"subcommand:server"`
+	}
+
+	dest := &Args{}
+	p, err := NewParser(Config{}, dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Parse([]string{"server", "--port", "9090"}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Subcommand() should return the active subcommand struct.
+	sub := p.Subcommand()
+	if sub == nil {
+		t.Fatal("Subcommand() returned nil")
+	}
+	sc, ok := sub.(*ServerCmd)
+	if !ok {
+		t.Fatalf("Subcommand() type = %T, want *ServerCmd", sub)
+	}
+	if sc.Port != 9090 {
+		t.Errorf("Port = %d, want 9090", sc.Port)
+	}
+
+	// SubcommandNames() should return the chain.
+	names := p.SubcommandNames()
+	if len(names) != 1 || names[0] != "server" {
+		t.Errorf("SubcommandNames() = %v, want [server]", names)
+	}
+
+	// Non-invoked subcommand should be nil.
+	if dest.Server == nil {
+		t.Error("dest.Server should not be nil after invocation")
+	}
+}
+
+func TestSubcommandNilWhenNotInvoked(t *testing.T) {
+	type ServerCmd struct {
+		Port int `arg:"-p,--port" default:"8080"`
+	}
+	type Args struct {
+		Verbose bool       `arg:"-v,--verbose"`
+		Server  *ServerCmd `arg:"subcommand:server"`
+	}
+
+	dest := &Args{}
+	p, err := NewParser(Config{}, dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Parse([]string{"--verbose"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if p.Subcommand() != nil {
+		t.Error("Subcommand() should be nil when no subcommand invoked")
+	}
+	if dest.Server != nil {
+		t.Error("Server should be nil when not invoked")
+	}
+}
