@@ -52,6 +52,24 @@ var (
 func typedValueForField(fieldValue reflect.Value, field *FieldMetadata) (optargs.TypedValue, error) {
 	ft := field.Type
 
+	// Pointer types: wrap in a ptrValue that allocates on first Set().
+	if ft.Kind() == reflect.Ptr {
+		return &ptrValue{fieldValue: fieldValue, elemType: ft.Elem(), field: field}, nil
+	}
+
+	// TextUnmarshaler takes priority over kind-based dispatch — user-defined
+	// types (e.g., net.IP which is []byte) must be handled here before the
+	// slice/scalar switch below.
+	ptrType := reflect.PointerTo(ft)
+	if ptrType.Implements(textUnmarshalerIface) {
+		dest := fieldValue.Addr().Interface().(encoding.TextUnmarshaler)
+		var val encoding.TextMarshaler
+		if m, ok := dest.(encoding.TextMarshaler); ok {
+			val = m
+		}
+		return optargs.NewTextValue(val, dest), nil
+	}
+
 	// time.Duration must be checked before int64 (same Kind).
 	if ft == durationType {
 		p := fieldValue.Addr().Interface().(*time.Duration)
@@ -108,18 +126,6 @@ func typedValueForField(fieldValue reflect.Value, field *FieldMetadata) (optargs
 
 	case reflect.Map:
 		return typedValueForMap(fieldValue, ft)
-	}
-
-	// Fallback: TextUnmarshaler.
-	ptrType := reflect.PointerTo(ft)
-	if ptrType.Implements(textUnmarshalerIface) {
-		dest := fieldValue.Addr().Interface().(encoding.TextUnmarshaler)
-		// If dest also implements TextMarshaler, pass it as val for String().
-		var val encoding.TextMarshaler
-		if m, ok := dest.(encoding.TextMarshaler); ok {
-			val = m
-		}
-		return optargs.NewTextValue(val, dest), nil
 	}
 
 	return nil, fmt.Errorf("unsupported type %s for field %s", ft, field.Name)
@@ -182,6 +188,51 @@ func typedValueForMap(fieldValue reflect.Value, ft reflect.Type) (optargs.TypedV
 	}
 
 	return nil, fmt.Errorf("unsupported map value type: %s", ft.Elem())
+}
+
+// ptrValue wraps a pointer field. Allocates the pointed-to value on first
+// Set() so that unset pointer fields remain nil.
+type ptrValue struct {
+	fieldValue reflect.Value
+	elemType   reflect.Type
+	field      *FieldMetadata
+	inner      optargs.TypedValue // created lazily on first Set()
+}
+
+func (v *ptrValue) Set(s string) error {
+	if v.inner == nil {
+		// Allocate the pointer and create the inner TypedValue.
+		v.fieldValue.Set(reflect.New(v.elemType))
+		elemField := &FieldMetadata{
+			Name:       v.field.Name,
+			FieldIndex: v.field.FieldIndex,
+			Type:       v.elemType,
+		}
+		var err error
+		v.inner, err = typedValueForField(v.fieldValue.Elem(), elemField)
+		if err != nil {
+			return err
+		}
+	}
+	return v.inner.Set(s)
+}
+
+func (v *ptrValue) String() string {
+	if v.fieldValue.IsNil() {
+		return ""
+	}
+	if v.inner != nil {
+		return v.inner.String()
+	}
+	return ""
+}
+
+func (v *ptrValue) Type() string {
+	return v.elemType.String()
+}
+
+func (v *ptrValue) IsBoolFlag() bool {
+	return v.elemType.Kind() == reflect.Bool
 }
 
 // processPositionalArgs processes positional arguments from remaining args
@@ -248,7 +299,12 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 			continue
 		}
 
-		envValue, exists := os.LookupEnv(field.Env)
+		envName := field.Env
+		if ci.config.EnvPrefix != "" {
+			envName = ci.config.EnvPrefix + envName
+		}
+
+		envValue, exists := os.LookupEnv(envName)
 		if !exists {
 			continue
 		}

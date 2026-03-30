@@ -274,6 +274,15 @@ func (tp *TagParser) parseArgTag(metadata *FieldMetadata, argTag string) error {
 			metadata.SubcommandName = strings.TrimPrefix(part, "subcommand:")
 		case strings.HasPrefix(part, "env:"):
 			metadata.Env = strings.TrimPrefix(part, "env:")
+		case part == "env":
+			// Bare "env" — auto-derive env var name from field name in SCREAMING_SNAKE_CASE.
+			metadata.Env = toScreamingSnake(metadata.Name)
+		case part == "separate":
+			// "separate" changes slice behavior from greedy multi-value to
+			// one-value-per-flag. Our POSIX-based parser already uses this
+			// semantics by default, so this is a no-op — accepted for
+			// upstream compatibility.
+			continue
 		case strings.HasPrefix(part, "--"):
 			// Long option
 			metadata.Long = strings.TrimPrefix(part, "--")
@@ -383,4 +392,28 @@ func (tp *TagParser) ValidateFieldMetadata(metadata *FieldMetadata) error {
 	}
 
 	return nil
+}
+
+// toScreamingSnake converts a CamelCase or mixedCase name to SCREAMING_SNAKE_CASE.
+// Examples: "Workers" → "WORKERS", "NumWorkers" → "NUM_WORKERS", "APIToken" → "API_TOKEN".
+func toScreamingSnake(name string) string {
+	var result []byte
+	for i, r := range name {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			// Insert underscore before uppercase if previous char was lowercase
+			// or if next char is lowercase (handles "APIToken" → "API_TOKEN").
+			prev := name[i-1]
+			if prev >= 'a' && prev <= 'z' {
+				result = append(result, '_')
+			} else if i+1 < len(name) && name[i+1] >= 'a' && name[i+1] <= 'z' {
+				result = append(result, '_')
+			}
+		}
+		if r >= 'a' && r <= 'z' {
+			result = append(result, byte(r-32)) // to uppercase
+		} else {
+			result = append(result, byte(r))
+		}
+	}
+	return string(result)
 }
