@@ -184,53 +184,6 @@ func typedValueForMap(fieldValue reflect.Value, ft reflect.Type) (optargs.TypedV
 	return nil, fmt.Errorf("unsupported map value type: %s", ft.Elem())
 }
 
-// setFieldValue sets a field value based on the parsed argument using
-// optargs.Convert for all type conversion.
-func (ci *CoreIntegration) setFieldValue(fieldValue reflect.Value, field *FieldMetadata, arg string) error {
-	// Handle boolean flags specially - they are set to true when present without argument
-	if field.Type.Kind() == reflect.Bool && arg == "" {
-		fieldValue.SetBool(true)
-		return nil
-	}
-
-	// Handle slice types - append to existing values
-	if field.Type.Kind() == reflect.Slice {
-		elemType := field.Type.Elem()
-		converted, err := optargs.Convert(arg, elemType)
-		if err != nil {
-			return fmt.Errorf("failed to convert slice element: %w", err)
-		}
-		fieldValue.Set(reflect.Append(fieldValue, reflect.ValueOf(converted)))
-		return nil
-	}
-
-	// Handle map types - parse key=value pairs
-	if field.Type.Kind() == reflect.Map {
-		return setMapValue(fieldValue, field.Type, arg)
-	}
-
-	// For all other types, delegate to core
-	converted, err := optargs.Convert(arg, field.Type)
-	if err != nil {
-		return fmt.Errorf("failed to convert value '%s' for field %s: %w", arg, field.Name, err)
-	}
-
-	fieldValue.Set(reflect.ValueOf(converted))
-	return nil
-}
-
-// setScalarValue converts a string to the target type using optargs.Convert
-// and sets the field value.
-func (ci *CoreIntegration) setScalarValue(fieldValue reflect.Value, fieldType reflect.Type, arg string) error {
-	converted, err := optargs.Convert(arg, fieldType)
-	if err != nil {
-		return fmt.Errorf("failed to convert scalar value: %w", err)
-	}
-
-	fieldValue.Set(reflect.ValueOf(converted))
-	return nil
-}
-
 // processPositionalArgs processes positional arguments from remaining args
 func (ci *CoreIntegration) processPositionalArgs(parser *optargs.Parser, destValue reflect.Value) error {
 	remainingArgs := parser.Args
@@ -355,35 +308,6 @@ func fieldByMeta(destValue reflect.Value, field *FieldMetadata) reflect.Value {
 		return destValue.Field(field.FieldIndex)
 	}
 	return destValue.FieldByName(field.Name)
-}
-
-// setMapValue parses a "key=value" string and inserts it into a map field.
-// Initializes the map if nil.
-func setMapValue(fieldValue reflect.Value, mapType reflect.Type, arg string) error {
-	idx := strings.Index(arg, "=")
-	if idx < 0 {
-		return fmt.Errorf("map value must be in key=value format, got %q", arg)
-	}
-	keyStr := arg[:idx]
-	valStr := arg[idx+1:]
-
-	keyType := mapType.Key()
-	valType := mapType.Elem()
-
-	key, err := optargs.Convert(keyStr, keyType)
-	if err != nil {
-		return fmt.Errorf("failed to convert map key: %w", err)
-	}
-	val, err := optargs.Convert(valStr, valType)
-	if err != nil {
-		return fmt.Errorf("failed to convert map value: %w", err)
-	}
-
-	if fieldValue.IsNil() {
-		fieldValue.Set(reflect.MakeMap(mapType))
-	}
-	fieldValue.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(val))
-	return nil
 }
 
 // formatDefault returns the display string for a field's default value.
