@@ -313,8 +313,8 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 }
 
 // setDefaultValues sets default values for unset fields using optargs.Convert
-// and optargs.ConvertSlice for type conversion. Uses pre-parsed HasDefault
-// and DefaultTag from struct metadata to avoid re-parsing tags at runtime.
+// setDefaultValues sets default values for unset fields via TypedValue.Set().
+// Uses pre-parsed HasDefault and DefaultTag from struct metadata.
 func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 	for _, field := range ci.metadata.Fields {
 		if !field.HasDefault {
@@ -326,23 +326,16 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 			continue
 		}
 
-		// Only set default if field is not already set
 		if ci.isFieldSet(fieldValue) {
 			continue
 		}
 
-		if field.Type.Kind() == reflect.Slice {
-			converted, err := optargs.ConvertSlice(field.DefaultTag, field.Type)
-			if err != nil {
-				return fmt.Errorf("failed to set default value for field %s: %w", field.Name, err)
-			}
-			fieldValue.Set(reflect.ValueOf(converted))
-		} else {
-			converted, err := optargs.Convert(field.DefaultTag, field.Type)
-			if err != nil {
-				return fmt.Errorf("failed to set default value for field %s: %w", field.Name, err)
-			}
-			fieldValue.Set(reflect.ValueOf(converted))
+		tv, err := typedValueForField(fieldValue, &field)
+		if err != nil {
+			return fmt.Errorf("default for field %s: %w", field.Name, err)
+		}
+		if err := tv.Set(field.DefaultTag); err != nil {
+			return fmt.Errorf("failed to set default value for field %s: %w", field.Name, err)
 		}
 	}
 
