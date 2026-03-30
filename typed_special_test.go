@@ -29,6 +29,9 @@ func TestStringArrayValue(t *testing.T) {
 	if v.Type() != "stringArray" {
 		t.Errorf("Type() = %q, want %q", v.Type(), "stringArray")
 	}
+	if got := v.String(); got != "[a,b,c,d]" {
+		t.Errorf("String() = %q, want %q", got, "[a,b,c,d]")
+	}
 }
 
 func TestCountValue(t *testing.T) {

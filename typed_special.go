@@ -99,28 +99,24 @@ func (v *textValue) Type() string { return "textUnmarshaler" }
 
 // --- FuncValue: wraps a callback function ---
 
-type funcValue struct{ fn func(string) error }
+type funcValue struct {
+	fn       func(string) error
+	boolFlag bool
+	typeName string
+}
 
 // NewFuncValue returns a TypedValue that calls fn on each Set().
 func NewFuncValue(fn func(string) error) TypedValue {
-	return &funcValue{fn: fn}
+	return &funcValue{fn: fn, typeName: "func"}
 }
-
-func (v *funcValue) Set(s string) error { return v.fn(s) }
-func (v *funcValue) String() string     { return "" }
-func (v *funcValue) Type() string       { return "func" }
-
-// --- BoolFuncValue: wraps a boolean callback, implements BoolValuer ---
-
-type boolFuncValue struct{ fn func(string) error }
 
 // NewBoolFuncValue returns a TypedValue that calls fn on each Set()
 // and implements BoolValuer so it works as a no-argument flag.
 func NewBoolFuncValue(fn func(string) error) TypedValue {
-	return &boolFuncValue{fn: fn}
+	return &funcValue{fn: fn, boolFlag: true, typeName: "boolFunc"}
 }
 
-func (v *boolFuncValue) Set(s string) error { return v.fn(s) }
-func (v *boolFuncValue) String() string     { return "" }
-func (v *boolFuncValue) Type() string       { return "boolFunc" }
-func (v *boolFuncValue) IsBoolFlag() bool    { return true }
+func (v *funcValue) Set(s string) error { return v.fn(s) }
+func (v *funcValue) String() string     { return "" }
+func (v *funcValue) Type() string       { return v.typeName }
+func (v *funcValue) IsBoolFlag() bool   { return v.boolFlag }

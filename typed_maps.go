@@ -68,7 +68,7 @@ func NewStringToStringValue(val map[string]string, p *map[string]string) TypedVa
 		p = new(map[string]string)
 	}
 	*p = val
-	return &mapValue{p: p, valType: reflect.TypeOf(""), typeName: "stringToString"}
+	return &mapValue{p: p, valType: stringType, typeName: "stringToString"}
 }
 
 func NewStringToIntValue(val map[string]int, p *map[string]int) TypedValue {
@@ -76,7 +76,7 @@ func NewStringToIntValue(val map[string]int, p *map[string]int) TypedValue {
 		p = new(map[string]int)
 	}
 	*p = val
-	return &mapValue{p: p, valType: reflect.TypeOf(int(0)), typeName: "stringToInt"}
+	return &mapValue{p: p, valType: intType, typeName: "stringToInt"}
 }
 
 func NewStringToInt64Value(val map[string]int64, p *map[string]int64) TypedValue {
@@ -84,5 +84,5 @@ func NewStringToInt64Value(val map[string]int64, p *map[string]int64) TypedValue
 		p = new(map[string]int64)
 	}
 	*p = val
-	return &mapValue{p: p, valType: reflect.TypeOf(int64(0)), typeName: "stringToInt64"}
+	return &mapValue{p: p, valType: int64Type, typeName: "stringToInt64"}
 }

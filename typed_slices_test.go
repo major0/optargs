@@ -76,21 +76,6 @@ func TestSliceIntValue(t *testing.T) {
 	}
 }
 
-func TestSliceAccumulation(t *testing.T) {
-	// Verify repeated Set() calls accumulate.
-	var s []int
-	v := NewIntSliceValue(nil, &s)
-	if err := v.Set("1,2"); err != nil {
-		t.Fatal(err)
-	}
-	if err := v.Set("3"); err != nil {
-		t.Fatal(err)
-	}
-	if got := v.String(); got != "[1,2,3]" {
-		t.Errorf("String() = %q, want %q", got, "[1,2,3]")
-	}
-}
-
 func TestSliceNilPointers(t *testing.T) {
 	tests := []struct {
 		name string

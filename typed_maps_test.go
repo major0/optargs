@@ -126,3 +126,21 @@ func TestMapFirstEqualsSplit(t *testing.T) {
 		t.Errorf("expected value with '=', got %q", m["url"])
 	}
 }
+
+func TestMapStringAndType(t *testing.T) {
+	var m map[string]string
+	v := NewStringToStringValue(nil, &m)
+	// Empty map.
+	if got := v.String(); got != "map[]" {
+		t.Errorf("empty String() = %q, want %q", got, "map[]")
+	}
+	if got := v.Type(); got != "stringToString" {
+		t.Errorf("Type() = %q, want %q", got, "stringToString")
+	}
+	// After Set.
+	_ = v.Set("k=v")
+	got := v.String()
+	if got != "map[k=v]" {
+		t.Errorf("String() = %q, want %q", got, "map[k=v]")
+	}
+}

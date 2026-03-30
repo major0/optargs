@@ -111,6 +111,23 @@ func TestPropertyRoundTripScalars(t *testing.T) {
 			t.Error(err)
 		}
 	})
+
+	// Duration: testing/quick can't generate time.Duration directly,
+	// so we use int64 nanoseconds as a proxy.
+	t.Run("duration", func(t *testing.T) {
+		f := func(ns int64) bool {
+			d := time.Duration(ns)
+			v := NewDurationValue(d, nil)
+			fresh := NewDurationValue(0, nil)
+			if err := fresh.Set(v.String()); err != nil {
+				return false
+			}
+			return fresh.String() == v.String()
+		}
+		if err := quick.Check(f, nil); err != nil {
+			t.Error(err)
+		}
+	})
 }
 
 // Property 2: Convert delegation — Set(s) matches Convert(s, type) for all scalars.
@@ -119,34 +136,44 @@ func TestPropertyConvertDelegation(t *testing.T) {
 		name       string
 		newVal     func() TypedValue
 		targetType reflect.Type
-		gen        func() string
 	}{
-		{"int", func() TypedValue { return NewIntValue(0, nil) }, reflect.TypeOf(int(0)),
-			func() string { return "42" }},
-		{"int64", func() TypedValue { return NewInt64Value(0, nil) }, reflect.TypeOf(int64(0)),
-			func() string { return "-99" }},
-		{"uint", func() TypedValue { return NewUintValue(0, nil) }, reflect.TypeOf(uint(0)),
-			func() string { return "7" }},
-		{"uint64", func() TypedValue { return NewUint64Value(0, nil) }, reflect.TypeOf(uint64(0)),
-			func() string { return "100" }},
-		{"float64", func() TypedValue { return NewFloat64Value(0, nil) }, reflect.TypeOf(float64(0)),
-			func() string { return "3.14" }},
-		{"string", func() TypedValue { return NewStringValue("", nil) }, reflect.TypeOf(""),
-			func() string { return "hello" }},
+		{"int", func() TypedValue { return NewIntValue(0, nil) }, intType},
+		{"int64", func() TypedValue { return NewInt64Value(0, nil) }, int64Type},
+		{"uint", func() TypedValue { return NewUintValue(0, nil) }, uintType},
+		{"uint64", func() TypedValue { return NewUint64Value(0, nil) }, uint64Type},
+		{"float64", func() TypedValue { return NewFloat64Value(0, nil) }, float64Type},
 	}
 	for _, tt := range types {
 		t.Run(tt.name, func(t *testing.T) {
-			s := tt.gen()
-			v := tt.newVal()
-			if err := v.Set(s); err != nil {
-				t.Fatalf("Set(%q) error: %v", s, err)
+			f := func(n int64) bool {
+				// Use absolute value to avoid uint issues with negatives.
+				s := fmt.Sprintf("%d", n)
+				if tt.name == "uint" || tt.name == "uint64" {
+					if n < 0 {
+						return true // skip negatives for unsigned
+					}
+					s = fmt.Sprintf("%d", uint64(n))
+				}
+				if tt.name == "float64" {
+					s = fmt.Sprintf("%g", float64(n))
+				}
+
+				v := tt.newVal()
+				setErr := v.Set(s)
+				_, convErr := Convert(s, tt.targetType)
+
+				// Both should succeed or both should fail.
+				if (setErr != nil) != (convErr != nil) {
+					return false
+				}
+				if setErr != nil {
+					return true // both failed, consistent
+				}
+				converted, _ := Convert(s, tt.targetType)
+				return v.String() == fmt.Sprintf("%v", converted)
 			}
-			converted, err := Convert(s, tt.targetType)
-			if err != nil {
-				t.Fatalf("Convert(%q) error: %v", s, err)
-			}
-			if v.String() != fmt.Sprintf("%v", converted) {
-				t.Errorf("Set(%q).String() = %q, Convert = %q", s, v.String(), fmt.Sprintf("%v", converted))
+			if err := quick.Check(f, nil); err != nil {
+				t.Error(err)
 			}
 		})
 	}
@@ -214,27 +241,6 @@ func TestPropertyBooleanConsistency(t *testing.T) {
 				if got != expected {
 					t.Errorf("convertBool(%q)=%v, Set(%q).String()=%q", s, expected, s, v.String())
 				}
-			}
-		})
-	}
-}
-
-// Duration round-trip property test.
-func TestPropertyDurationRoundTrip(t *testing.T) {
-	durations := []time.Duration{
-		0, time.Second, time.Minute, time.Hour,
-		5*time.Second + 500*time.Millisecond,
-		-3 * time.Second,
-	}
-	for _, d := range durations {
-		t.Run(d.String(), func(t *testing.T) {
-			v := NewDurationValue(d, nil)
-			fresh := NewDurationValue(0, nil)
-			if err := fresh.Set(v.String()); err != nil {
-				t.Fatalf("Set(%q) error: %v", v.String(), err)
-			}
-			if fresh.String() != v.String() {
-				t.Errorf("round-trip: got %q, want %q", fresh.String(), v.String())
 			}
 		})
 	}

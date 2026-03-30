@@ -55,7 +55,7 @@ func NewStringSliceValue(val []string, p *[]string) TypedValue {
 		p = new([]string)
 	}
 	*p = val
-	return &sliceValue{p: p, elemType: reflect.TypeOf(""), typeName: "stringSlice"}
+	return &sliceValue{p: p, elemType: stringType, typeName: "stringSlice"}
 }
 
 func NewBoolSliceValue(val []bool, p *[]bool) TypedValue {
@@ -63,7 +63,7 @@ func NewBoolSliceValue(val []bool, p *[]bool) TypedValue {
 		p = new([]bool)
 	}
 	*p = val
-	return &sliceValue{p: p, elemType: reflect.TypeOf(false), typeName: "boolSlice"}
+	return &sliceValue{p: p, elemType: boolType, typeName: "boolSlice"}
 }
 
 func NewIntSliceValue(val []int, p *[]int) TypedValue {
@@ -71,7 +71,7 @@ func NewIntSliceValue(val []int, p *[]int) TypedValue {
 		p = new([]int)
 	}
 	*p = val
-	return &sliceValue{p: p, elemType: reflect.TypeOf(int(0)), typeName: "intSlice"}
+	return &sliceValue{p: p, elemType: intType, typeName: "intSlice"}
 }
 
 func NewInt32SliceValue(val []int32, p *[]int32) TypedValue {
@@ -79,7 +79,7 @@ func NewInt32SliceValue(val []int32, p *[]int32) TypedValue {
 		p = new([]int32)
 	}
 	*p = val
-	return &sliceValue{p: p, elemType: reflect.TypeOf(int32(0)), typeName: "int32Slice"}
+	return &sliceValue{p: p, elemType: int32Type, typeName: "int32Slice"}
 }
 
 func NewInt64SliceValue(val []int64, p *[]int64) TypedValue {
@@ -87,7 +87,7 @@ func NewInt64SliceValue(val []int64, p *[]int64) TypedValue {
 		p = new([]int64)
 	}
 	*p = val
-	return &sliceValue{p: p, elemType: reflect.TypeOf(int64(0)), typeName: "int64Slice"}
+	return &sliceValue{p: p, elemType: int64Type, typeName: "int64Slice"}
 }
 
 func NewUintSliceValue(val []uint, p *[]uint) TypedValue {
@@ -95,7 +95,7 @@ func NewUintSliceValue(val []uint, p *[]uint) TypedValue {
 		p = new([]uint)
 	}
 	*p = val
-	return &sliceValue{p: p, elemType: reflect.TypeOf(uint(0)), typeName: "uintSlice"}
+	return &sliceValue{p: p, elemType: uintType, typeName: "uintSlice"}
 }
 
 func NewFloat32SliceValue(val []float32, p *[]float32) TypedValue {
@@ -103,7 +103,7 @@ func NewFloat32SliceValue(val []float32, p *[]float32) TypedValue {
 		p = new([]float32)
 	}
 	*p = val
-	return &sliceValue{p: p, elemType: reflect.TypeOf(float32(0)), typeName: "float32Slice"}
+	return &sliceValue{p: p, elemType: float32Type, typeName: "float32Slice"}
 }
 
 func NewFloat64SliceValue(val []float64, p *[]float64) TypedValue {
@@ -111,7 +111,7 @@ func NewFloat64SliceValue(val []float64, p *[]float64) TypedValue {
 		p = new([]float64)
 	}
 	*p = val
-	return &sliceValue{p: p, elemType: reflect.TypeOf(float64(0)), typeName: "float64Slice"}
+	return &sliceValue{p: p, elemType: float64Type, typeName: "float64Slice"}
 }
 
 // durationSliceValue is a dedicated type because time.Duration is int64

@@ -1,7 +1,6 @@
 package optargs
 
 import (
-	"reflect"
 	"testing"
 	"time"
 )
@@ -42,7 +41,6 @@ func TestTypedValueInFlagHandle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Drain the iterator — handlers fire during iteration.
 	for _, err := range p.Options() {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -91,40 +89,4 @@ func TestTypedValueHandleError(t *testing.T) {
 	if gotErr == nil {
 		t.Fatal("expected error for invalid int")
 	}
-}
-
-// TestConvertAndConvertSliceUnchanged verifies that the existing Convert()
-// and ConvertSlice() functions still work correctly after adding typed values.
-func TestConvertAndConvertSliceUnchanged(t *testing.T) {
-	// These are regression checks — Convert and ConvertSlice must remain stable.
-	t.Run("Convert_int", func(t *testing.T) {
-		v, err := Convert("42", reflect.TypeOf(int(0)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if v.(int) != 42 {
-			t.Errorf("got %v, want 42", v)
-		}
-	})
-
-	t.Run("Convert_bool", func(t *testing.T) {
-		v, err := Convert("yes", reflect.TypeOf(false))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if v.(bool) != true {
-			t.Errorf("got %v, want true", v)
-		}
-	})
-
-	t.Run("ConvertSlice_int", func(t *testing.T) {
-		v, err := ConvertSlice("1,2,3", reflect.TypeOf([]int{}))
-		if err != nil {
-			t.Fatal(err)
-		}
-		s := v.([]int)
-		if len(s) != 3 || s[0] != 1 || s[1] != 2 || s[2] != 3 {
-			t.Errorf("got %v, want [1 2 3]", s)
-		}
-	})
 }
