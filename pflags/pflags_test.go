@@ -2,6 +2,7 @@ package pflags
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -635,17 +636,17 @@ func TestIsZeroValue(t *testing.T) {
 // TestTranslateError tests error translation from OptArgs Core to pflag format.
 func TestTranslateError(t *testing.T) {
 	tests := []struct {
-		name    string
-		input   string
-		want    string
+		name  string
+		input string
+		want  string
 	}{
 		{"nil", "", ""},
 		{"unknown long", "unknown option: verbose", "unknown flag: --verbose"},
-		{"unknown short", "unknown option: v", "unknown shorthand flag: 'v'"},
-		{"unknown bare", "unknown option", "unknown flag: unknown option"},
+		{"unknown short", "unknown option: v", "unknown shorthand flag: 'v' in -v"},
+		{"unknown bare", "unknown option", "unknown flag: --"},
 		{"requires arg long", "option requires an argument: output", "flag needs an argument: --output"},
-		{"requires arg short", "option requires an argument: o", "flag needs an argument: -o"},
-		{"requires arg bare", "option requires an argument", "flag needs an argument: option requires an argument"},
+		{"requires arg short", "option requires an argument: o", "flag needs an argument: 'o' in -o"},
+		{"requires arg bare", "option requires an argument", "flag needs an argument: --"},
 		{"passthrough", "some other error", "some other error"},
 	}
 
@@ -1794,5 +1795,51 @@ func TestFlagUsagesWrapped(t *testing.T) {
 	// Should have more lines than unwrapped
 	if strings.Count(wrapped, "\n") <= strings.Count(noWrap, "\n") {
 		t.Errorf("wrapped should have more lines than unwrapped:\nwrapped:\n%s\nunwrapped:\n%s", wrapped, noWrap)
+	}
+}
+
+// TestStructuredErrors tests that parse errors return typed error structs.
+func TestStructuredErrors(t *testing.T) {
+	t.Run("NotExistError", func(t *testing.T) {
+		fs := NewFlagSet("test", ContinueOnError)
+		fs.StringVar(new(string), "known", "", "")
+		err := fs.Parse([]string{"--unknown"})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		var notExist *NotExistError
+		if !errors.As(err, &notExist) {
+			t.Fatalf("expected *NotExistError, got %T: %v", err, err)
+		}
+		if notExist.GetSpecifiedName() != "unknown" {
+			t.Errorf("GetSpecifiedName() = %q", notExist.GetSpecifiedName())
+		}
+	})
+
+	t.Run("ValueRequiredError", func(t *testing.T) {
+		fs := NewFlagSet("test", ContinueOnError)
+		fs.StringVarP(new(string), "output", "o", "", "")
+		// Trigger missing argument by passing -o with no following arg
+		err := fs.Parse([]string{"-o"})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		var valReq *ValueRequiredError
+		if !errors.As(err, &valReq) {
+			t.Fatalf("expected *ValueRequiredError, got %T: %v", err, err)
+		}
+	})
+}
+
+// TestParseErrorsAllowlist tests that unknown flags can be ignored.
+func TestParseErrorsAllowlist(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.ParseErrorsAllowlist = ParseErrorsAllowlist{UnknownFlags: true}
+	fs.StringVar(new(string), "known", "", "")
+
+	// Unknown flags should be silently ignored
+	err := fs.Parse([]string{"--known", "val", "--unknown", "pos"})
+	if err != nil {
+		t.Fatalf("expected no error with UnknownFlags allowlist, got: %v", err)
 	}
 }

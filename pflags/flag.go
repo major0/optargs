@@ -74,6 +74,9 @@ type FlagSet struct {
 
 	// parseAllFn is set by ParseAll to receive callbacks for each parsed flag.
 	parseAllFn func(flag *Flag, value string) error
+
+	// ParseErrorsAllowlist defines parsing errors that can be ignored.
+	ParseErrorsAllowlist ParseErrorsAllowlist
 }
 
 // NormalizedName is a flag name that has been normalized according to rules

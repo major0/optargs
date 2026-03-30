@@ -178,7 +178,7 @@ func mapArgumentType(valueType string) optargs.ArgType {
 	}
 }
 
-// translateError converts OptArgs Core errors to pflag-compatible error messages.
+// translateError converts OptArgs Core errors to pflag-compatible structured errors.
 func translateError(err error) error {
 	if err == nil {
 		return nil
@@ -188,24 +188,24 @@ func translateError(err error) error {
 
 	switch {
 	case strings.Contains(errMsg, "unknown option"):
+		name := ""
 		if idx := strings.Index(errMsg, ": "); idx >= 0 {
-			optionName := errMsg[idx+2:]
-			if len(optionName) == 1 {
-				return fmt.Errorf("unknown shorthand flag: '%s'", optionName)
-			}
-			return fmt.Errorf("unknown flag: --%s", optionName)
+			name = errMsg[idx+2:]
 		}
-		return fmt.Errorf("unknown flag: %s", errMsg)
+		if len(name) == 1 {
+			return &NotExistError{specifiedName: name, specifiedShortnames: name}
+		}
+		return &NotExistError{specifiedName: name}
 
 	case strings.Contains(errMsg, "option requires an argument"):
+		name := ""
 		if idx := strings.Index(errMsg, ": "); idx >= 0 {
-			optionName := errMsg[idx+2:]
-			if len(optionName) == 1 {
-				return fmt.Errorf("flag needs an argument: -%s", optionName)
-			}
-			return fmt.Errorf("flag needs an argument: --%s", optionName)
+			name = errMsg[idx+2:]
 		}
-		return fmt.Errorf("flag needs an argument: %s", errMsg)
+		if len(name) == 1 {
+			return &ValueRequiredError{specifiedName: name, specifiedShortnames: name}
+		}
+		return &ValueRequiredError{specifiedName: name}
 
 	default:
 		return err
@@ -245,13 +245,20 @@ func (f *FlagSet) Parse(arguments []string) error {
 
 	parser, err := optargs.NewParser(config, shortOpts, longOpts, arguments)
 	if err != nil {
-		return f.failf("%v", translateError(err))
+		return f.failf(translateError(err))
 	}
 
 	// Consume the iterator — handlers do the work, we only propagate errors.
 	for _, err := range parser.Options() {
 		if err != nil {
-			return f.failf("%v", translateError(err))
+			translated := translateError(err)
+			// Skip unknown flag errors if allowlisted
+			if f.ParseErrorsAllowlist.UnknownFlags {
+				if _, ok := translated.(*NotExistError); ok {
+					continue
+				}
+			}
+			return f.failf(translated)
 		}
 	}
 
@@ -282,8 +289,7 @@ func (f *FlagSet) ParseAll(arguments []string, fn func(flag *Flag, value string)
 // failf handles a parse error according to the FlagSet's ErrorHandling mode.
 // For ContinueOnError it returns the error. For ExitOnError and PanicOnError
 // it prints the error and usage before exiting or panicking.
-func (f *FlagSet) failf(format string, a ...interface{}) error {
-	err := fmt.Errorf(format, a...)
+func (f *FlagSet) failf(err error) error {
 	switch f.errorHandling {
 	case ContinueOnError:
 		return err
