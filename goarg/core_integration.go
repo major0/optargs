@@ -233,7 +233,6 @@ func (ci *CoreIntegration) setScalarValue(fieldValue reflect.Value, fieldType re
 
 // processPositionalArgs processes positional arguments from remaining args
 func (ci *CoreIntegration) processPositionalArgs(parser *optargs.Parser, destValue reflect.Value) error {
-	// Get remaining arguments after option parsing
 	remainingArgs := parser.Args
 	argIndex := 0
 
@@ -245,23 +244,24 @@ func (ci *CoreIntegration) processPositionalArgs(parser *optargs.Parser, destVal
 			return fmt.Errorf("cannot set positional field %s", field.Name)
 		}
 
-		if positional.Multiple {
-			// For slice types, consume all remaining arguments
-			elemType := field.Type.Elem()
-			slice := reflect.MakeSlice(field.Type, 0, len(remainingArgs)-argIndex)
+		tv, err := typedValueForField(fieldValue, field)
+		if err != nil {
+			return fmt.Errorf("positional field %s: %w", field.Name, err)
+		}
 
+		if positional.Multiple {
+			// Initialize to empty slice (not nil) for consistency with
+			// the old reflect.MakeSlice behavior.
+			if fieldValue.IsNil() {
+				fieldValue.Set(reflect.MakeSlice(field.Type, 0, 0))
+			}
 			for argIndex < len(remainingArgs) {
-				converted, err := optargs.Convert(remainingArgs[argIndex], elemType)
-				if err != nil {
+				if err := tv.Set(remainingArgs[argIndex]); err != nil {
 					return fmt.Errorf("failed to set positional argument %d: %w", argIndex, err)
 				}
-				slice = reflect.Append(slice, reflect.ValueOf(converted))
 				argIndex++
 			}
-
-			fieldValue.Set(slice)
 		} else {
-			// For single values, consume one argument
 			if argIndex >= len(remainingArgs) {
 				if positional.Required {
 					return fmt.Errorf("missing required positional argument: %s", field.Name)
@@ -269,10 +269,9 @@ func (ci *CoreIntegration) processPositionalArgs(parser *optargs.Parser, destVal
 				continue
 			}
 
-			if err := ci.setScalarValue(fieldValue, field.Type, remainingArgs[argIndex]); err != nil {
+			if err := tv.Set(remainingArgs[argIndex]); err != nil {
 				return fmt.Errorf("failed to set positional argument %s: %w", field.Name, err)
 			}
-
 			argIndex++
 		}
 	}
