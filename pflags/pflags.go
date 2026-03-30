@@ -28,7 +28,7 @@ func shortOptArgType(v Value) optargs.ArgType {
 	if isBoolFlag(v) {
 		return optargs.NoArgument
 	}
-	return mapArgumentType(v.Type())
+	return optargs.RequiredArgument
 }
 
 // buildShortOpts constructs the short option map for optargs.NewParser
@@ -98,7 +98,10 @@ func (f *FlagSet) buildLongOpts() map[string]*optargs.Flag {
 	longOpts := make(map[string]*optargs.Flag)
 	for normalizedName, flag := range f.flags {
 		handler := f.makeHandler(flag)
-		hasArg := mapArgumentType(flag.Value.Type())
+		hasArg := optargs.RequiredArgument
+		if isBoolFlag(flag.Value) {
+			hasArg = optargs.OptionalArgument
+		}
 
 		coreFlag := &optargs.Flag{
 			Name:   normalizedName,
@@ -165,16 +168,6 @@ func (f *FlagSet) makeNegationHandler(flag *Flag) func(string, string) error {
 		}
 		flag.Changed = true
 		return nil
-	}
-}
-
-// mapArgumentType converts pflags value types to OptArgs Core argument types.
-func mapArgumentType(valueType string) optargs.ArgType {
-	switch valueType {
-	case "bool":
-		return optargs.OptionalArgument
-	default:
-		return optargs.RequiredArgument
 	}
 }
 

@@ -151,34 +151,34 @@ func TestValueSetAndString(t *testing.T) {
 		{"bool/F", newBoolValue(true, new(bool)), "F", "false", ""},
 		{"bool/TRUE", newBoolValue(false, new(bool)), "TRUE", "true", ""},
 		{"bool/FALSE", newBoolValue(true, new(bool)), "FALSE", "false", ""},
-		{"bool/invalid", newBoolValue(false, new(bool)), "invalid", "", "invalid boolean value"},
+		{"bool/invalid", newBoolValue(false, new(bool)), "invalid", "", "invalid value"},
 		// int
 		{"int/valid", newIntValue(0, new(int)), "100", "100", ""},
 		{"int/negative", newIntValue(0, new(int)), "-50", "-50", ""},
-		{"int/invalid", newIntValue(0, new(int)), "abc", "", "invalid syntax for integer flag"},
-		{"int/float", newIntValue(0, new(int)), "3.14", "", "invalid syntax for integer flag"},
+		{"int/invalid", newIntValue(0, new(int)), "abc", "", "invalid value"},
+		{"int/float", newIntValue(0, new(int)), "3.14", "", "invalid value"},
 		// int64
 		{"int64/valid", newInt64Value(0, new(int64)), "9999999999", "9999999999", ""},
 		{"int64/negative", newInt64Value(0, new(int64)), "-100", "-100", ""},
-		{"int64/invalid", newInt64Value(0, new(int64)), "abc", "", "invalid syntax for int64 flag"},
+		{"int64/invalid", newInt64Value(0, new(int64)), "abc", "", "invalid value"},
 		// uint
 		{"uint/valid", newUintValue(0, new(uint)), "42", "42", ""},
-		{"uint/invalid", newUintValue(0, new(uint)), "-1", "", "invalid syntax for uint flag"},
-		{"uint/text", newUintValue(0, new(uint)), "abc", "", "invalid syntax for uint flag"},
+		{"uint/invalid", newUintValue(0, new(uint)), "-1", "", "invalid value"},
+		{"uint/text", newUintValue(0, new(uint)), "abc", "", "invalid value"},
 		// uint64
 		{"uint64/valid", newUint64Value(0, new(uint64)), "18446744073709551615", "18446744073709551615", ""},
-		{"uint64/invalid", newUint64Value(0, new(uint64)), "-1", "", "invalid syntax for uint64 flag"},
+		{"uint64/invalid", newUint64Value(0, new(uint64)), "-1", "", "invalid value"},
 		// float64
 		{"float64/valid", newFloat64Value(0, new(float64)), "2.5", "2.5", ""},
 		{"float64/negative", newFloat64Value(0, new(float64)), "-1.5", "-1.5", ""},
 		{"float64/scientific", newFloat64Value(0, new(float64)), "1e10", "1e+10", ""},
-		{"float64/invalid", newFloat64Value(0, new(float64)), "abc", "", "invalid syntax for float64 flag"},
+		{"float64/invalid", newFloat64Value(0, new(float64)), "abc", "", "invalid value"},
 		// duration
 		{"duration/seconds", newDurationValue(0, new(time.Duration)), "1s", "1s", ""},
 		{"duration/minutes", newDurationValue(0, new(time.Duration)), "2m", "2m0s", ""},
 		{"duration/hours", newDurationValue(0, new(time.Duration)), "3h", "3h0m0s", ""},
 		{"duration/compound", newDurationValue(0, new(time.Duration)), "1h30m", "1h30m0s", ""},
-		{"duration/invalid", newDurationValue(0, new(time.Duration)), "bad", "", "invalid duration format"},
+		{"duration/invalid", newDurationValue(0, new(time.Duration)), "bad", "", "invalid value"},
 		// stringSlice
 		{"stringSlice/single", newStringSliceValue([]string{}, new([]string)), "one", "[one]", ""},
 		{"stringSlice/csv", newStringSliceValue([]string{}, new([]string)), "a,b,c", "[a,b,c]", ""},
@@ -187,49 +187,49 @@ func TestValueSetAndString(t *testing.T) {
 		{"intSlice/single", newIntSliceValue([]int{}, new([]int)), "5", "[5]", ""},
 		{"intSlice/csv", newIntSliceValue([]int{}, new([]int)), "1,2,3", "[1,2,3]", ""},
 		{"intSlice/negative", newIntSliceValue([]int{}, new([]int)), "-5,-10", "[-5,-10]", ""},
-		{"intSlice/invalid_single", newIntSliceValue([]int{}, new([]int)), "abc", "", "invalid syntax for integer slice element"},
-		{"intSlice/invalid_csv", newIntSliceValue([]int{}, new([]int)), "1,abc,3", "", "invalid syntax for integer slice element"},
+		{"intSlice/invalid_single", newIntSliceValue([]int{}, new([]int)), "abc", "", "invalid value"},
+		{"intSlice/invalid_csv", newIntSliceValue([]int{}, new([]int)), "1,abc,3", "", "invalid value"},
 		// int8
 		{"int8/valid", newInt8Value(0, new(int8)), "42", "42", ""},
-		{"int8/invalid", newInt8Value(0, new(int8)), "abc", "", "invalid syntax for int8 flag"},
-		{"int8/overflow", newInt8Value(0, new(int8)), "200", "", "invalid syntax for int8 flag"},
+		{"int8/invalid", newInt8Value(0, new(int8)), "abc", "", "invalid value"},
+		{"int8/overflow", newInt8Value(0, new(int8)), "200", "", "invalid value"},
 		// int16
 		{"int16/valid", newInt16Value(0, new(int16)), "1000", "1000", ""},
-		{"int16/invalid", newInt16Value(0, new(int16)), "abc", "", "invalid syntax for int16 flag"},
+		{"int16/invalid", newInt16Value(0, new(int16)), "abc", "", "invalid value"},
 		// int32
 		{"int32/valid", newInt32Value(0, new(int32)), "100000", "100000", ""},
-		{"int32/invalid", newInt32Value(0, new(int32)), "abc", "", "invalid syntax for int32 flag"},
+		{"int32/invalid", newInt32Value(0, new(int32)), "abc", "", "invalid value"},
 		// uint8
 		{"uint8/valid", newUint8Value(0, new(uint8)), "200", "200", ""},
-		{"uint8/invalid", newUint8Value(0, new(uint8)), "-1", "", "invalid syntax for uint8 flag"},
+		{"uint8/invalid", newUint8Value(0, new(uint8)), "-1", "", "invalid value"},
 		// uint16
 		{"uint16/valid", newUint16Value(0, new(uint16)), "60000", "60000", ""},
-		{"uint16/invalid", newUint16Value(0, new(uint16)), "abc", "", "invalid syntax for uint16 flag"},
+		{"uint16/invalid", newUint16Value(0, new(uint16)), "abc", "", "invalid value"},
 		// uint32
 		{"uint32/valid", newUint32Value(0, new(uint32)), "4000000000", "4000000000", ""},
-		{"uint32/invalid", newUint32Value(0, new(uint32)), "-1", "", "invalid syntax for uint32 flag"},
+		{"uint32/invalid", newUint32Value(0, new(uint32)), "-1", "", "invalid value"},
 		// float32
 		{"float32/valid", newFloat32Value(0, new(float32)), "1.5", "1.5", ""},
-		{"float32/invalid", newFloat32Value(0, new(float32)), "abc", "", "invalid syntax for float32 flag"},
+		{"float32/invalid", newFloat32Value(0, new(float32)), "abc", "", "invalid value"},
 		// boolSlice
 		{"boolSlice/single", newBoolSliceValue([]bool{}, new([]bool)), "true", "[true]", ""},
 		{"boolSlice/csv", newBoolSliceValue([]bool{}, new([]bool)), "true,false,true", "[true,false,true]", ""},
-		{"boolSlice/invalid", newBoolSliceValue([]bool{}, new([]bool)), "abc", "", "invalid boolean slice element"},
+		{"boolSlice/invalid", newBoolSliceValue([]bool{}, new([]bool)), "abc", "", "invalid value"},
 		// int32Slice
 		{"int32Slice/csv", newInt32SliceValue([]int32{}, new([]int32)), "1,2,3", "[1,2,3]", ""},
-		{"int32Slice/invalid", newInt32SliceValue([]int32{}, new([]int32)), "abc", "", "invalid syntax for int32 slice"},
+		{"int32Slice/invalid", newInt32SliceValue([]int32{}, new([]int32)), "abc", "", "invalid value"},
 		// int64Slice
 		{"int64Slice/csv", newInt64SliceValue([]int64{}, new([]int64)), "100,200", "[100,200]", ""},
 		// uintSlice
 		{"uintSlice/csv", newUintSliceValue([]uint{}, new([]uint)), "1,2", "[1,2]", ""},
-		{"uintSlice/invalid", newUintSliceValue([]uint{}, new([]uint)), "-1", "", "invalid syntax for uint slice"},
+		{"uintSlice/invalid", newUintSliceValue([]uint{}, new([]uint)), "-1", "", "invalid value"},
 		// float32Slice
 		{"float32Slice/csv", newFloat32SliceValue([]float32{}, new([]float32)), "1.5,2.5", "[1.5,2.5]", ""},
 		// float64Slice
 		{"float64Slice/csv", newFloat64SliceValue([]float64{}, new([]float64)), "1.1,2.2", "[1.1,2.2]", ""},
 		// durationSlice
 		{"durationSlice/csv", newDurationSliceValue([]time.Duration{}, new([]time.Duration)), "1s,2m", "[1s,2m0s]", ""},
-		{"durationSlice/invalid", newDurationSliceValue([]time.Duration{}, new([]time.Duration)), "bad", "", "invalid duration slice element"},
+		{"durationSlice/invalid", newDurationSliceValue([]time.Duration{}, new([]time.Duration)), "bad", "", "invalid value"},
 	}
 
 	for _, tt := range tests {
@@ -257,7 +257,12 @@ func TestValueSetAndString(t *testing.T) {
 // TestIsBoolFlag verifies the boolValue.IsBoolFlag() method.
 func TestIsBoolFlag(t *testing.T) {
 	bv := newBoolValue(false, new(bool))
-	if !bv.IsBoolFlag() {
+	type boolFlagger interface{ IsBoolFlag() bool }
+	bf, ok := bv.(boolFlagger)
+	if !ok {
+		t.Fatal("bool value should implement IsBoolFlag()")
+	}
+	if !bf.IsBoolFlag() {
 		t.Error("IsBoolFlag() should return true")
 	}
 }

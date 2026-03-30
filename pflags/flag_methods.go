@@ -268,12 +268,12 @@ func (f *FlagSet) IntSliceP(name, shorthand string, value []int, usage string) *
 // The callback function fn will be called every time the flag is encountered
 // during parsing, with the flag's value as an argument.
 func (f *FlagSet) Func(name string, usage string, fn func(string) error) {
-	f.VarP(funcValue(fn), name, "", usage)
+	f.VarP(newFuncValue(fn), name, "", usage)
 }
 
 // FuncP is like Func, but accepts a shorthand letter.
 func (f *FlagSet) FuncP(name, shorthand string, usage string, fn func(string) error) {
-	f.VarP(funcValue(fn), name, shorthand, usage)
+	f.VarP(newFuncValue(fn), name, shorthand, usage)
 }
 
 // BoolFunc defines a boolean callback flag. The callback is called every time
@@ -281,12 +281,12 @@ func (f *FlagSet) FuncP(name, shorthand string, usage string, fn func(string) er
 // receives an empty string. When used with a value (--flag=value), the callback
 // receives the value.
 func (f *FlagSet) BoolFunc(name string, usage string, fn func(string) error) {
-	f.VarP(boolFuncValue(fn), name, "", usage)
+	f.VarP(newBoolFuncValue(fn), name, "", usage)
 }
 
 // BoolFuncP is like BoolFunc, but accepts a shorthand letter.
 func (f *FlagSet) BoolFuncP(name, shorthand string, usage string, fn func(string) error) {
-	f.VarP(boolFuncValue(fn), name, shorthand, usage)
+	f.VarP(newBoolFuncValue(fn), name, shorthand, usage)
 }
 
 // -- Int8
