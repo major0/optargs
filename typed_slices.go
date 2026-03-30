@@ -18,7 +18,8 @@ type sliceValue struct {
 
 func (v *sliceValue) Set(s string) error {
 	parts := strings.Split(s, ",")
-	dest := reflect.ValueOf(v.p).Elem()
+	pp := reflect.ValueOf(v.p).Elem()
+	dest := pp
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		if part == "" {
@@ -30,7 +31,7 @@ func (v *sliceValue) Set(s string) error {
 		}
 		dest = reflect.Append(dest, reflect.ValueOf(converted))
 	}
-	reflect.ValueOf(v.p).Elem().Set(dest)
+	pp.Set(dest)
 	return nil
 }
 
