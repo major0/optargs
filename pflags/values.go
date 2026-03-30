@@ -315,3 +315,164 @@ func (f boolFuncValue) Set(s string) error { return f(s) }
 func (f boolFuncValue) Type() string       { return "bool" }
 func (f boolFuncValue) String() string     { return "" }
 func (f boolFuncValue) IsBoolFlag() bool   { return true }
+
+// -- int8 Value
+type int8Value int8
+
+func newInt8Value(val int8, p *int8) *int8Value {
+	if p == nil {
+		p = new(int8)
+	}
+	*p = val
+	return (*int8Value)(p)
+}
+
+func (i *int8Value) Set(s string) error {
+	v, err := strconv.ParseInt(s, 0, 8)
+	if err != nil {
+		return fmt.Errorf("invalid syntax for int8 flag: %s", s)
+	}
+	*i = int8Value(v)
+	return nil
+}
+
+func (i *int8Value) Type() string   { return "int8" }
+func (i *int8Value) String() string { return strconv.FormatInt(int64(*i), 10) }
+
+// -- int16 Value
+type int16Value int16
+
+func newInt16Value(val int16, p *int16) *int16Value {
+	if p == nil {
+		p = new(int16)
+	}
+	*p = val
+	return (*int16Value)(p)
+}
+
+func (i *int16Value) Set(s string) error {
+	v, err := strconv.ParseInt(s, 0, 16)
+	if err != nil {
+		return fmt.Errorf("invalid syntax for int16 flag: %s", s)
+	}
+	*i = int16Value(v)
+	return nil
+}
+
+func (i *int16Value) Type() string   { return "int16" }
+func (i *int16Value) String() string { return strconv.FormatInt(int64(*i), 10) }
+
+// -- int32 Value
+type int32Value int32
+
+func newInt32Value(val int32, p *int32) *int32Value {
+	if p == nil {
+		p = new(int32)
+	}
+	*p = val
+	return (*int32Value)(p)
+}
+
+func (i *int32Value) Set(s string) error {
+	v, err := strconv.ParseInt(s, 0, 32)
+	if err != nil {
+		return fmt.Errorf("invalid syntax for int32 flag: %s", s)
+	}
+	*i = int32Value(v)
+	return nil
+}
+
+func (i *int32Value) Type() string   { return "int32" }
+func (i *int32Value) String() string { return strconv.FormatInt(int64(*i), 10) }
+
+// -- uint8 Value
+type uint8Value uint8
+
+func newUint8Value(val uint8, p *uint8) *uint8Value {
+	if p == nil {
+		p = new(uint8)
+	}
+	*p = val
+	return (*uint8Value)(p)
+}
+
+func (i *uint8Value) Set(s string) error {
+	v, err := strconv.ParseUint(s, 0, 8)
+	if err != nil {
+		return fmt.Errorf("invalid syntax for uint8 flag: %s", s)
+	}
+	*i = uint8Value(v)
+	return nil
+}
+
+func (i *uint8Value) Type() string   { return "uint8" }
+func (i *uint8Value) String() string { return strconv.FormatUint(uint64(*i), 10) }
+
+// -- uint16 Value
+type uint16Value uint16
+
+func newUint16Value(val uint16, p *uint16) *uint16Value {
+	if p == nil {
+		p = new(uint16)
+	}
+	*p = val
+	return (*uint16Value)(p)
+}
+
+func (i *uint16Value) Set(s string) error {
+	v, err := strconv.ParseUint(s, 0, 16)
+	if err != nil {
+		return fmt.Errorf("invalid syntax for uint16 flag: %s", s)
+	}
+	*i = uint16Value(v)
+	return nil
+}
+
+func (i *uint16Value) Type() string   { return "uint16" }
+func (i *uint16Value) String() string { return strconv.FormatUint(uint64(*i), 10) }
+
+// -- uint32 Value
+type uint32Value uint32
+
+func newUint32Value(val uint32, p *uint32) *uint32Value {
+	if p == nil {
+		p = new(uint32)
+	}
+	*p = val
+	return (*uint32Value)(p)
+}
+
+func (i *uint32Value) Set(s string) error {
+	v, err := strconv.ParseUint(s, 0, 32)
+	if err != nil {
+		return fmt.Errorf("invalid syntax for uint32 flag: %s", s)
+	}
+	*i = uint32Value(v)
+	return nil
+}
+
+func (i *uint32Value) Type() string   { return "uint32" }
+func (i *uint32Value) String() string { return strconv.FormatUint(uint64(*i), 10) }
+
+// -- float32 Value
+type float32Value float32
+
+func newFloat32Value(val float32, p *float32) *float32Value {
+	if p == nil {
+		p = new(float32)
+	}
+	*p = val
+	return (*float32Value)(p)
+}
+
+func (f *float32Value) Set(s string) error {
+	v, err := strconv.ParseFloat(s, 32)
+	if err != nil {
+		return fmt.Errorf("invalid syntax for float32 flag: %s", s)
+	}
+	*f = float32Value(v)
+	return nil
+}
+
+func (f *float32Value) Type() string   { return "float32" }
+func (f *float32Value) String() string { return strconv.FormatFloat(float64(*f), 'g', -1, 32) }

@@ -288,3 +288,157 @@ func (f *FlagSet) BoolFunc(name string, usage string, fn func(string) error) {
 func (f *FlagSet) BoolFuncP(name, shorthand string, usage string, fn func(string) error) {
 	f.VarP(boolFuncValue(fn), name, shorthand, usage)
 }
+
+// -- Int8
+
+func (f *FlagSet) Int8Var(p *int8, name string, value int8, usage string) {
+	f.VarP(newInt8Value(value, p), name, "", usage)
+}
+
+func (f *FlagSet) Int8VarP(p *int8, name, shorthand string, value int8, usage string) {
+	f.VarP(newInt8Value(value, p), name, shorthand, usage)
+}
+
+func (f *FlagSet) Int8(name string, value int8, usage string) *int8 {
+	p := new(int8)
+	f.Int8VarP(p, name, "", value, usage)
+	return p
+}
+
+func (f *FlagSet) Int8P(name, shorthand string, value int8, usage string) *int8 {
+	p := new(int8)
+	f.Int8VarP(p, name, shorthand, value, usage)
+	return p
+}
+
+// -- Int16
+
+func (f *FlagSet) Int16Var(p *int16, name string, value int16, usage string) {
+	f.VarP(newInt16Value(value, p), name, "", usage)
+}
+
+func (f *FlagSet) Int16VarP(p *int16, name, shorthand string, value int16, usage string) {
+	f.VarP(newInt16Value(value, p), name, shorthand, usage)
+}
+
+func (f *FlagSet) Int16(name string, value int16, usage string) *int16 {
+	p := new(int16)
+	f.Int16VarP(p, name, "", value, usage)
+	return p
+}
+
+func (f *FlagSet) Int16P(name, shorthand string, value int16, usage string) *int16 {
+	p := new(int16)
+	f.Int16VarP(p, name, shorthand, value, usage)
+	return p
+}
+
+// -- Int32
+
+func (f *FlagSet) Int32Var(p *int32, name string, value int32, usage string) {
+	f.VarP(newInt32Value(value, p), name, "", usage)
+}
+
+func (f *FlagSet) Int32VarP(p *int32, name, shorthand string, value int32, usage string) {
+	f.VarP(newInt32Value(value, p), name, shorthand, usage)
+}
+
+func (f *FlagSet) Int32(name string, value int32, usage string) *int32 {
+	p := new(int32)
+	f.Int32VarP(p, name, "", value, usage)
+	return p
+}
+
+func (f *FlagSet) Int32P(name, shorthand string, value int32, usage string) *int32 {
+	p := new(int32)
+	f.Int32VarP(p, name, shorthand, value, usage)
+	return p
+}
+
+// -- Uint8
+
+func (f *FlagSet) Uint8Var(p *uint8, name string, value uint8, usage string) {
+	f.VarP(newUint8Value(value, p), name, "", usage)
+}
+
+func (f *FlagSet) Uint8VarP(p *uint8, name, shorthand string, value uint8, usage string) {
+	f.VarP(newUint8Value(value, p), name, shorthand, usage)
+}
+
+func (f *FlagSet) Uint8(name string, value uint8, usage string) *uint8 {
+	p := new(uint8)
+	f.Uint8VarP(p, name, "", value, usage)
+	return p
+}
+
+func (f *FlagSet) Uint8P(name, shorthand string, value uint8, usage string) *uint8 {
+	p := new(uint8)
+	f.Uint8VarP(p, name, shorthand, value, usage)
+	return p
+}
+
+// -- Uint16
+
+func (f *FlagSet) Uint16Var(p *uint16, name string, value uint16, usage string) {
+	f.VarP(newUint16Value(value, p), name, "", usage)
+}
+
+func (f *FlagSet) Uint16VarP(p *uint16, name, shorthand string, value uint16, usage string) {
+	f.VarP(newUint16Value(value, p), name, shorthand, usage)
+}
+
+func (f *FlagSet) Uint16(name string, value uint16, usage string) *uint16 {
+	p := new(uint16)
+	f.Uint16VarP(p, name, "", value, usage)
+	return p
+}
+
+func (f *FlagSet) Uint16P(name, shorthand string, value uint16, usage string) *uint16 {
+	p := new(uint16)
+	f.Uint16VarP(p, name, shorthand, value, usage)
+	return p
+}
+
+// -- Uint32
+
+func (f *FlagSet) Uint32Var(p *uint32, name string, value uint32, usage string) {
+	f.VarP(newUint32Value(value, p), name, "", usage)
+}
+
+func (f *FlagSet) Uint32VarP(p *uint32, name, shorthand string, value uint32, usage string) {
+	f.VarP(newUint32Value(value, p), name, shorthand, usage)
+}
+
+func (f *FlagSet) Uint32(name string, value uint32, usage string) *uint32 {
+	p := new(uint32)
+	f.Uint32VarP(p, name, "", value, usage)
+	return p
+}
+
+func (f *FlagSet) Uint32P(name, shorthand string, value uint32, usage string) *uint32 {
+	p := new(uint32)
+	f.Uint32VarP(p, name, shorthand, value, usage)
+	return p
+}
+
+// -- Float32
+
+func (f *FlagSet) Float32Var(p *float32, name string, value float32, usage string) {
+	f.VarP(newFloat32Value(value, p), name, "", usage)
+}
+
+func (f *FlagSet) Float32VarP(p *float32, name, shorthand string, value float32, usage string) {
+	f.VarP(newFloat32Value(value, p), name, shorthand, usage)
+}
+
+func (f *FlagSet) Float32(name string, value float32, usage string) *float32 {
+	p := new(float32)
+	f.Float32VarP(p, name, "", value, usage)
+	return p
+}
+
+func (f *FlagSet) Float32P(name, shorthand string, value float32, usage string) *float32 {
+	p := new(float32)
+	f.Float32VarP(p, name, shorthand, value, usage)
+	return p
+}

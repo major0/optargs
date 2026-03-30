@@ -86,6 +86,27 @@ func TestFlagCreationAllTypes(t *testing.T) {
 		{"IntSliceVarP", func(fs *FlagSet) { var s []int; fs.IntSliceVarP(&s, "f", "n", []int{1}, "u") }, "f", "[1]", "intSlice"},
 		{"IntSlice", func(fs *FlagSet) { fs.IntSlice("f", []int{1}, "u") }, "f", "[1]", "intSlice"},
 		{"IntSliceP", func(fs *FlagSet) { fs.IntSliceP("f", "n", []int{1}, "u") }, "f", "[1]", "intSlice"},
+		// Int8
+		{"Int8Var", func(fs *FlagSet) { var i int8; fs.Int8Var(&i, "f", 7, "u") }, "f", "7", "int8"},
+		{"Int8P", func(fs *FlagSet) { fs.Int8P("f", "i", 7, "u") }, "f", "7", "int8"},
+		// Int16
+		{"Int16Var", func(fs *FlagSet) { var i int16; fs.Int16Var(&i, "f", 16, "u") }, "f", "16", "int16"},
+		{"Int16P", func(fs *FlagSet) { fs.Int16P("f", "i", 16, "u") }, "f", "16", "int16"},
+		// Int32
+		{"Int32Var", func(fs *FlagSet) { var i int32; fs.Int32Var(&i, "f", 32, "u") }, "f", "32", "int32"},
+		{"Int32P", func(fs *FlagSet) { fs.Int32P("f", "i", 32, "u") }, "f", "32", "int32"},
+		// Uint8
+		{"Uint8Var", func(fs *FlagSet) { var u uint8; fs.Uint8Var(&u, "f", 8, "u") }, "f", "8", "uint8"},
+		{"Uint8P", func(fs *FlagSet) { fs.Uint8P("f", "u", 8, "u") }, "f", "8", "uint8"},
+		// Uint16
+		{"Uint16Var", func(fs *FlagSet) { var u uint16; fs.Uint16Var(&u, "f", 16, "u") }, "f", "16", "uint16"},
+		{"Uint16P", func(fs *FlagSet) { fs.Uint16P("f", "u", 16, "u") }, "f", "16", "uint16"},
+		// Uint32
+		{"Uint32Var", func(fs *FlagSet) { var u uint32; fs.Uint32Var(&u, "f", 32, "u") }, "f", "32", "uint32"},
+		{"Uint32P", func(fs *FlagSet) { fs.Uint32P("f", "u", 32, "u") }, "f", "32", "uint32"},
+		// Float32
+		{"Float32Var", func(fs *FlagSet) { var f32 float32; fs.Float32Var(&f32, "f", 1.5, "u") }, "f", "1.5", "float32"},
+		{"Float32P", func(fs *FlagSet) { fs.Float32P("f", "g", 1.5, "u") }, "f", "1.5", "float32"},
 	}
 
 	for _, tt := range tests {
@@ -168,6 +189,28 @@ func TestValueSetAndString(t *testing.T) {
 		{"intSlice/negative", newIntSliceValue([]int{}, new([]int)), "-5,-10", "[-5,-10]", ""},
 		{"intSlice/invalid_single", newIntSliceValue([]int{}, new([]int)), "abc", "", "invalid syntax for integer slice element"},
 		{"intSlice/invalid_csv", newIntSliceValue([]int{}, new([]int)), "1,abc,3", "", "invalid syntax for integer slice element"},
+		// int8
+		{"int8/valid", newInt8Value(0, new(int8)), "42", "42", ""},
+		{"int8/invalid", newInt8Value(0, new(int8)), "abc", "", "invalid syntax for int8 flag"},
+		{"int8/overflow", newInt8Value(0, new(int8)), "200", "", "invalid syntax for int8 flag"},
+		// int16
+		{"int16/valid", newInt16Value(0, new(int16)), "1000", "1000", ""},
+		{"int16/invalid", newInt16Value(0, new(int16)), "abc", "", "invalid syntax for int16 flag"},
+		// int32
+		{"int32/valid", newInt32Value(0, new(int32)), "100000", "100000", ""},
+		{"int32/invalid", newInt32Value(0, new(int32)), "abc", "", "invalid syntax for int32 flag"},
+		// uint8
+		{"uint8/valid", newUint8Value(0, new(uint8)), "200", "200", ""},
+		{"uint8/invalid", newUint8Value(0, new(uint8)), "-1", "", "invalid syntax for uint8 flag"},
+		// uint16
+		{"uint16/valid", newUint16Value(0, new(uint16)), "60000", "60000", ""},
+		{"uint16/invalid", newUint16Value(0, new(uint16)), "abc", "", "invalid syntax for uint16 flag"},
+		// uint32
+		{"uint32/valid", newUint32Value(0, new(uint32)), "4000000000", "4000000000", ""},
+		{"uint32/invalid", newUint32Value(0, new(uint32)), "-1", "", "invalid syntax for uint32 flag"},
+		// float32
+		{"float32/valid", newFloat32Value(0, new(float32)), "1.5", "1.5", ""},
+		{"float32/invalid", newFloat32Value(0, new(float32)), "abc", "", "invalid syntax for float32 flag"},
 	}
 
 	for _, tt := range tests {
