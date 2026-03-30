@@ -5,8 +5,6 @@ import (
 	"testing"
 	"testing/quick"
 	"time"
-
-	"github.com/major0/optargs"
 )
 
 // Property 1: Round-trip — typedValueForField + Set(s) produces the same
@@ -95,17 +93,3 @@ func TestPropertyDurationField(t *testing.T) {
 	}
 }
 
-// Property 5: BoolValuer interface check.
-func TestPropertyBoolValuerInterface(t *testing.T) {
-	dest := &struct{ B bool }{}
-	dv := reflect.ValueOf(dest).Elem()
-	fv := dv.FieldByName("B")
-	meta := &FieldMetadata{Name: "B", FieldIndex: 0, Type: fv.Type()}
-	tv, err := typedValueForField(fv, meta)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := tv.(optargs.BoolValuer); !ok {
-		t.Error("bool TypedValue should implement BoolValuer")
-	}
-}

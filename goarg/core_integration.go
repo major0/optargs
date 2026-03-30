@@ -265,7 +265,6 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 	return nil
 }
 
-// setDefaultValues sets default values for unset fields using optargs.Convert
 // setDefaultValues sets default values for unset fields via TypedValue.Set().
 // Uses pre-parsed HasDefault and DefaultTag from struct metadata.
 func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
