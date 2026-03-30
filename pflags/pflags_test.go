@@ -211,6 +211,25 @@ func TestValueSetAndString(t *testing.T) {
 		// float32
 		{"float32/valid", newFloat32Value(0, new(float32)), "1.5", "1.5", ""},
 		{"float32/invalid", newFloat32Value(0, new(float32)), "abc", "", "invalid syntax for float32 flag"},
+		// boolSlice
+		{"boolSlice/single", newBoolSliceValue([]bool{}, new([]bool)), "true", "[true]", ""},
+		{"boolSlice/csv", newBoolSliceValue([]bool{}, new([]bool)), "true,false,true", "[true,false,true]", ""},
+		{"boolSlice/invalid", newBoolSliceValue([]bool{}, new([]bool)), "abc", "", "invalid boolean slice element"},
+		// int32Slice
+		{"int32Slice/csv", newInt32SliceValue([]int32{}, new([]int32)), "1,2,3", "[1,2,3]", ""},
+		{"int32Slice/invalid", newInt32SliceValue([]int32{}, new([]int32)), "abc", "", "invalid syntax for int32 slice"},
+		// int64Slice
+		{"int64Slice/csv", newInt64SliceValue([]int64{}, new([]int64)), "100,200", "[100,200]", ""},
+		// uintSlice
+		{"uintSlice/csv", newUintSliceValue([]uint{}, new([]uint)), "1,2", "[1,2]", ""},
+		{"uintSlice/invalid", newUintSliceValue([]uint{}, new([]uint)), "-1", "", "invalid syntax for uint slice"},
+		// float32Slice
+		{"float32Slice/csv", newFloat32SliceValue([]float32{}, new([]float32)), "1.5,2.5", "[1.5,2.5]", ""},
+		// float64Slice
+		{"float64Slice/csv", newFloat64SliceValue([]float64{}, new([]float64)), "1.1,2.2", "[1.1,2.2]", ""},
+		// durationSlice
+		{"durationSlice/csv", newDurationSliceValue([]time.Duration{}, new([]time.Duration)), "1s,2m", "[1s,2m0s]", ""},
+		{"durationSlice/invalid", newDurationSliceValue([]time.Duration{}, new([]time.Duration)), "bad", "", "invalid duration slice element"},
 	}
 
 	for _, tt := range tests {

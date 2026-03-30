@@ -442,3 +442,108 @@ func (f *FlagSet) Float32P(name, shorthand string, value float32, usage string) 
 	f.Float32VarP(p, name, shorthand, value, usage)
 	return p
 }
+
+// -- BoolSlice
+
+func (f *FlagSet) BoolSliceVar(p *[]bool, name string, value []bool, usage string) {
+	f.VarP(newBoolSliceValue(value, p), name, "", usage)
+}
+func (f *FlagSet) BoolSliceVarP(p *[]bool, name, shorthand string, value []bool, usage string) {
+	f.VarP(newBoolSliceValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) BoolSlice(name string, value []bool, usage string) *[]bool {
+	p := new([]bool); f.BoolSliceVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) BoolSliceP(name, shorthand string, value []bool, usage string) *[]bool {
+	p := new([]bool); f.BoolSliceVarP(p, name, shorthand, value, usage); return p
+}
+
+// -- Int32Slice
+
+func (f *FlagSet) Int32SliceVar(p *[]int32, name string, value []int32, usage string) {
+	f.VarP(newInt32SliceValue(value, p), name, "", usage)
+}
+func (f *FlagSet) Int32SliceVarP(p *[]int32, name, shorthand string, value []int32, usage string) {
+	f.VarP(newInt32SliceValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) Int32Slice(name string, value []int32, usage string) *[]int32 {
+	p := new([]int32); f.Int32SliceVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) Int32SliceP(name, shorthand string, value []int32, usage string) *[]int32 {
+	p := new([]int32); f.Int32SliceVarP(p, name, shorthand, value, usage); return p
+}
+
+// -- Int64Slice
+
+func (f *FlagSet) Int64SliceVar(p *[]int64, name string, value []int64, usage string) {
+	f.VarP(newInt64SliceValue(value, p), name, "", usage)
+}
+func (f *FlagSet) Int64SliceVarP(p *[]int64, name, shorthand string, value []int64, usage string) {
+	f.VarP(newInt64SliceValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) Int64Slice(name string, value []int64, usage string) *[]int64 {
+	p := new([]int64); f.Int64SliceVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) Int64SliceP(name, shorthand string, value []int64, usage string) *[]int64 {
+	p := new([]int64); f.Int64SliceVarP(p, name, shorthand, value, usage); return p
+}
+
+// -- UintSlice
+
+func (f *FlagSet) UintSliceVar(p *[]uint, name string, value []uint, usage string) {
+	f.VarP(newUintSliceValue(value, p), name, "", usage)
+}
+func (f *FlagSet) UintSliceVarP(p *[]uint, name, shorthand string, value []uint, usage string) {
+	f.VarP(newUintSliceValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) UintSlice(name string, value []uint, usage string) *[]uint {
+	p := new([]uint); f.UintSliceVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) UintSliceP(name, shorthand string, value []uint, usage string) *[]uint {
+	p := new([]uint); f.UintSliceVarP(p, name, shorthand, value, usage); return p
+}
+
+// -- Float32Slice
+
+func (f *FlagSet) Float32SliceVar(p *[]float32, name string, value []float32, usage string) {
+	f.VarP(newFloat32SliceValue(value, p), name, "", usage)
+}
+func (f *FlagSet) Float32SliceVarP(p *[]float32, name, shorthand string, value []float32, usage string) {
+	f.VarP(newFloat32SliceValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) Float32Slice(name string, value []float32, usage string) *[]float32 {
+	p := new([]float32); f.Float32SliceVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) Float32SliceP(name, shorthand string, value []float32, usage string) *[]float32 {
+	p := new([]float32); f.Float32SliceVarP(p, name, shorthand, value, usage); return p
+}
+
+// -- Float64Slice
+
+func (f *FlagSet) Float64SliceVar(p *[]float64, name string, value []float64, usage string) {
+	f.VarP(newFloat64SliceValue(value, p), name, "", usage)
+}
+func (f *FlagSet) Float64SliceVarP(p *[]float64, name, shorthand string, value []float64, usage string) {
+	f.VarP(newFloat64SliceValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) Float64Slice(name string, value []float64, usage string) *[]float64 {
+	p := new([]float64); f.Float64SliceVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) Float64SliceP(name, shorthand string, value []float64, usage string) *[]float64 {
+	p := new([]float64); f.Float64SliceVarP(p, name, shorthand, value, usage); return p
+}
+
+// -- DurationSlice
+
+func (f *FlagSet) DurationSliceVar(p *[]time.Duration, name string, value []time.Duration, usage string) {
+	f.VarP(newDurationSliceValue(value, p), name, "", usage)
+}
+func (f *FlagSet) DurationSliceVarP(p *[]time.Duration, name, shorthand string, value []time.Duration, usage string) {
+	f.VarP(newDurationSliceValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) DurationSlice(name string, value []time.Duration, usage string) *[]time.Duration {
+	p := new([]time.Duration); f.DurationSliceVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) DurationSliceP(name, shorthand string, value []time.Duration, usage string) *[]time.Duration {
+	p := new([]time.Duration); f.DurationSliceVarP(p, name, shorthand, value, usage); return p
+}

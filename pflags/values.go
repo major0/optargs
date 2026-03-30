@@ -476,3 +476,205 @@ func (f *float32Value) Set(s string) error {
 
 func (f *float32Value) Type() string   { return "float32" }
 func (f *float32Value) String() string { return strconv.FormatFloat(float64(*f), 'g', -1, 32) }
+
+// -- []bool Value
+type boolSliceValue []bool
+
+func newBoolSliceValue(val []bool, p *[]bool) *boolSliceValue {
+	if p == nil { p = new([]bool) }
+	*p = val
+	return (*boolSliceValue)(p)
+}
+
+func (s *boolSliceValue) Set(val string) error {
+	for _, part := range strings.Split(val, ",") {
+		v, err := strconv.ParseBool(strings.TrimSpace(part))
+		if err != nil {
+			return fmt.Errorf("invalid boolean slice element: %s", strings.TrimSpace(part))
+		}
+		*s = append(*s, v)
+	}
+	return nil
+}
+
+func (s *boolSliceValue) Type() string { return "boolSlice" }
+func (s *boolSliceValue) String() string {
+	if len(*s) == 0 { return "[]" }
+	parts := make([]string, len(*s))
+	for i, v := range *s { parts[i] = strconv.FormatBool(v) }
+	return fmt.Sprintf("[%s]", strings.Join(parts, ","))
+}
+
+// -- []int32 Value
+type int32SliceValue []int32
+
+func newInt32SliceValue(val []int32, p *[]int32) *int32SliceValue {
+	if p == nil { p = new([]int32) }
+	*p = val
+	return (*int32SliceValue)(p)
+}
+
+func (s *int32SliceValue) Set(val string) error {
+	for _, part := range strings.Split(val, ",") {
+		trimmed := strings.TrimSpace(part)
+		v, err := strconv.ParseInt(trimmed, 0, 32)
+		if err != nil {
+			return fmt.Errorf("invalid syntax for int32 slice element: %s", trimmed)
+		}
+		*s = append(*s, int32(v))
+	}
+	return nil
+}
+
+func (s *int32SliceValue) Type() string { return "int32Slice" }
+func (s *int32SliceValue) String() string {
+	if len(*s) == 0 { return "[]" }
+	parts := make([]string, len(*s))
+	for i, v := range *s { parts[i] = strconv.FormatInt(int64(v), 10) }
+	return fmt.Sprintf("[%s]", strings.Join(parts, ","))
+}
+
+// -- []int64 Value
+type int64SliceValue []int64
+
+func newInt64SliceValue(val []int64, p *[]int64) *int64SliceValue {
+	if p == nil { p = new([]int64) }
+	*p = val
+	return (*int64SliceValue)(p)
+}
+
+func (s *int64SliceValue) Set(val string) error {
+	for _, part := range strings.Split(val, ",") {
+		trimmed := strings.TrimSpace(part)
+		v, err := strconv.ParseInt(trimmed, 0, 64)
+		if err != nil {
+			return fmt.Errorf("invalid syntax for int64 slice element: %s", trimmed)
+		}
+		*s = append(*s, v)
+	}
+	return nil
+}
+
+func (s *int64SliceValue) Type() string { return "int64Slice" }
+func (s *int64SliceValue) String() string {
+	if len(*s) == 0 { return "[]" }
+	parts := make([]string, len(*s))
+	for i, v := range *s { parts[i] = strconv.FormatInt(v, 10) }
+	return fmt.Sprintf("[%s]", strings.Join(parts, ","))
+}
+
+// -- []uint Value
+type uintSliceValue []uint
+
+func newUintSliceValue(val []uint, p *[]uint) *uintSliceValue {
+	if p == nil { p = new([]uint) }
+	*p = val
+	return (*uintSliceValue)(p)
+}
+
+func (s *uintSliceValue) Set(val string) error {
+	for _, part := range strings.Split(val, ",") {
+		trimmed := strings.TrimSpace(part)
+		v, err := strconv.ParseUint(trimmed, 0, 0)
+		if err != nil {
+			return fmt.Errorf("invalid syntax for uint slice element: %s", trimmed)
+		}
+		*s = append(*s, uint(v))
+	}
+	return nil
+}
+
+func (s *uintSliceValue) Type() string { return "uintSlice" }
+func (s *uintSliceValue) String() string {
+	if len(*s) == 0 { return "[]" }
+	parts := make([]string, len(*s))
+	for i, v := range *s { parts[i] = strconv.FormatUint(uint64(v), 10) }
+	return fmt.Sprintf("[%s]", strings.Join(parts, ","))
+}
+
+// -- []float32 Value
+type float32SliceValue []float32
+
+func newFloat32SliceValue(val []float32, p *[]float32) *float32SliceValue {
+	if p == nil { p = new([]float32) }
+	*p = val
+	return (*float32SliceValue)(p)
+}
+
+func (s *float32SliceValue) Set(val string) error {
+	for _, part := range strings.Split(val, ",") {
+		trimmed := strings.TrimSpace(part)
+		v, err := strconv.ParseFloat(trimmed, 32)
+		if err != nil {
+			return fmt.Errorf("invalid syntax for float32 slice element: %s", trimmed)
+		}
+		*s = append(*s, float32(v))
+	}
+	return nil
+}
+
+func (s *float32SliceValue) Type() string { return "float32Slice" }
+func (s *float32SliceValue) String() string {
+	if len(*s) == 0 { return "[]" }
+	parts := make([]string, len(*s))
+	for i, v := range *s { parts[i] = strconv.FormatFloat(float64(v), 'g', -1, 32) }
+	return fmt.Sprintf("[%s]", strings.Join(parts, ","))
+}
+
+// -- []float64 Value
+type float64SliceValue []float64
+
+func newFloat64SliceValue(val []float64, p *[]float64) *float64SliceValue {
+	if p == nil { p = new([]float64) }
+	*p = val
+	return (*float64SliceValue)(p)
+}
+
+func (s *float64SliceValue) Set(val string) error {
+	for _, part := range strings.Split(val, ",") {
+		trimmed := strings.TrimSpace(part)
+		v, err := strconv.ParseFloat(trimmed, 64)
+		if err != nil {
+			return fmt.Errorf("invalid syntax for float64 slice element: %s", trimmed)
+		}
+		*s = append(*s, v)
+	}
+	return nil
+}
+
+func (s *float64SliceValue) Type() string { return "float64Slice" }
+func (s *float64SliceValue) String() string {
+	if len(*s) == 0 { return "[]" }
+	parts := make([]string, len(*s))
+	for i, v := range *s { parts[i] = strconv.FormatFloat(v, 'g', -1, 64) }
+	return fmt.Sprintf("[%s]", strings.Join(parts, ","))
+}
+
+// -- []time.Duration Value
+type durationSliceValue []time.Duration
+
+func newDurationSliceValue(val []time.Duration, p *[]time.Duration) *durationSliceValue {
+	if p == nil { p = new([]time.Duration) }
+	*p = val
+	return (*durationSliceValue)(p)
+}
+
+func (s *durationSliceValue) Set(val string) error {
+	for _, part := range strings.Split(val, ",") {
+		trimmed := strings.TrimSpace(part)
+		v, err := time.ParseDuration(trimmed)
+		if err != nil {
+			return fmt.Errorf("invalid duration slice element: %s", trimmed)
+		}
+		*s = append(*s, v)
+	}
+	return nil
+}
+
+func (s *durationSliceValue) Type() string { return "durationSlice" }
+func (s *durationSliceValue) String() string {
+	if len(*s) == 0 { return "[]" }
+	parts := make([]string, len(*s))
+	for i, v := range *s { parts[i] = v.String() }
+	return fmt.Sprintf("[%s]", strings.Join(parts, ","))
+}
