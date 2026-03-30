@@ -291,7 +291,6 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 			continue
 		}
 
-		// Only set from environment if field is not already set
 		if ci.isFieldSet(fieldValue) {
 			continue
 		}
@@ -301,7 +300,11 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 			continue
 		}
 
-		if err := ci.setScalarValue(fieldValue, field.Type, envValue); err != nil {
+		tv, err := typedValueForField(fieldValue, &field)
+		if err != nil {
+			return fmt.Errorf("env var %s for field %s: %w", field.Env, field.Name, err)
+		}
+		if err := tv.Set(envValue); err != nil {
 			return fmt.Errorf("failed to set environment variable %s for field %s: %w", field.Env, field.Name, err)
 		}
 	}
