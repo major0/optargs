@@ -309,21 +309,6 @@ func TestCommandCaseInsensitiveLookup(t *testing.T) {
 	}
 }
 
-func TestExecuteCommandCaseInsensitive(t *testing.T) {
-	root := newMinimalParser(t)
-	sub := newMinimalParser(t)
-	root.config.commandCaseIgnore = true
-	root.AddCmd("server", sub)
-
-	got, err := root.ExecuteCommand("SERVER", []string{"--help"})
-	if err != nil {
-		t.Fatalf("ExecuteCommand(SERVER): %v", err)
-	}
-	if got != sub {
-		t.Error("ExecuteCommand returned wrong parser")
-	}
-}
-
 // TestSubcommandOverlappingLongOpts verifies cross-chain prefix matching
 // when parent and child parsers register long options with overlapping
 // prefixes. The longest matching option name wins regardless of which

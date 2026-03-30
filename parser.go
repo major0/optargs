@@ -642,11 +642,6 @@ func (p *Parser) ExecuteCommand(name string, args []string) (*Parser, error) {
 	return p.Commands.executeCommand(name, args, p.config.commandCaseIgnore)
 }
 
-// HasCommands returns true if any commands are registered
-func (p *Parser) HasCommands() bool {
-	return p.Commands.HasCommands()
-}
-
 // SetStrictSubcommands enables or disables strict subcommand mode.
 // When enabled, child parsers registered via AddCmd do not inherit
 // parent options — unknown options in a subcommand produce an error

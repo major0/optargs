@@ -83,17 +83,6 @@ func (cr CommandRegistry) executeCommand(name string, args []string, caseIgnore 
 	return prepareCommand(name, parser, exists, args)
 }
 
-// ExecuteCommandCaseInsensitive finds and prepares a command for execution
-// with optional case-insensitive matching.
-func (cr CommandRegistry) ExecuteCommandCaseInsensitive(name string, args []string, caseIgnore bool) (*Parser, error) {
-	return cr.executeCommand(name, args, caseIgnore)
-}
-
-// HasCommands returns true if any commands are registered
-func (cr CommandRegistry) HasCommands() bool {
-	return len(cr) > 0
-}
-
 // GetAliases returns all aliases for a given parser
 func (cr CommandRegistry) GetAliases(targetParser *Parser) []string {
 	var aliases []string
