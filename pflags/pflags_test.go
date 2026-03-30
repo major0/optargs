@@ -1910,3 +1910,107 @@ func TestParseErrorsAllowlist(t *testing.T) {
 		t.Fatalf("expected no error with UnknownFlags allowlist, got: %v", err)
 	}
 }
+
+// TestStringArrayParsing tests StringArray flag behavior (no comma splitting).
+func TestStringArrayParsing(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		expected []string
+	}{
+		{"single", []string{"--items", "one"}, []string{"one"}},
+		{"repeated", []string{"--items", "one", "--items", "two"}, []string{"one", "two"}},
+		{"with-comma", []string{"--items", "a,b"}, []string{"a,b"}}, // no splitting
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			var items []string
+			fs.StringArrayVar(&items, "items", nil, "")
+			if err := fs.Parse(tt.args); err != nil {
+				t.Fatal(err)
+			}
+			if len(items) != len(tt.expected) {
+				t.Fatalf("got %v, want %v", items, tt.expected)
+			}
+			for i, v := range items {
+				if v != tt.expected[i] {
+					t.Errorf("items[%d] = %q, want %q", i, v, tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+// TestStringToStringParsing tests StringToString flag behavior.
+func TestStringToStringParsing(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var m map[string]string
+	fs.StringToStringVar(&m, "labels", nil, "")
+	if err := fs.Parse([]string{"--labels", "env=prod,tier=web"}); err != nil {
+		t.Fatal(err)
+	}
+	if m["env"] != "prod" || m["tier"] != "web" {
+		t.Errorf("got %v, want map[env:prod tier:web]", m)
+	}
+}
+
+// TestStringToIntParsing tests StringToInt flag behavior.
+func TestStringToIntParsing(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var m map[string]int
+	fs.StringToIntVar(&m, "ports", nil, "")
+	if err := fs.Parse([]string{"--ports", "http=80,https=443"}); err != nil {
+		t.Fatal(err)
+	}
+	if m["http"] != 80 || m["https"] != 443 {
+		t.Errorf("got %v, want map[http:80 https:443]", m)
+	}
+}
+
+// TestStringToInt64Parsing tests StringToInt64 flag behavior.
+func TestStringToInt64Parsing(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var m map[string]int64
+	fs.StringToInt64Var(&m, "sizes", nil, "")
+	if err := fs.Parse([]string{"--sizes", "small=100,large=9999999999"}); err != nil {
+		t.Fatal(err)
+	}
+	if m["small"] != 100 || m["large"] != 9999999999 {
+		t.Errorf("got %v, want map[small:100 large:9999999999]", m)
+	}
+}
+
+// TestStringCollectionCreation tests flag creation for string collection types.
+func TestStringCollectionCreation(t *testing.T) {
+	tests := []struct {
+		name     string
+		register func(fs *FlagSet)
+		flag     string
+		typeName string
+	}{
+		{"StringArrayVar", func(fs *FlagSet) { fs.StringArrayVar(new([]string), "f", nil, "u") }, "f", "stringArray"},
+		{"StringArrayP", func(fs *FlagSet) { fs.StringArrayP("f", "a", nil, "u") }, "f", "stringArray"},
+		{"StringToStringVar", func(fs *FlagSet) { fs.StringToStringVar(new(map[string]string), "f", nil, "u") }, "f", "stringToString"},
+		{"StringToStringP", func(fs *FlagSet) { fs.StringToStringP("f", "s", nil, "u") }, "f", "stringToString"},
+		{"StringToIntVar", func(fs *FlagSet) { fs.StringToIntVar(new(map[string]int), "f", nil, "u") }, "f", "stringToInt"},
+		{"StringToIntP", func(fs *FlagSet) { fs.StringToIntP("f", "i", nil, "u") }, "f", "stringToInt"},
+		{"StringToInt64Var", func(fs *FlagSet) { fs.StringToInt64Var(new(map[string]int64), "f", nil, "u") }, "f", "stringToInt64"},
+		{"StringToInt64P", func(fs *FlagSet) { fs.StringToInt64P("f", "l", nil, "u") }, "f", "stringToInt64"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			tt.register(fs)
+			f := fs.Lookup(tt.flag)
+			if f == nil {
+				t.Fatalf("flag %q not found", tt.flag)
+			}
+			if f.Value.Type() != tt.typeName {
+				t.Errorf("Type = %q, want %q", f.Value.Type(), tt.typeName)
+			}
+		})
+	}
+}

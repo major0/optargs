@@ -547,3 +547,63 @@ func (f *FlagSet) DurationSlice(name string, value []time.Duration, usage string
 func (f *FlagSet) DurationSliceP(name, shorthand string, value []time.Duration, usage string) *[]time.Duration {
 	p := new([]time.Duration); f.DurationSliceVarP(p, name, shorthand, value, usage); return p
 }
+
+// -- StringArray (appends raw strings without comma splitting)
+
+func (f *FlagSet) StringArrayVar(p *[]string, name string, value []string, usage string) {
+	f.VarP(newStringArrayValue(value, p), name, "", usage)
+}
+func (f *FlagSet) StringArrayVarP(p *[]string, name, shorthand string, value []string, usage string) {
+	f.VarP(newStringArrayValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) StringArray(name string, value []string, usage string) *[]string {
+	p := new([]string); f.StringArrayVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) StringArrayP(name, shorthand string, value []string, usage string) *[]string {
+	p := new([]string); f.StringArrayVarP(p, name, shorthand, value, usage); return p
+}
+
+// -- StringToString (map[string]string)
+
+func (f *FlagSet) StringToStringVar(p *map[string]string, name string, value map[string]string, usage string) {
+	f.VarP(newStringToStringValue(value, p), name, "", usage)
+}
+func (f *FlagSet) StringToStringVarP(p *map[string]string, name, shorthand string, value map[string]string, usage string) {
+	f.VarP(newStringToStringValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) StringToString(name string, value map[string]string, usage string) *map[string]string {
+	p := new(map[string]string); f.StringToStringVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) StringToStringP(name, shorthand string, value map[string]string, usage string) *map[string]string {
+	p := new(map[string]string); f.StringToStringVarP(p, name, shorthand, value, usage); return p
+}
+
+// -- StringToInt (map[string]int)
+
+func (f *FlagSet) StringToIntVar(p *map[string]int, name string, value map[string]int, usage string) {
+	f.VarP(newStringToIntValue(value, p), name, "", usage)
+}
+func (f *FlagSet) StringToIntVarP(p *map[string]int, name, shorthand string, value map[string]int, usage string) {
+	f.VarP(newStringToIntValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) StringToInt(name string, value map[string]int, usage string) *map[string]int {
+	p := new(map[string]int); f.StringToIntVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) StringToIntP(name, shorthand string, value map[string]int, usage string) *map[string]int {
+	p := new(map[string]int); f.StringToIntVarP(p, name, shorthand, value, usage); return p
+}
+
+// -- StringToInt64 (map[string]int64)
+
+func (f *FlagSet) StringToInt64Var(p *map[string]int64, name string, value map[string]int64, usage string) {
+	f.VarP(newStringToInt64Value(value, p), name, "", usage)
+}
+func (f *FlagSet) StringToInt64VarP(p *map[string]int64, name, shorthand string, value map[string]int64, usage string) {
+	f.VarP(newStringToInt64Value(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) StringToInt64(name string, value map[string]int64, usage string) *map[string]int64 {
+	p := new(map[string]int64); f.StringToInt64VarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) StringToInt64P(name, shorthand string, value map[string]int64, usage string) *map[string]int64 {
+	p := new(map[string]int64); f.StringToInt64VarP(p, name, shorthand, value, usage); return p
+}
