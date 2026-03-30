@@ -400,22 +400,25 @@ func formatDefault(field *FieldMetadata) string {
 }
 
 // makeHandler returns a Handle callback that sets the struct field value when
-// the option is parsed. Uses the pre-computed field index for O(1) access
-// instead of FieldByName.
-func (ci *CoreIntegration) makeHandler(field *FieldMetadata, destValue reflect.Value) func(string, string) error {
-	idx := field.FieldIndex
-	return func(name, arg string) error {
-		var fieldValue reflect.Value
-		if idx >= 0 {
-			fieldValue = destValue.Field(idx)
-		} else {
-			fieldValue = destValue.FieldByName(field.Name)
-		}
-		if !fieldValue.CanSet() {
-			return fmt.Errorf("cannot set field %s", field.Name)
-		}
-		return ci.setFieldValue(fieldValue, field, arg)
+// the option is parsed. Creates a TypedValue at setup time and captures it
+// in the closure — the handler just calls Set().
+func (ci *CoreIntegration) makeHandler(field *FieldMetadata, destValue reflect.Value) (func(string, string) error, error) {
+	fieldValue := fieldByMeta(destValue, field)
+	if !fieldValue.CanSet() {
+		return nil, fmt.Errorf("cannot set field %s", field.Name)
 	}
+	tv, err := typedValueForField(fieldValue, field)
+	if err != nil {
+		return nil, err
+	}
+	return func(name, arg string) error {
+		if arg == "" {
+			if _, ok := tv.(optargs.BoolValuer); ok {
+				return tv.Set("true")
+			}
+		}
+		return tv.Set(arg)
+	}, nil
 }
 
 // buildFlags builds short and long option maps in a single pass over
@@ -423,14 +426,17 @@ func (ci *CoreIntegration) makeHandler(field *FieldMetadata, destValue reflect.V
 // shared *Flag is created. Handlers and Peer links are wired inline,
 // eliminating the separate buildShortOptMap / buildLongOptMap /
 // Peer-linking / Handle-setting passes.
-func (ci *CoreIntegration) buildFlags(destValue reflect.Value) (map[byte]*optargs.Flag, map[string]*optargs.Flag) {
+func (ci *CoreIntegration) buildFlags(destValue reflect.Value) (map[byte]*optargs.Flag, map[string]*optargs.Flag, error) {
 	nOpts := len(ci.metadata.Options)
 	shortOpts := make(map[byte]*optargs.Flag, nOpts)
 	longOpts := make(map[string]*optargs.Flag, nOpts)
 
 	for i := range ci.metadata.Options {
 		field := &ci.metadata.Options[i]
-		handler := ci.makeHandler(field, destValue)
+		handler, err := ci.makeHandler(field, destValue)
+		if err != nil {
+			return nil, nil, fmt.Errorf("field %s: %w", field.Name, err)
+		}
 		argName := strings.ToUpper(field.Name)
 		defVal := formatDefault(field)
 
@@ -470,7 +476,7 @@ func (ci *CoreIntegration) buildFlags(destValue reflect.Value) (map[byte]*optarg
 		}
 	}
 
-	return shortOpts, longOpts
+	return shortOpts, longOpts, nil
 }
 
 // CreateParserWithHandlers builds an OptArgs parser with Handle callbacks
@@ -478,7 +484,10 @@ func (ci *CoreIntegration) buildFlags(destValue reflect.Value) (map[byte]*optarg
 // case-insensitive commands and prepares positional arg metadata.
 // It does NOT register subcommands.
 func (ci *CoreIntegration) CreateParserWithHandlers(args []string, destValue reflect.Value) (*optargs.Parser, error) {
-	shortOpts, longOpts := ci.buildFlags(destValue)
+	shortOpts, longOpts, err := ci.buildFlags(destValue)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build flags: %w", err)
+	}
 
 	// Register builtin -h/--help flag (returns ErrHelp when parsed).
 	helpFlag := &optargs.Flag{
