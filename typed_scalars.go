@@ -188,3 +188,163 @@ func (v *durationValue) Set(s string) error {
 
 func (v *durationValue) String() string { return v.p.String() }
 func (v *durationValue) Type() string   { return "duration" }
+
+// --- Narrow integer types ---
+
+type int8Value struct{ p *int8 }
+
+func NewInt8Value(val int8, p *int8) TypedValue {
+	if p == nil {
+		p = new(int8)
+	}
+	*p = val
+	return &int8Value{p: p}
+}
+
+func (v *int8Value) Set(s string) error {
+	result, err := Convert(s, reflect.TypeOf(int8(0)))
+	if err != nil {
+		return err
+	}
+	*v.p = result.(int8)
+	return nil
+}
+
+func (v *int8Value) String() string { return fmt.Sprintf("%d", *v.p) }
+func (v *int8Value) Type() string   { return "int8" }
+
+type int16Value struct{ p *int16 }
+
+func NewInt16Value(val int16, p *int16) TypedValue {
+	if p == nil {
+		p = new(int16)
+	}
+	*p = val
+	return &int16Value{p: p}
+}
+
+func (v *int16Value) Set(s string) error {
+	result, err := Convert(s, reflect.TypeOf(int16(0)))
+	if err != nil {
+		return err
+	}
+	*v.p = result.(int16)
+	return nil
+}
+
+func (v *int16Value) String() string { return fmt.Sprintf("%d", *v.p) }
+func (v *int16Value) Type() string   { return "int16" }
+
+type int32Value struct{ p *int32 }
+
+func NewInt32Value(val int32, p *int32) TypedValue {
+	if p == nil {
+		p = new(int32)
+	}
+	*p = val
+	return &int32Value{p: p}
+}
+
+func (v *int32Value) Set(s string) error {
+	result, err := Convert(s, reflect.TypeOf(int32(0)))
+	if err != nil {
+		return err
+	}
+	*v.p = result.(int32)
+	return nil
+}
+
+func (v *int32Value) String() string { return fmt.Sprintf("%d", *v.p) }
+func (v *int32Value) Type() string   { return "int32" }
+
+// --- Narrow unsigned integer types ---
+
+type uint8Value struct{ p *uint8 }
+
+func NewUint8Value(val uint8, p *uint8) TypedValue {
+	if p == nil {
+		p = new(uint8)
+	}
+	*p = val
+	return &uint8Value{p: p}
+}
+
+func (v *uint8Value) Set(s string) error {
+	result, err := Convert(s, reflect.TypeOf(uint8(0)))
+	if err != nil {
+		return err
+	}
+	*v.p = result.(uint8)
+	return nil
+}
+
+func (v *uint8Value) String() string { return fmt.Sprintf("%d", *v.p) }
+func (v *uint8Value) Type() string   { return "uint8" }
+
+type uint16Value struct{ p *uint16 }
+
+func NewUint16Value(val uint16, p *uint16) TypedValue {
+	if p == nil {
+		p = new(uint16)
+	}
+	*p = val
+	return &uint16Value{p: p}
+}
+
+func (v *uint16Value) Set(s string) error {
+	result, err := Convert(s, reflect.TypeOf(uint16(0)))
+	if err != nil {
+		return err
+	}
+	*v.p = result.(uint16)
+	return nil
+}
+
+func (v *uint16Value) String() string { return fmt.Sprintf("%d", *v.p) }
+func (v *uint16Value) Type() string   { return "uint16" }
+
+type uint32Value struct{ p *uint32 }
+
+func NewUint32Value(val uint32, p *uint32) TypedValue {
+	if p == nil {
+		p = new(uint32)
+	}
+	*p = val
+	return &uint32Value{p: p}
+}
+
+func (v *uint32Value) Set(s string) error {
+	result, err := Convert(s, reflect.TypeOf(uint32(0)))
+	if err != nil {
+		return err
+	}
+	*v.p = result.(uint32)
+	return nil
+}
+
+func (v *uint32Value) String() string { return fmt.Sprintf("%d", *v.p) }
+func (v *uint32Value) Type() string   { return "uint32" }
+
+// --- Narrow float type ---
+
+type float32Value struct{ p *float32 }
+
+func NewFloat32Value(val float32, p *float32) TypedValue {
+	if p == nil {
+		p = new(float32)
+	}
+	*p = val
+	return &float32Value{p: p}
+}
+
+func (v *float32Value) Set(s string) error {
+	result, err := Convert(s, reflect.TypeOf(float32(0)))
+	if err != nil {
+		return err
+	}
+	*v.p = result.(float32)
+	return nil
+}
+
+func (v *float32Value) String() string { return fmt.Sprintf("%g", *v.p) }
+func (v *float32Value) Type() string   { return "float32" }

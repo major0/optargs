@@ -303,3 +303,74 @@ func TestScalarRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+func TestNarrowIntOverflow(t *testing.T) {
+	tests := []struct {
+		name    string
+		val     TypedValue
+		input   string
+		wantErr bool
+	}{
+		// int8: -128 to 127
+		{"int8_valid", NewInt8Value(0, nil), "127", false},
+		{"int8_min", NewInt8Value(0, nil), "-128", false},
+		{"int8_overflow", NewInt8Value(0, nil), "128", true},
+		{"int8_underflow", NewInt8Value(0, nil), "-129", true},
+
+		// int16: -32768 to 32767
+		{"int16_valid", NewInt16Value(0, nil), "32767", false},
+		{"int16_overflow", NewInt16Value(0, nil), "32768", true},
+
+		// int32: -2147483648 to 2147483647
+		{"int32_valid", NewInt32Value(0, nil), "2147483647", false},
+		{"int32_overflow", NewInt32Value(0, nil), "2147483648", true},
+
+		// uint8: 0 to 255
+		{"uint8_valid", NewUint8Value(0, nil), "255", false},
+		{"uint8_overflow", NewUint8Value(0, nil), "256", true},
+		{"uint8_negative", NewUint8Value(0, nil), "-1", true},
+
+		// uint16: 0 to 65535
+		{"uint16_valid", NewUint16Value(0, nil), "65535", false},
+		{"uint16_overflow", NewUint16Value(0, nil), "65536", true},
+
+		// uint32: 0 to 4294967295
+		{"uint32_valid", NewUint32Value(0, nil), "4294967295", false},
+		{"uint32_overflow", NewUint32Value(0, nil), "4294967296", true},
+
+		// float32
+		{"float32_valid", NewFloat32Value(0, nil), "3.14", false},
+		{"float32_invalid", NewFloat32Value(0, nil), "abc", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.val.Set(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Set(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestNarrowTypeNames(t *testing.T) {
+	tests := []struct {
+		name     string
+		val      TypedValue
+		wantType string
+	}{
+		{"int8", NewInt8Value(0, nil), "int8"},
+		{"int16", NewInt16Value(0, nil), "int16"},
+		{"int32", NewInt32Value(0, nil), "int32"},
+		{"uint8", NewUint8Value(0, nil), "uint8"},
+		{"uint16", NewUint16Value(0, nil), "uint16"},
+		{"uint32", NewUint32Value(0, nil), "uint32"},
+		{"float32", NewFloat32Value(0, nil), "float32"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.val.Type(); got != tt.wantType {
+				t.Errorf("Type() = %q, want %q", got, tt.wantType)
+			}
+		})
+	}
+}
