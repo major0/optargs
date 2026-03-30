@@ -8,6 +8,33 @@ import (
 	"strings"
 )
 
+// Cached reflect.Type for TextUnmarshaler interface check.
+var textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+
+// intBitSize maps signed integer kinds to their strconv bit-size parameter.
+var intBitSize = [...]int{
+	reflect.Int:   0,
+	reflect.Int8:  8,
+	reflect.Int16: 16,
+	reflect.Int32: 32,
+	reflect.Int64: 64,
+}
+
+// uintBitSize maps unsigned integer kinds to their strconv bit-size parameter.
+var uintBitSize = [...]int{
+	reflect.Uint:   0,
+	reflect.Uint8:  8,
+	reflect.Uint16: 16,
+	reflect.Uint32: 32,
+	reflect.Uint64: 64,
+}
+
+// floatBitSize maps float kinds to their strconv bit-size parameter.
+var floatBitSize = [...]int{
+	reflect.Float32: 32,
+	reflect.Float64: 64,
+}
+
 // Convert converts a string value to the specified Go type.
 // Supports: string, bool, all int/uint/float sizes, pointer types,
 // slice types, and types implementing encoding.TextUnmarshaler.
@@ -43,83 +70,39 @@ func Convert(value string, targetType reflect.Type) (interface{}, error) {
 		return result, err
 	}
 
-	switch targetType.Kind() {
-	case reflect.String:
+	kind := targetType.Kind()
+
+	switch {
+	case kind == reflect.String:
 		return value, nil
-	case reflect.Bool:
+
+	case kind == reflect.Bool:
 		return convertBool(value)
-	case reflect.Int:
-		v, err := strconv.ParseInt(value, 10, 0)
+
+	case kind >= reflect.Int && kind <= reflect.Int64:
+		bits := intBitSize[kind]
+		v, err := strconv.ParseInt(value, 10, bits)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type int", value)
+			return nil, fmt.Errorf("invalid value %q for type %s", value, targetType)
 		}
-		return int(v), nil
-	case reflect.Int8:
-		v, err := strconv.ParseInt(value, 10, 8)
+		return reflect.ValueOf(v).Convert(targetType).Interface(), nil
+
+	case kind >= reflect.Uint && kind <= reflect.Uint64:
+		bits := uintBitSize[kind]
+		v, err := strconv.ParseUint(value, 10, bits)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type int8", value)
+			return nil, fmt.Errorf("invalid value %q for type %s", value, targetType)
 		}
-		return int8(v), nil
-	case reflect.Int16:
-		v, err := strconv.ParseInt(value, 10, 16)
+		return reflect.ValueOf(v).Convert(targetType).Interface(), nil
+
+	case kind == reflect.Float32 || kind == reflect.Float64:
+		bits := floatBitSize[kind]
+		v, err := strconv.ParseFloat(value, bits)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type int16", value)
+			return nil, fmt.Errorf("invalid value %q for type %s", value, targetType)
 		}
-		return int16(v), nil
-	case reflect.Int32:
-		v, err := strconv.ParseInt(value, 10, 32)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type int32", value)
-		}
-		return int32(v), nil
-	case reflect.Int64:
-		v, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type int64", value)
-		}
-		return v, nil
-	case reflect.Uint:
-		v, err := strconv.ParseUint(value, 10, 0)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type uint", value)
-		}
-		return uint(v), nil
-	case reflect.Uint8:
-		v, err := strconv.ParseUint(value, 10, 8)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type uint8", value)
-		}
-		return uint8(v), nil
-	case reflect.Uint16:
-		v, err := strconv.ParseUint(value, 10, 16)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type uint16", value)
-		}
-		return uint16(v), nil
-	case reflect.Uint32:
-		v, err := strconv.ParseUint(value, 10, 32)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type uint32", value)
-		}
-		return uint32(v), nil
-	case reflect.Uint64:
-		v, err := strconv.ParseUint(value, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type uint64", value)
-		}
-		return v, nil
-	case reflect.Float32:
-		v, err := strconv.ParseFloat(value, 32)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type float32", value)
-		}
-		return float32(v), nil
-	case reflect.Float64:
-		v, err := strconv.ParseFloat(value, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for type float64", value)
-		}
-		return v, nil
+		return reflect.ValueOf(v).Convert(targetType).Interface(), nil
+
 	default:
 		return nil, fmt.Errorf("unsupported type: %s", targetType)
 	}
@@ -142,11 +125,9 @@ func convertBool(value string) (bool, error) {
 // encoding.TextUnmarshaler and attempts conversion. The third return
 // value indicates whether the interface was found.
 func tryTextUnmarshaler(value string, targetType reflect.Type) (interface{}, error, bool) {
-	unmarshalerType := reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
-
 	// Check if *targetType implements TextUnmarshaler.
 	ptrType := reflect.PointerTo(targetType)
-	if ptrType.Implements(unmarshalerType) {
+	if ptrType.Implements(textUnmarshalerType) {
 		v := reflect.New(targetType)
 		u := v.Interface().(encoding.TextUnmarshaler) //nolint:errcheck // Implements() guarantees success
 		if err := u.UnmarshalText([]byte(value)); err != nil {
@@ -156,7 +137,7 @@ func tryTextUnmarshaler(value string, targetType reflect.Type) (interface{}, err
 	}
 
 	// Check if targetType itself implements TextUnmarshaler (already a pointer type, etc.).
-	if targetType.Implements(unmarshalerType) {
+	if targetType.Implements(textUnmarshalerType) {
 		v := reflect.New(targetType.Elem())
 		u := v.Interface().(encoding.TextUnmarshaler) //nolint:errcheck // Implements() guarantees success
 		if err := u.UnmarshalText([]byte(value)); err != nil {
