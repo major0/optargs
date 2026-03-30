@@ -1,10 +1,12 @@
 package goarg
 
 import (
+	"encoding"
 	"fmt"
 	"os"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/major0/optargs"
 )
@@ -35,6 +37,151 @@ func (ci *CoreIntegration) buildPositionalArgs() {
 			Multiple: field.Type.Kind() == reflect.Slice,
 		})
 	}
+}
+
+// Cached reflect.Type for time.Duration and TextUnmarshaler interface.
+var (
+	durationType        = reflect.TypeOf(time.Duration(0))
+	durationSliceType   = reflect.TypeOf([]time.Duration{})
+	textUnmarshalerIface = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+)
+
+// typedValueForField creates an optargs.TypedValue backed by a pointer to
+// the struct field's storage. Type dispatch happens once here at setup time;
+// the returned TypedValue handles all subsequent Set() calls.
+func typedValueForField(fieldValue reflect.Value, field *FieldMetadata) (optargs.TypedValue, error) {
+	ft := field.Type
+
+	// time.Duration must be checked before int64 (same Kind).
+	if ft == durationType {
+		p := fieldValue.Addr().Interface().(*time.Duration)
+		return optargs.NewDurationValue(*p, p), nil
+	}
+
+	// Scalar types.
+	switch ft.Kind() {
+	case reflect.String:
+		p := fieldValue.Addr().Interface().(*string)
+		return optargs.NewStringValue(*p, p), nil
+	case reflect.Bool:
+		p := fieldValue.Addr().Interface().(*bool)
+		return optargs.NewBoolValue(*p, p), nil
+	case reflect.Int:
+		p := fieldValue.Addr().Interface().(*int)
+		return optargs.NewIntValue(*p, p), nil
+	case reflect.Int8:
+		p := fieldValue.Addr().Interface().(*int8)
+		return optargs.NewInt8Value(*p, p), nil
+	case reflect.Int16:
+		p := fieldValue.Addr().Interface().(*int16)
+		return optargs.NewInt16Value(*p, p), nil
+	case reflect.Int32:
+		p := fieldValue.Addr().Interface().(*int32)
+		return optargs.NewInt32Value(*p, p), nil
+	case reflect.Int64:
+		p := fieldValue.Addr().Interface().(*int64)
+		return optargs.NewInt64Value(*p, p), nil
+	case reflect.Uint:
+		p := fieldValue.Addr().Interface().(*uint)
+		return optargs.NewUintValue(*p, p), nil
+	case reflect.Uint8:
+		p := fieldValue.Addr().Interface().(*uint8)
+		return optargs.NewUint8Value(*p, p), nil
+	case reflect.Uint16:
+		p := fieldValue.Addr().Interface().(*uint16)
+		return optargs.NewUint16Value(*p, p), nil
+	case reflect.Uint32:
+		p := fieldValue.Addr().Interface().(*uint32)
+		return optargs.NewUint32Value(*p, p), nil
+	case reflect.Uint64:
+		p := fieldValue.Addr().Interface().(*uint64)
+		return optargs.NewUint64Value(*p, p), nil
+	case reflect.Float32:
+		p := fieldValue.Addr().Interface().(*float32)
+		return optargs.NewFloat32Value(*p, p), nil
+	case reflect.Float64:
+		p := fieldValue.Addr().Interface().(*float64)
+		return optargs.NewFloat64Value(*p, p), nil
+
+	case reflect.Slice:
+		return typedValueForSlice(fieldValue, ft)
+
+	case reflect.Map:
+		return typedValueForMap(fieldValue, ft)
+	}
+
+	// Fallback: TextUnmarshaler.
+	ptrType := reflect.PointerTo(ft)
+	if ptrType.Implements(textUnmarshalerIface) {
+		dest := fieldValue.Addr().Interface().(encoding.TextUnmarshaler)
+		// If dest also implements TextMarshaler, pass it as val for String().
+		var val encoding.TextMarshaler
+		if m, ok := dest.(encoding.TextMarshaler); ok {
+			val = m
+		}
+		return optargs.NewTextValue(val, dest), nil
+	}
+
+	return nil, fmt.Errorf("unsupported type %s for field %s", ft, field.Name)
+}
+
+// typedValueForSlice handles slice field types.
+func typedValueForSlice(fieldValue reflect.Value, ft reflect.Type) (optargs.TypedValue, error) {
+	// []time.Duration must be checked before []int64.
+	if ft == durationSliceType {
+		p := fieldValue.Addr().Interface().(*[]time.Duration)
+		return optargs.NewDurationSliceValue(*p, p), nil
+	}
+
+	switch ft.Elem().Kind() {
+	case reflect.String:
+		p := fieldValue.Addr().Interface().(*[]string)
+		return optargs.NewStringSliceValue(*p, p), nil
+	case reflect.Bool:
+		p := fieldValue.Addr().Interface().(*[]bool)
+		return optargs.NewBoolSliceValue(*p, p), nil
+	case reflect.Int:
+		p := fieldValue.Addr().Interface().(*[]int)
+		return optargs.NewIntSliceValue(*p, p), nil
+	case reflect.Int32:
+		p := fieldValue.Addr().Interface().(*[]int32)
+		return optargs.NewInt32SliceValue(*p, p), nil
+	case reflect.Int64:
+		p := fieldValue.Addr().Interface().(*[]int64)
+		return optargs.NewInt64SliceValue(*p, p), nil
+	case reflect.Uint:
+		p := fieldValue.Addr().Interface().(*[]uint)
+		return optargs.NewUintSliceValue(*p, p), nil
+	case reflect.Float32:
+		p := fieldValue.Addr().Interface().(*[]float32)
+		return optargs.NewFloat32SliceValue(*p, p), nil
+	case reflect.Float64:
+		p := fieldValue.Addr().Interface().(*[]float64)
+		return optargs.NewFloat64SliceValue(*p, p), nil
+	}
+
+	return nil, fmt.Errorf("unsupported slice element type: %s", ft.Elem())
+}
+
+// typedValueForMap handles map field types.
+func typedValueForMap(fieldValue reflect.Value, ft reflect.Type) (optargs.TypedValue, error) {
+	if ft.Key().Kind() != reflect.String {
+		return nil, fmt.Errorf("unsupported map key type: %s", ft.Key())
+	}
+
+	switch ft.Elem().Kind() {
+	case reflect.String:
+		p := fieldValue.Addr().Interface().(*map[string]string)
+		return optargs.NewStringToStringValue(*p, p), nil
+	case reflect.Int:
+		p := fieldValue.Addr().Interface().(*map[string]int)
+		return optargs.NewStringToIntValue(*p, p), nil
+	case reflect.Int64:
+		p := fieldValue.Addr().Interface().(*map[string]int64)
+		return optargs.NewStringToInt64Value(*p, p), nil
+	}
+
+	return nil, fmt.Errorf("unsupported map value type: %s", ft.Elem())
 }
 
 // setFieldValue sets a field value based on the parsed argument using
