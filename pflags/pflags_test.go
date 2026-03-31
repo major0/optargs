@@ -1823,4 +1823,388 @@ func TestGlobalWrapperSmoke(t *testing.T) {
 		t.Error("ArgsLenAtDash should be -1 before parse")
 	}
 	_ = FlagUsagesWrapped(80)
+
+	// Exercise VarP variants and remaining wrappers
+	Int64VarP(new(int64), "i64p", "L", 0, "")
+	UintVarP(new(uint), "up", "U", 0, "")
+	Float32VarP(new(float32), "f32p", "G", 0, "")
+	StringSliceVarP(new([]string), "ssp", "S", nil, "")
+	IntSliceVarP(new([]int), "isp", "I", nil, "")
+	BoolSliceVarP(new([]bool), "bsp", "B", nil, "")
+	DurationSliceVarP(new([]time.Duration), "dsp", "D", nil, "")
+	StringArrayVarP(new([]string), "sap", "A", nil, "")
+	CountVarP(new(int), "cntp", "C", "")
+	FuncP("fnp", "F", "", func(string) error { return nil })
+	BoolFuncP("bfp", "V", "", func(string) error { return nil })
+	SetInterspersed(true)
+	_ = Lookup("i64")
+	_ = Set("i64", "42")
+	VisitAll(func(*Flag) {})
+	Visit(func(*Flag) {})
+	_ = ShorthandLookup("L")
+	_ = VarPF(newStringValue("", new(string)), "vpf", "Z", "")
+	_ = Parsed()
+	_ = NArg()
+	_ = Arg(0)
+	_ = Args()
+	PrintDefaults()
+	_ = FlagUsages()
+	Usage()
+	MarkHidden("vpf")       //nolint:errcheck
+	MarkDeprecated("vpf", "gone") //nolint:errcheck
+}
+
+// TestGettersEmptySlice tests getters on empty/nil slice flags.
+func TestGettersEmptySlice(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.IntSliceVar(new([]int), "is", nil, "")
+	fs.BoolSliceVar(new([]bool), "bs", nil, "")
+	v, err := fs.GetIntSlice("is")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != nil {
+		t.Errorf("expected nil for empty intSlice, got %v", v)
+	}
+	v2, err := fs.GetBoolSlice("bs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v2 != nil {
+		t.Errorf("expected nil for empty boolSlice, got %v", v2)
+	}
+}
+
+// TestSetNormalizeFuncReNormalize tests that SetNormalizeFunc re-normalizes
+// flags that were already registered under the old (or no) normalization.
+func TestSetNormalizeFuncReNormalize(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "my_flag", "", "")
+	fs.StringVar(new(string), "other_flag", "", "")
+
+	// Flags registered under raw names
+	if fs.Lookup("my_flag") == nil {
+		t.Fatal("my_flag should exist before normalization")
+	}
+
+	// Now set normalize func — existing flags should be re-keyed
+	fs.SetNormalizeFunc(func(f *FlagSet, name string) NormalizedName {
+		return NormalizedName(strings.ReplaceAll(name, "_", "-"))
+	})
+
+	// Old underscore key should still resolve via normalization
+	if fs.Lookup("my_flag") == nil {
+		t.Error("my_flag should resolve via normalization")
+	}
+	if fs.Lookup("my-flag") == nil {
+		t.Error("my-flag should exist after re-normalization")
+	}
+	if fs.Lookup("other-flag") == nil {
+		t.Error("other-flag should exist after re-normalization")
+	}
+}
+
+// TestHasAvailableFlagsShortOnly tests HasAvailableFlags with short-only flags.
+func TestHasAvailableFlagsShortOnly(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.ShortVar(newBoolValue(false, new(bool)), "x", "extract")
+
+	if !fs.HasAvailableFlags() {
+		t.Error("should have available flags (short-only visible)")
+	}
+
+	// Hide the short-only flag
+	fs.shortOnly["x"].Hidden = true
+	if fs.HasAvailableFlags() {
+		t.Error("should not have available flags (all hidden)")
+	}
+}
+
+// TestAddFlagShorthandConflict tests that AddFlag silently ignores
+// shorthand conflicts (different from addFlag which panics).
+func TestAddFlagShorthandConflict(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVarP(new(string), "verbose", "v", "", "")
+
+	// AddFlag with conflicting shorthand should be silently ignored
+	flag := &Flag{
+		Name:      "version",
+		Shorthand: "v",
+		Value:     newStringValue("", new(string)),
+		DefValue:  "",
+	}
+	fs.AddFlag(flag) // should not panic
+
+	// Original flag should still be there
+	if fs.Lookup("verbose") == nil {
+		t.Error("verbose should still exist")
+	}
+	// Conflicting flag should NOT have been added
+	if fs.Lookup("version") != nil {
+		t.Error("version should not have been added due to shorthand conflict")
+	}
+}
+
+// TestWrapLineHardBreak tests wrapLine when a word exceeds the column width
+// (no space found for soft break).
+func TestWrapLineHardBreak(t *testing.T) {
+	// A line with no spaces — must hard-break at cols
+	line := "abcdefghijklmnopqrstuvwxyz"
+	wrapped := wrapLine(line, 10)
+	if !strings.Contains(wrapped, "\n") {
+		t.Errorf("expected hard break, got: %q", wrapped)
+	}
+	// First segment should be exactly 10 chars
+	parts := strings.SplitN(wrapped, "\n", 2)
+	if len(parts[0]) != 10 {
+		t.Errorf("first segment = %d chars, want 10", len(parts[0]))
+	}
+}
+
+// TestWrapLineNarrowCols tests wrapLine with very narrow columns where
+// the default indent exceeds cols/2.
+func TestWrapLineNarrowCols(t *testing.T) {
+	line := "  --output string   output file path for the application"
+	wrapped := wrapLine(line, 30)
+	if !strings.Contains(wrapped, "\n") {
+		t.Errorf("expected wrap, got: %q", wrapped)
+	}
+}
+
+// TestValidateShorthandPanics tests validateShorthand panic branches.
+func TestValidateShorthandPanics(t *testing.T) {
+	t.Run("multi-char", func(t *testing.T) {
+		fs := NewFlagSet("test", ContinueOnError)
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic for multi-char shorthand")
+			}
+		}()
+		fs.ShortVar(newBoolValue(false, new(bool)), "ab", "")
+	})
+
+	t.Run("short-only redefined", func(t *testing.T) {
+		fs := NewFlagSet("test", ContinueOnError)
+		fs.ShortVar(newBoolValue(false, new(bool)), "x", "first")
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic for short-only redefined")
+			}
+		}()
+		fs.ShortVar(newBoolValue(false, new(bool)), "x", "second")
+	})
+}
+
+// TestSetValueError tests Set() with a value that fails parsing.
+func TestSetValueError(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.IntVar(new(int), "count", 0, "")
+	err := fs.Set("count", "not-a-number")
+	if err == nil {
+		t.Error("expected error for invalid int value")
+	}
+}
+
+// TestUnquoteUsageSingleBacktick tests the single-backtick fallback path.
+func TestUnquoteUsageSingleBacktick(t *testing.T) {
+	f := &Flag{Usage: "output `filename", Value: newStringValue("", new(string))}
+	name, usage := UnquoteUsage(f)
+	// Single backtick — should fall through to type-based name
+	if name != "string" {
+		t.Errorf("name = %q, want %q", name, "string")
+	}
+	if usage != "output `filename" {
+		t.Errorf("usage = %q", usage)
+	}
+}
+
+// TestNormalizeArgsTermination tests that normalizeArgs stops normalizing
+// after -- terminator.
+func TestNormalizeArgsTermination(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.SetNormalizeFunc(func(f *FlagSet, name string) NormalizedName {
+		return NormalizedName(strings.ReplaceAll(name, "_", "-"))
+	})
+	var s string
+	fs.StringVar(&s, "my-flag", "", "")
+
+	// --my_flag should be normalized, but after -- it should not
+	if err := fs.Parse([]string{"--my_flag", "val", "--", "--my_flag"}); err != nil {
+		t.Fatal(err)
+	}
+	if s != "val" {
+		t.Errorf("flag = %q, want %q", s, "val")
+	}
+	// The --my_flag after -- should be a positional arg, not normalized
+	if fs.NArg() != 1 || fs.Arg(0) != "--my_flag" {
+		t.Errorf("args = %v, want [--my_flag]", fs.Args())
+	}
+}
+
+// TestIPMaskIPv6 tests IPMask parsing with an IPv6 address.
+func TestIPMaskIPv6(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var mask net.IPMask
+	fs.IPMaskVar(&mask, "mask", nil, "")
+	// ffff::ffff is a valid IPv6 address usable as a mask
+	if err := fs.Parse([]string{"--mask", "ffff::ffff"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(mask) == 0 {
+		t.Error("mask should not be empty")
+	}
+}
+
+// TestParseInvalidValue tests that parsing an invalid value for a typed flag
+// returns an error through the full Parse path.
+func TestParseInvalidValue(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.IntVar(new(int), "count", 0, "")
+	err := fs.Parse([]string{"--count", "abc"})
+	if err == nil {
+		t.Fatal("expected error for invalid int value")
+	}
+	if !strings.Contains(err.Error(), "invalid value") {
+		t.Errorf("error = %q, expected 'invalid value'", err.Error())
+	}
+}
+
+// TestBuildShortOptsNilFlag tests that buildShortOpts skips shorthands
+// pointing to non-existent long flags (defensive path).
+func TestBuildShortOptsNilFlag(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVarP(new(string), "output", "o", "", "")
+	// Manually corrupt the shorthand map to point to a non-existent flag
+	fs.shorthand["z"] = "nonexistent"
+	// buildShortOpts should skip "z" without panicking
+	shortOpts := fs.buildShortOpts()
+	if _, exists := shortOpts['z']; exists {
+		t.Error("shortOpts should not contain 'z' for non-existent flag")
+	}
+	if _, exists := shortOpts['o']; !exists {
+		t.Error("shortOpts should contain 'o'")
+	}
+}
+
+// TestParseAllCallbackError tests that a callback error in ParseAll
+// propagates correctly through the full parse path.
+func TestParseAllCallbackError(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "name", "", "")
+	fs.BoolVar(new(bool), "verbose", false, "")
+
+	callCount := 0
+	err := fs.ParseAll([]string{"--name", "val", "--verbose"}, func(flag *Flag, value string) error {
+		callCount++
+		if flag.Name == "verbose" {
+			return fmt.Errorf("callback rejected verbose")
+		}
+		return nil
+	})
+	if err == nil || !strings.Contains(err.Error(), "callback rejected") {
+		t.Errorf("expected callback error, got: %v", err)
+	}
+	// First flag should have been processed
+	if callCount < 1 {
+		t.Errorf("callCount = %d, expected at least 1", callCount)
+	}
+}
+
+// TestGetterErrors tests error paths for typed getters: wrong type and
+// nonexistent flag. Exercises the getFlagValue error return for each
+// getter category (scalar, slice, map).
+func TestGetterErrors(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "s", "", "")
+
+	// Wrong type errors
+	if _, err := fs.GetInt("s"); err == nil {
+		t.Error("GetInt on string flag should error")
+	}
+	if _, err := fs.GetInt64("s"); err == nil {
+		t.Error("GetInt64 on string flag should error")
+	}
+	if _, err := fs.GetUint64("s"); err == nil {
+		t.Error("GetUint64 on string flag should error")
+	}
+	if _, err := fs.GetFloat64("s"); err == nil {
+		t.Error("GetFloat64 on string flag should error")
+	}
+	if _, err := fs.GetDuration("s"); err == nil {
+		t.Error("GetDuration on string flag should error")
+	}
+	if _, err := fs.GetCount("s"); err == nil {
+		t.Error("GetCount on string flag should error")
+	}
+	if _, err := fs.GetStringSlice("s"); err == nil {
+		t.Error("GetStringSlice on string flag should error")
+	}
+	if _, err := fs.GetStringToString("s"); err == nil {
+		t.Error("GetStringToString on string flag should error")
+	}
+	if _, err := fs.GetStringToInt("s"); err == nil {
+		t.Error("GetStringToInt on string flag should error")
+	}
+	if _, err := fs.GetStringToInt64("s"); err == nil {
+		t.Error("GetStringToInt64 on string flag should error")
+	}
+
+	// Nonexistent flag
+	if _, err := fs.GetInt("nope"); err == nil {
+		t.Error("GetInt on nonexistent flag should error")
+	}
+}
+
+// TestNewValueNilPointer tests that value constructors handle nil pointer
+// arguments safely (defensive guards in newIPValue, newIPMaskValue, newIPNetValue).
+func TestNewValueNilPointer(t *testing.T) {
+	// These should not panic — nil pointer means allocate internally
+	v1 := newIPValue(net.IPv4(1, 2, 3, 4), nil)
+	if v1.String() == "" {
+		t.Error("newIPValue(nil) should still produce a valid value")
+	}
+	v2 := newIPMaskValue(net.CIDRMask(24, 32), nil)
+	if v2.String() == "" {
+		t.Error("newIPMaskValue(nil) should still produce a valid value")
+	}
+	v3 := newIPNetValue(net.IPNet{IP: net.IPv4(10, 0, 0, 0), Mask: net.CIDRMask(8, 32)}, nil)
+	if v3.String() == "" {
+		t.Error("newIPNetValue(nil) should still produce a valid value")
+	}
+}
+
+// TestAddFlagNoShorthand tests AddFlag with a flag that has no shorthand.
+func TestAddFlagNoShorthand(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	flag := &Flag{
+		Name:     "output",
+		Usage:    "output file",
+		Value:    newStringValue("", new(string)),
+		DefValue: "",
+	}
+	fs.AddFlag(flag)
+	if fs.Lookup("output") == nil {
+		t.Error("flag without shorthand should be added")
+	}
+}
+
+// TestGetSliceParseError is intentionally omitted — the getSlice parse error
+// branch is a defensive path that can only trigger if Value.String() returns
+// data that doesn't match what Value.Set() accepted. This is unreachable
+// with well-behaved Value implementations.
+
+// TestParseStringMapMalformed tests parseStringMap with entries missing '='.
+func TestParseStringMapMalformed(t *testing.T) {
+	// Directly test the parser with malformed input
+	result := parseStringMap("map[good=val,badentry,also=ok]")
+	if result["good"] != "val" {
+		t.Errorf("good = %q, want val", result["good"])
+	}
+	if result["also"] != "ok" {
+		t.Errorf("also = %q, want ok", result["also"])
+	}
+	// "badentry" has no '=' so should be skipped
+	if _, exists := result["badentry"]; exists {
+		t.Error("badentry should be skipped (no '=')")
+	}
 }

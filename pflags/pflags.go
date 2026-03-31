@@ -108,20 +108,20 @@ func (f *FlagSet) buildLongOpts() map[string]*optargs.Flag {
 	longOpts := make(map[string]*optargs.Flag)
 	for normalizedName, flag := range f.flags {
 		handler := f.makeHandler(flag)
+		isBool := isBoolFlag(flag.Value)
 		hasArg := optargs.RequiredArgument
-		if isBoolFlag(flag.Value) {
+		if isBool {
 			hasArg = boolLongArgType(flag.Value)
 		}
 
-		coreFlag := &optargs.Flag{
+		longOpts[normalizedName] = &optargs.Flag{
 			Name:   normalizedName,
 			HasArg: hasArg,
 			Handle: handler,
 		}
-		longOpts[normalizedName] = coreFlag
 
 		// Register negation flag for booleans that accept an argument
-		if isBoolFlag(flag.Value) && hasArg == optargs.OptionalArgument {
+		if isBool && hasArg == optargs.OptionalArgument {
 			negName := "no-" + normalizedName
 			longOpts[negName] = &optargs.Flag{
 				Name:   negName,

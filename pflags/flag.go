@@ -385,26 +385,29 @@ func (f *FlagSet) defaultUsage() {
 }
 
 // PrintDefaults prints, to standard error unless configured otherwise, the
-// default values of all defined flags in the set. Output format matches
-// spf13/pflag: flags sorted alphabetically, usage aligned with spaces.
+// default values of all defined flags in the set.
 func (f *FlagSet) PrintDefaults() {
-	// Collect visible flags and compute max line width for alignment.
+	f.printDefaultsTo(f.out())
+}
+
+// printDefaultsTo writes flag usage to the given writer. Extracted so
+// FlagUsagesWrapped can write to a buffer without swapping f.output.
+func (f *FlagSet) printDefaultsTo(w io.Writer) {
 	type flagLine struct {
-		flag   *Flag
-		prefix string // "  -o, --output string" or "      --verbose"
+		flag    *Flag
+		prefix  string
+		name    string // unquoted type name
+		usage   string // unquoted usage text
 	}
 
 	var lines []flagLine
 	maxLen := 0
 
-	// Collect in alphabetical order (matching upstream pflag)
 	names := make([]string, 0, len(f.order))
 	for _, name := range f.order {
-		fl := f.flags[name]
-		if fl.Hidden {
-			continue
+		if !f.flags[name].Hidden {
+			names = append(names, name)
 		}
-		names = append(names, name)
 	}
 	if f.SortFlags {
 		sortStrings(names)
@@ -412,35 +415,31 @@ func (f *FlagSet) PrintDefaults() {
 
 	for _, name := range names {
 		fl := f.flags[name]
+		typeName, usageText := UnquoteUsage(fl)
+
 		var prefix string
 		if len(fl.Shorthand) > 0 {
 			prefix = fmt.Sprintf("  -%s, --%s", fl.Shorthand, fl.Name)
 		} else {
 			prefix = fmt.Sprintf("      --%s", fl.Name)
 		}
-
-		typeName, _ := UnquoteUsage(fl)
 		if len(typeName) > 0 {
 			prefix += " " + typeName
 		}
 
-		lines = append(lines, flagLine{flag: fl, prefix: prefix})
+		lines = append(lines, flagLine{flag: fl, prefix: prefix, name: typeName, usage: usageText})
 		if len(prefix) > maxLen {
 			maxLen = len(prefix)
 		}
 	}
 
-	w := f.out()
 	for _, line := range lines {
-		_, usage := UnquoteUsage(line.flag)
 		padding := strings.Repeat(" ", maxLen-len(line.prefix))
-
-		if len(usage) > 0 {
-			fmt.Fprintf(w, "%s%s   %s", line.prefix, padding, usage) //nolint:errcheck
+		if len(line.usage) > 0 {
+			fmt.Fprintf(w, "%s%s   %s", line.prefix, padding, line.usage) //nolint:errcheck
 		} else {
 			fmt.Fprint(w, line.prefix) //nolint:errcheck
 		}
-
 		if !isZeroValue(line.flag, line.flag.DefValue) {
 			if line.flag.Value.Type() == "string" {
 				fmt.Fprintf(w, " (default %q)", line.flag.DefValue) //nolint:errcheck
@@ -463,29 +462,22 @@ func (f *FlagSet) FlagUsages() string {
 // flags in the FlagSet. Wrapped to cols columns (0 for no wrapping).
 func (f *FlagSet) FlagUsagesWrapped(cols int) string {
 	var buf bytes.Buffer
-	old := f.output
-	f.output = &buf
-	f.PrintDefaults()
-	f.output = old
+	f.printDefaultsTo(&buf)
 
 	if cols <= 0 {
 		return buf.String()
 	}
 
-	// Wrap each line at cols
 	var result bytes.Buffer
 	for _, line := range strings.Split(buf.String(), "\n") {
-		if len(line) <= cols || cols == 0 {
+		if len(line) <= cols {
 			result.WriteString(line)
 			result.WriteByte('\n')
 			continue
 		}
-		// Find the usage text start (after the flag prefix + padding)
-		// and wrap there
 		result.WriteString(wrapLine(line, cols))
 		result.WriteByte('\n')
 	}
-	// Remove trailing extra newline from split
 	s := result.String()
 	if len(s) > 0 && s[len(s)-1] == '\n' {
 		s = s[:len(s)-1]
@@ -519,40 +511,34 @@ func wrapLine(line string, cols int) string {
 // sortStrings sorts a slice of strings in place.
 func sortStrings(s []string) { sort.Strings(s) }
 
+// zeroStrings maps type names to their zero-value string representations.
+// Used by isZeroValue to avoid allocating a fresh Value on every call.
+var zeroStrings = map[string]string{
+	"bool": "false", "duration": "0s", "float64": "0",
+	"float32": "0", "int": "0", "int8": "0", "int16": "0",
+	"int32": "0", "int64": "0", "string": "",
+	"uint": "0", "uint8": "0", "uint16": "0",
+	"uint32": "0", "uint64": "0",
+	"stringSlice": "[]", "intSlice": "[]", "boolSlice": "[]",
+	"int32Slice": "[]", "int64Slice": "[]", "uintSlice": "[]",
+	"float32Slice": "[]", "float64Slice": "[]", "durationSlice": "[]",
+	"stringArray": "[]", "count": "0",
+	"stringToString": "map[]", "stringToInt": "map[]", "stringToInt64": "map[]",
+}
+
 // isZeroValue determines whether the string represents the zero
-// value for a flag.
+// value for a flag. O(1) lookup, no allocations.
 func isZeroValue(flag *Flag, value string) bool {
-	// Build a zero value of the flag's Value type, and see if the
-	// result of calling its String method equals the value passed in.
-	// This works unless the Value type is itself an interface type.
-	typ := flag.Value.Type()
-	var z Value
-	switch typ {
-	case "bool":
-		z = newBoolValue(false, nil)
-	case "duration":
-		z = newDurationValue(0, nil)
-	case "float64":
-		z = newFloat64Value(0, nil)
-	case "int":
-		z = newIntValue(0, nil)
-	case "int64":
-		z = newInt64Value(0, nil)
-	case "string":
-		z = newStringValue("", nil)
-	case "uint":
-		z = newUintValue(0, nil)
-	case "uint64":
-		z = newUint64Value(0, nil)
-	case "stringSlice":
-		z = newStringSliceValue([]string{}, nil)
-	case "intSlice":
-		z = newIntSliceValue([]int{}, nil)
-	default:
-		// likely a custom type
-		return false
+	if z, ok := zeroStrings[flag.Value.Type()]; ok {
+		return value == z
 	}
-	return value == z.String()
+	return false
+}
+
+// typeDisplayNames maps Value type names to their display names in usage text.
+var typeDisplayNames = map[string]string{
+	"bool": "", "float32": "float", "float64": "float",
+	"int64": "int", "uint64": "uint",
 }
 
 // UnquoteUsage extracts a back-quoted name from the usage
@@ -561,7 +547,6 @@ func isZeroValue(flag *Flag, value string) bool {
 // If there are no back quotes, the name is an educated guess of the
 // type of the flag's value, or the empty string if the flag is boolean.
 func UnquoteUsage(flag *Flag) (name string, usage string) {
-	// Look for a back-quoted name, but avoid the strings package.
 	usage = flag.Usage
 	for i := 0; i < len(usage); i++ {
 		if usage[i] == '`' {
@@ -572,20 +557,12 @@ func UnquoteUsage(flag *Flag) (name string, usage string) {
 					return name, usage
 				}
 			}
-			break // Only one back quote; use type name.
+			break
 		}
 	}
-	// No explicit name, so use type if we can find one.
 	name = flag.Value.Type()
-	switch name {
-	case "bool":
-		name = ""
-	case "float64":
-		name = "float"
-	case "int64":
-		name = "int"
-	case "uint64":
-		name = "uint"
+	if display, ok := typeDisplayNames[name]; ok {
+		name = display
 	}
 	return
 }
