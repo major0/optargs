@@ -20,3 +20,12 @@ type TypedValue interface {
 type BoolValuer interface {
 	IsBoolFlag() bool
 }
+
+// BoolArgValuer optionally declares whether a bool-like flag accepts
+// an optional =value argument (e.g., --flag=true). When not implemented,
+// wrappers default to accepting an optional argument for backward
+// compatibility. Types that are strictly no-argument (like Count)
+// return false.
+type BoolArgValuer interface {
+	BoolTakesArg() bool
+}

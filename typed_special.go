@@ -54,9 +54,10 @@ func (v *countValue) Set(_ string) error {
 	return nil
 }
 
-func (v *countValue) String() string  { return fmt.Sprintf("%d", *v.p) }
-func (v *countValue) Type() string    { return "count" }
-func (v *countValue) IsBoolFlag() bool { return true }
+func (v *countValue) String() string    { return fmt.Sprintf("%d", *v.p) }
+func (v *countValue) Type() string      { return "count" }
+func (v *countValue) IsBoolFlag() bool  { return true }
+func (v *countValue) BoolTakesArg() bool { return false }
 
 // --- TextValue: wraps encoding.TextUnmarshaler/TextMarshaler ---
 
@@ -120,3 +121,4 @@ func (v *funcValue) Set(s string) error { return v.fn(s) }
 func (v *funcValue) String() string     { return "" }
 func (v *funcValue) Type() string       { return v.typeName }
 func (v *funcValue) IsBoolFlag() bool   { return v.boolFlag }
+func (v *funcValue) BoolTakesArg() bool { return false }

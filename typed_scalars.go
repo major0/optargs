@@ -106,9 +106,10 @@ func (v *boolValue) Set(s string) error {
 	return nil
 }
 
-func (v *boolValue) String() string   { return fmt.Sprintf("%t", *v.p) }
-func (v *boolValue) Type() string     { return "bool" }
-func (v *boolValue) IsBoolFlag() bool { return true }
+func (v *boolValue) String() string     { return fmt.Sprintf("%t", *v.p) }
+func (v *boolValue) Type() string       { return "bool" }
+func (v *boolValue) IsBoolFlag() bool   { return true }
+func (v *boolValue) BoolTakesArg() bool { return true }
 
 // --- Duration: uses time.ParseDuration, not Convert ---
 
