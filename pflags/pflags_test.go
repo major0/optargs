@@ -1431,3 +1431,269 @@ func TestIPNetParsing(t *testing.T) {
 		t.Errorf("ipnet = %s, want 10.0.0.0/8", ipnet)
 	}
 }
+
+// TestTypedGetters tests all Get* methods on FlagSet.
+func TestTypedGetters(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.BoolVar(new(bool), "b", true, "")
+	fs.StringVar(new(string), "s", "hello", "")
+	fs.IntVar(new(int), "i", 42, "")
+	fs.Int8Var(new(int8), "i8", 7, "")
+	fs.Int16Var(new(int16), "i16", 16, "")
+	fs.Int32Var(new(int32), "i32", 32, "")
+	fs.Int64Var(new(int64), "i64", 64, "")
+	fs.UintVar(new(uint), "u", 7, "")
+	fs.Uint8Var(new(uint8), "u8", 8, "")
+	fs.Uint16Var(new(uint16), "u16", 16, "")
+	fs.Uint32Var(new(uint32), "u32", 32, "")
+	fs.Uint64Var(new(uint64), "u64", 64, "")
+	fs.Float32Var(new(float32), "f32", 1.5, "")
+	fs.Float64Var(new(float64), "f64", 3.14, "")
+	fs.DurationVar(new(time.Duration), "d", 5*time.Second, "")
+	fs.CountVar(new(int), "c", "")
+	fs.StringSliceVar(new([]string), "ss", []string{"a", "b"}, "")
+	fs.IntSliceVar(new([]int), "is", []int{1, 2}, "")
+
+	if v, err := fs.GetBool("b"); err != nil || v != true {
+		t.Errorf("GetBool: %v %v", v, err)
+	}
+	if v, err := fs.GetString("s"); err != nil || v != "hello" {
+		t.Errorf("GetString: %v %v", v, err)
+	}
+	if v, err := fs.GetInt("i"); err != nil || v != 42 {
+		t.Errorf("GetInt: %v %v", v, err)
+	}
+	if v, err := fs.GetInt8("i8"); err != nil || v != 7 {
+		t.Errorf("GetInt8: %v %v", v, err)
+	}
+	if v, err := fs.GetInt16("i16"); err != nil || v != 16 {
+		t.Errorf("GetInt16: %v %v", v, err)
+	}
+	if v, err := fs.GetInt32("i32"); err != nil || v != 32 {
+		t.Errorf("GetInt32: %v %v", v, err)
+	}
+	if v, err := fs.GetInt64("i64"); err != nil || v != 64 {
+		t.Errorf("GetInt64: %v %v", v, err)
+	}
+	if v, err := fs.GetUint("u"); err != nil || v != 7 {
+		t.Errorf("GetUint: %v %v", v, err)
+	}
+	if v, err := fs.GetUint8("u8"); err != nil || v != 8 {
+		t.Errorf("GetUint8: %v %v", v, err)
+	}
+	if v, err := fs.GetUint16("u16"); err != nil || v != 16 {
+		t.Errorf("GetUint16: %v %v", v, err)
+	}
+	if v, err := fs.GetUint32("u32"); err != nil || v != 32 {
+		t.Errorf("GetUint32: %v %v", v, err)
+	}
+	if v, err := fs.GetUint64("u64"); err != nil || v != 64 {
+		t.Errorf("GetUint64: %v %v", v, err)
+	}
+	if v, err := fs.GetFloat32("f32"); err != nil || v != 1.5 {
+		t.Errorf("GetFloat32: %v %v", v, err)
+	}
+	if v, err := fs.GetFloat64("f64"); err != nil || v != 3.14 {
+		t.Errorf("GetFloat64: %v %v", v, err)
+	}
+	if v, err := fs.GetDuration("d"); err != nil || v != 5*time.Second {
+		t.Errorf("GetDuration: %v %v", v, err)
+	}
+	if v, err := fs.GetCount("c"); err != nil || v != 0 {
+		t.Errorf("GetCount: %v %v", v, err)
+	}
+	if v, err := fs.GetStringSlice("ss"); err != nil || len(v) != 2 {
+		t.Errorf("GetStringSlice: %v %v", v, err)
+	}
+	if v, err := fs.GetIntSlice("is"); err != nil || len(v) != 2 {
+		t.Errorf("GetIntSlice: %v %v", v, err)
+	}
+
+	// Error cases
+	if _, err := fs.GetBool("nonexistent"); err == nil {
+		t.Error("expected error for nonexistent flag")
+	}
+	if _, err := fs.GetBool("s"); err == nil {
+		t.Error("expected error for type mismatch")
+	}
+}
+
+// TestSliceAndMapGetters tests slice and map Get* methods after parsing.
+func TestSliceAndMapGetters(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.BoolSliceVar(new([]bool), "bs", nil, "")
+	fs.Int32SliceVar(new([]int32), "i32s", nil, "")
+	fs.Int64SliceVar(new([]int64), "i64s", nil, "")
+	fs.UintSliceVar(new([]uint), "us", nil, "")
+	fs.Float32SliceVar(new([]float32), "f32s", nil, "")
+	fs.Float64SliceVar(new([]float64), "f64s", nil, "")
+	fs.DurationSliceVar(new([]time.Duration), "ds", nil, "")
+	fs.StringToStringVar(new(map[string]string), "sts", nil, "")
+	fs.StringToIntVar(new(map[string]int), "sti", nil, "")
+	fs.StringToInt64Var(new(map[string]int64), "sti64", nil, "")
+
+	if err := fs.Parse([]string{
+		"--bs", "true,false",
+		"--i32s", "1,2",
+		"--i64s", "100,200",
+		"--us", "3,4",
+		"--f32s", "1.5,2.5",
+		"--f64s", "3.14,2.72",
+		"--ds", "1s,2m",
+		"--sts", "a=b,c=d",
+		"--sti", "x=1,y=2",
+		"--sti64", "p=100,q=200",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if v, err := fs.GetBoolSlice("bs"); err != nil || len(v) != 2 || v[0] != true || v[1] != false {
+		t.Errorf("GetBoolSlice: %v %v", v, err)
+	}
+	if v, err := fs.GetInt32Slice("i32s"); err != nil || len(v) != 2 || v[0] != 1 || v[1] != 2 {
+		t.Errorf("GetInt32Slice: %v %v", v, err)
+	}
+	if v, err := fs.GetInt64Slice("i64s"); err != nil || len(v) != 2 || v[0] != 100 || v[1] != 200 {
+		t.Errorf("GetInt64Slice: %v %v", v, err)
+	}
+	if v, err := fs.GetUintSlice("us"); err != nil || len(v) != 2 || v[0] != 3 || v[1] != 4 {
+		t.Errorf("GetUintSlice: %v %v", v, err)
+	}
+	if v, err := fs.GetFloat32Slice("f32s"); err != nil || len(v) != 2 {
+		t.Errorf("GetFloat32Slice: %v %v", v, err)
+	}
+	if v, err := fs.GetFloat64Slice("f64s"); err != nil || len(v) != 2 {
+		t.Errorf("GetFloat64Slice: %v %v", v, err)
+	}
+	if v, err := fs.GetDurationSlice("ds"); err != nil || len(v) != 2 || v[0] != time.Second || v[1] != 2*time.Minute {
+		t.Errorf("GetDurationSlice: %v %v", v, err)
+	}
+	if v, err := fs.GetStringToString("sts"); err != nil || v["a"] != "b" || v["c"] != "d" {
+		t.Errorf("GetStringToString: %v %v", v, err)
+	}
+	if v, err := fs.GetStringToInt("sti"); err != nil || v["x"] != 1 || v["y"] != 2 {
+		t.Errorf("GetStringToInt: %v %v", v, err)
+	}
+	if v, err := fs.GetStringToInt64("sti64"); err != nil || v["p"] != 100 || v["q"] != 200 {
+		t.Errorf("GetStringToInt64: %v %v", v, err)
+	}
+}
+
+// TestStructuredErrorAccessors tests all accessor methods on structured error types.
+func TestStructuredErrorAccessors(t *testing.T) {
+	t.Run("NotExistError/short", func(t *testing.T) {
+		fs := NewFlagSet("test", ContinueOnError)
+		fs.StringVarP(new(string), "output", "o", "", "")
+		err := fs.Parse([]string{"-z"})
+		var notExist *NotExistError
+		if !errors.As(err, &notExist) {
+			t.Fatalf("expected *NotExistError, got %T", err)
+		}
+		if notExist.GetSpecifiedShortnames() == "" {
+			t.Error("GetSpecifiedShortnames should not be empty for short flag error")
+		}
+	})
+
+	t.Run("InvalidValueError", func(t *testing.T) {
+		// Constructed directly — not yet wired into translateError
+		inner := fmt.Errorf("bad number")
+		e := &InvalidValueError{flag: &Flag{Name: "count"}, value: "abc", err: inner}
+		if e.GetFlag().Name != "count" {
+			t.Errorf("GetFlag().Name = %q", e.GetFlag().Name)
+		}
+		if e.GetValue() != "abc" {
+			t.Errorf("GetValue() = %q", e.GetValue())
+		}
+		if e.Unwrap() != inner {
+			t.Error("Unwrap() should return inner error")
+		}
+		if !strings.Contains(e.Error(), "count") {
+			t.Errorf("Error() = %q", e.Error())
+		}
+	})
+
+	t.Run("ValueRequiredError/accessors", func(t *testing.T) {
+		fs := NewFlagSet("test", ContinueOnError)
+		fs.StringVarP(new(string), "output", "o", "", "")
+		err := fs.Parse([]string{"-o"})
+		var valReq *ValueRequiredError
+		if !errors.As(err, &valReq) {
+			t.Fatalf("expected *ValueRequiredError, got %T", err)
+		}
+		// GetFlag may be nil (translateError doesn't have FlagSet access)
+		_ = valReq.GetFlag()
+		if valReq.GetSpecifiedName() == "" {
+			t.Error("GetSpecifiedName should not be empty")
+		}
+		if valReq.GetSpecifiedShortnames() == "" {
+			t.Error("GetSpecifiedShortnames should not be empty for short flag")
+		}
+	})
+
+	t.Run("InvalidSyntaxError", func(t *testing.T) {
+		e := &InvalidSyntaxError{specifiedFlag: "--bad=flag=syntax"}
+		if e.GetSpecifiedFlag() != "--bad=flag=syntax" {
+			t.Errorf("GetSpecifiedFlag() = %q", e.GetSpecifiedFlag())
+		}
+		if !strings.Contains(e.Error(), "bad flag syntax") {
+			t.Errorf("Error() = %q", e.Error())
+		}
+	})
+}
+
+// TestAliasVar tests AliasVar and AliasVarP for long-name aliases.
+func TestAliasVar(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var format string
+	fs.Var(newStringValue("", &format), "format", "output format")
+	fs.AliasVar(newStringValue("", &format), "output-format", "alias for format")
+	fs.AliasVarP(newStringValue("", &format), "fmt", "F", "alias with shorthand")
+
+	// Long alias
+	if err := fs.Parse([]string{"--output-format", "json"}); err != nil {
+		t.Fatal(err)
+	}
+	if format != "json" {
+		t.Errorf("format = %q, want json", format)
+	}
+
+	// Alias should be hidden
+	usages := fs.FlagUsages()
+	if strings.Contains(usages, "output-format") {
+		t.Errorf("alias should be hidden from help:\n%s", usages)
+	}
+	if strings.Contains(usages, "--fmt") {
+		t.Errorf("alias with shorthand should be hidden from help:\n%s", usages)
+	}
+}
+
+// TestTextVar tests TextVar with a type implementing encoding.TextUnmarshaler.
+func TestTextVar(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var ip net.IP
+	fs.TextVar(&ip, "addr", &net.IP{127, 0, 0, 1}, "address")
+	if err := fs.Parse([]string{"--addr", "10.0.0.1"}); err != nil {
+		t.Fatal(err)
+	}
+	if ip.String() != "10.0.0.1" {
+		t.Errorf("ip = %s, want 10.0.0.1", ip)
+	}
+}
+
+// TestIPMaskInvalid tests IPMask with invalid input.
+func TestIPMaskInvalid(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.IPMaskVar(new(net.IPMask), "mask", nil, "")
+	if err := fs.Parse([]string{"--mask", "not-an-ip"}); err == nil {
+		t.Error("expected error for invalid IP mask")
+	}
+}
+
+// TestIPNetInvalid tests IPNet with invalid input.
+func TestIPNetInvalid(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.IPNetVar(new(net.IPNet), "cidr", net.IPNet{}, "")
+	if err := fs.Parse([]string{"--cidr", "not-a-cidr"}); err == nil {
+		t.Error("expected error for invalid CIDR")
+	}
+}
