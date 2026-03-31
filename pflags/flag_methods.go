@@ -1,6 +1,8 @@
 package pflags
 
 import (
+	"encoding"
+	"net"
 	"time"
 )
 
@@ -606,4 +608,73 @@ func (f *FlagSet) StringToInt64(name string, value map[string]int64, usage strin
 }
 func (f *FlagSet) StringToInt64P(name, shorthand string, value map[string]int64, usage string) *map[string]int64 {
 	p := new(map[string]int64); f.StringToInt64VarP(p, name, shorthand, value, usage); return p
+}
+
+// -- Count (increments on each occurrence, e.g. -vvv)
+
+func (f *FlagSet) CountVar(p *int, name string, usage string) {
+	f.VarP(newCountValue(0, p), name, "", usage)
+}
+func (f *FlagSet) CountVarP(p *int, name, shorthand string, usage string) {
+	f.VarP(newCountValue(0, p), name, shorthand, usage)
+}
+func (f *FlagSet) Count(name string, usage string) *int {
+	p := new(int); f.CountVarP(p, name, "", usage); return p
+}
+func (f *FlagSet) CountP(name, shorthand string, usage string) *int {
+	p := new(int); f.CountVarP(p, name, shorthand, usage); return p
+}
+
+// -- TextVar (encoding.TextUnmarshaler)
+
+func (f *FlagSet) TextVar(p encoding.TextUnmarshaler, name string, value encoding.TextMarshaler, usage string) {
+	f.VarP(newTextValue(value, p), name, "", usage)
+}
+func (f *FlagSet) TextVarP(p encoding.TextUnmarshaler, name, shorthand string, value encoding.TextMarshaler, usage string) {
+	f.VarP(newTextValue(value, p), name, shorthand, usage)
+}
+
+// -- IP
+
+func (f *FlagSet) IPVar(p *net.IP, name string, value net.IP, usage string) {
+	f.VarP(newIPValue(value, p), name, "", usage)
+}
+func (f *FlagSet) IPVarP(p *net.IP, name, shorthand string, value net.IP, usage string) {
+	f.VarP(newIPValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) IP(name string, value net.IP, usage string) *net.IP {
+	p := new(net.IP); f.IPVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) IPP(name, shorthand string, value net.IP, usage string) *net.IP {
+	p := new(net.IP); f.IPVarP(p, name, shorthand, value, usage); return p
+}
+
+// -- IPMask
+
+func (f *FlagSet) IPMaskVar(p *net.IPMask, name string, value net.IPMask, usage string) {
+	f.VarP(newIPMaskValue(value, p), name, "", usage)
+}
+func (f *FlagSet) IPMaskVarP(p *net.IPMask, name, shorthand string, value net.IPMask, usage string) {
+	f.VarP(newIPMaskValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) IPMask(name string, value net.IPMask, usage string) *net.IPMask {
+	p := new(net.IPMask); f.IPMaskVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) IPMaskP(name, shorthand string, value net.IPMask, usage string) *net.IPMask {
+	p := new(net.IPMask); f.IPMaskVarP(p, name, shorthand, value, usage); return p
+}
+
+// -- IPNet
+
+func (f *FlagSet) IPNetVar(p *net.IPNet, name string, value net.IPNet, usage string) {
+	f.VarP(newIPNetValue(value, p), name, "", usage)
+}
+func (f *FlagSet) IPNetVarP(p *net.IPNet, name, shorthand string, value net.IPNet, usage string) {
+	f.VarP(newIPNetValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) IPNet(name string, value net.IPNet, usage string) *net.IPNet {
+	p := new(net.IPNet); f.IPNetVarP(p, name, "", value, usage); return p
+}
+func (f *FlagSet) IPNetP(name, shorthand string, value net.IPNet, usage string) *net.IPNet {
+	p := new(net.IPNet); f.IPNetVarP(p, name, shorthand, value, usage); return p
 }

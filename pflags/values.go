@@ -1,6 +1,9 @@
 package pflags
 
 import (
+	"encoding"
+	"fmt"
+	"net"
 	"time"
 
 	"github.com/major0/optargs"
@@ -46,3 +49,74 @@ func newStringToInt64Value(val map[string]int64, p *map[string]int64) Value    {
 func newCountValue(val int, p *int) Value              { return optargs.NewCountValue(val, p) }
 func newFuncValue(fn func(string) error) Value         { return optargs.NewFuncValue(fn) }
 func newBoolFuncValue(fn func(string) error) Value     { return optargs.NewBoolFuncValue(fn) }
+
+func newTextValue(val encoding.TextMarshaler, dest encoding.TextUnmarshaler) Value {
+	return optargs.NewTextValue(val, dest)
+}
+
+// -- IP value (net.IP implements TextUnmarshaler)
+
+func newIPValue(val net.IP, p *net.IP) Value {
+	if p == nil {
+		p = new(net.IP)
+	}
+	*p = val
+	return optargs.NewTextValue(&val, p)
+}
+
+// -- IPMask value (custom: net.IPMask does not implement TextUnmarshaler)
+
+type ipMaskValue net.IPMask
+
+func newIPMaskValue(val net.IPMask, p *net.IPMask) Value {
+	if p == nil {
+		p = new(net.IPMask)
+	}
+	*p = val
+	return (*ipMaskValue)(p)
+}
+
+func (v *ipMaskValue) Set(s string) error {
+	ip := net.ParseIP(s)
+	if ip == nil {
+		return fmt.Errorf("invalid IP mask: %q", s)
+	}
+	// Use the 4-byte form if possible.
+	if ip4 := ip.To4(); ip4 != nil {
+		*v = ipMaskValue(net.IPMask(ip4))
+	} else {
+		*v = ipMaskValue(net.IPMask(ip))
+	}
+	return nil
+}
+
+func (v *ipMaskValue) String() string { return net.IPMask(*v).String() }
+func (v *ipMaskValue) Type() string   { return "ipMask" }
+
+// -- IPNet value (custom: net.IPNet does not implement TextUnmarshaler)
+
+type ipNetValue net.IPNet
+
+func newIPNetValue(val net.IPNet, p *net.IPNet) Value {
+	if p == nil {
+		p = new(net.IPNet)
+	}
+	*p = val
+	return (*ipNetValue)(p)
+}
+
+func (v *ipNetValue) Set(s string) error {
+	_, n, err := net.ParseCIDR(s)
+	if err != nil {
+		return fmt.Errorf("invalid CIDR: %q", s)
+	}
+	*v = ipNetValue(*n)
+	return nil
+}
+
+func (v *ipNetValue) String() string {
+	n := net.IPNet(*v)
+	return n.String()
+}
+
+func (v *ipNetValue) Type() string { return "ipNet" }

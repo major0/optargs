@@ -91,6 +91,17 @@ func (f *FlagSet) normalizeArgs(args []string) []string {
 	return out
 }
 
+// boolLongArgType returns the core argument type for a boolean long option.
+// If the value implements BoolArgValuer and returns false, the flag is
+// strictly no-argument. Otherwise it accepts an optional =value.
+func boolLongArgType(v Value) optargs.ArgType {
+	type boolArgValuer interface{ BoolTakesArg() bool }
+	if ba, ok := v.(boolArgValuer); ok && !ba.BoolTakesArg() {
+		return optargs.NoArgument
+	}
+	return optargs.OptionalArgument
+}
+
 // buildLongOpts constructs the long option map for optargs.NewParser
 // from the FlagSet's registered flags. Also registers --no-<name>
 // negation flags for boolean flags.
@@ -100,7 +111,7 @@ func (f *FlagSet) buildLongOpts() map[string]*optargs.Flag {
 		handler := f.makeHandler(flag)
 		hasArg := optargs.RequiredArgument
 		if isBoolFlag(flag.Value) {
-			hasArg = optargs.OptionalArgument
+			hasArg = boolLongArgType(flag.Value)
 		}
 
 		coreFlag := &optargs.Flag{
@@ -110,8 +121,8 @@ func (f *FlagSet) buildLongOpts() map[string]*optargs.Flag {
 		}
 		longOpts[normalizedName] = coreFlag
 
-		// Register negation flag for booleans
-		if isBoolFlag(flag.Value) {
+		// Register negation flag for booleans that accept an argument
+		if isBoolFlag(flag.Value) && hasArg == optargs.OptionalArgument {
 			negName := "no-" + normalizedName
 			longOpts[negName] = &optargs.Flag{
 				Name:   negName,

@@ -1,6 +1,7 @@
 package pflags
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -146,27 +147,14 @@ func TestE2EHelpTextGeneration(t *testing.T) {
 
 	// All flags should appear
 	for _, name := range []string{"--output", "--verbose", "--count"} {
-		if !contains(usages, name) {
+		if !strings.Contains(usages, name) {
 			t.Errorf("missing %s in usage output", name)
 		}
 	}
 	// Shorthand flags should show shorthand
 	for _, sh := range []string{"-o,", "-v,"} {
-		if !contains(usages, sh) {
+		if !strings.Contains(usages, sh) {
 			t.Errorf("missing shorthand %s in usage output", sh)
 		}
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && searchString(s, substr)
-}
-
-func searchString(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
