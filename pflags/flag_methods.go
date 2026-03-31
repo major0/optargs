@@ -454,10 +454,14 @@ func (f *FlagSet) BoolSliceVarP(p *[]bool, name, shorthand string, value []bool,
 	f.VarP(newBoolSliceValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) BoolSlice(name string, value []bool, usage string) *[]bool {
-	p := new([]bool); f.BoolSliceVarP(p, name, "", value, usage); return p
+	p := new([]bool)
+	f.BoolSliceVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) BoolSliceP(name, shorthand string, value []bool, usage string) *[]bool {
-	p := new([]bool); f.BoolSliceVarP(p, name, shorthand, value, usage); return p
+	p := new([]bool)
+	f.BoolSliceVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- Int32Slice
@@ -469,10 +473,14 @@ func (f *FlagSet) Int32SliceVarP(p *[]int32, name, shorthand string, value []int
 	f.VarP(newInt32SliceValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) Int32Slice(name string, value []int32, usage string) *[]int32 {
-	p := new([]int32); f.Int32SliceVarP(p, name, "", value, usage); return p
+	p := new([]int32)
+	f.Int32SliceVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) Int32SliceP(name, shorthand string, value []int32, usage string) *[]int32 {
-	p := new([]int32); f.Int32SliceVarP(p, name, shorthand, value, usage); return p
+	p := new([]int32)
+	f.Int32SliceVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- Int64Slice
@@ -484,10 +492,14 @@ func (f *FlagSet) Int64SliceVarP(p *[]int64, name, shorthand string, value []int
 	f.VarP(newInt64SliceValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) Int64Slice(name string, value []int64, usage string) *[]int64 {
-	p := new([]int64); f.Int64SliceVarP(p, name, "", value, usage); return p
+	p := new([]int64)
+	f.Int64SliceVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) Int64SliceP(name, shorthand string, value []int64, usage string) *[]int64 {
-	p := new([]int64); f.Int64SliceVarP(p, name, shorthand, value, usage); return p
+	p := new([]int64)
+	f.Int64SliceVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- UintSlice
@@ -499,10 +511,14 @@ func (f *FlagSet) UintSliceVarP(p *[]uint, name, shorthand string, value []uint,
 	f.VarP(newUintSliceValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) UintSlice(name string, value []uint, usage string) *[]uint {
-	p := new([]uint); f.UintSliceVarP(p, name, "", value, usage); return p
+	p := new([]uint)
+	f.UintSliceVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) UintSliceP(name, shorthand string, value []uint, usage string) *[]uint {
-	p := new([]uint); f.UintSliceVarP(p, name, shorthand, value, usage); return p
+	p := new([]uint)
+	f.UintSliceVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- Float32Slice
@@ -514,10 +530,14 @@ func (f *FlagSet) Float32SliceVarP(p *[]float32, name, shorthand string, value [
 	f.VarP(newFloat32SliceValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) Float32Slice(name string, value []float32, usage string) *[]float32 {
-	p := new([]float32); f.Float32SliceVarP(p, name, "", value, usage); return p
+	p := new([]float32)
+	f.Float32SliceVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) Float32SliceP(name, shorthand string, value []float32, usage string) *[]float32 {
-	p := new([]float32); f.Float32SliceVarP(p, name, shorthand, value, usage); return p
+	p := new([]float32)
+	f.Float32SliceVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- Float64Slice
@@ -529,10 +549,14 @@ func (f *FlagSet) Float64SliceVarP(p *[]float64, name, shorthand string, value [
 	f.VarP(newFloat64SliceValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) Float64Slice(name string, value []float64, usage string) *[]float64 {
-	p := new([]float64); f.Float64SliceVarP(p, name, "", value, usage); return p
+	p := new([]float64)
+	f.Float64SliceVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) Float64SliceP(name, shorthand string, value []float64, usage string) *[]float64 {
-	p := new([]float64); f.Float64SliceVarP(p, name, shorthand, value, usage); return p
+	p := new([]float64)
+	f.Float64SliceVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- DurationSlice
@@ -544,10 +568,14 @@ func (f *FlagSet) DurationSliceVarP(p *[]time.Duration, name, shorthand string, 
 	f.VarP(newDurationSliceValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) DurationSlice(name string, value []time.Duration, usage string) *[]time.Duration {
-	p := new([]time.Duration); f.DurationSliceVarP(p, name, "", value, usage); return p
+	p := new([]time.Duration)
+	f.DurationSliceVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) DurationSliceP(name, shorthand string, value []time.Duration, usage string) *[]time.Duration {
-	p := new([]time.Duration); f.DurationSliceVarP(p, name, shorthand, value, usage); return p
+	p := new([]time.Duration)
+	f.DurationSliceVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- StringArray (appends raw strings without comma splitting)
@@ -559,10 +587,14 @@ func (f *FlagSet) StringArrayVarP(p *[]string, name, shorthand string, value []s
 	f.VarP(newStringArrayValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) StringArray(name string, value []string, usage string) *[]string {
-	p := new([]string); f.StringArrayVarP(p, name, "", value, usage); return p
+	p := new([]string)
+	f.StringArrayVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) StringArrayP(name, shorthand string, value []string, usage string) *[]string {
-	p := new([]string); f.StringArrayVarP(p, name, shorthand, value, usage); return p
+	p := new([]string)
+	f.StringArrayVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- StringToString (map[string]string)
@@ -574,10 +606,14 @@ func (f *FlagSet) StringToStringVarP(p *map[string]string, name, shorthand strin
 	f.VarP(newStringToStringValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) StringToString(name string, value map[string]string, usage string) *map[string]string {
-	p := new(map[string]string); f.StringToStringVarP(p, name, "", value, usage); return p
+	p := new(map[string]string)
+	f.StringToStringVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) StringToStringP(name, shorthand string, value map[string]string, usage string) *map[string]string {
-	p := new(map[string]string); f.StringToStringVarP(p, name, shorthand, value, usage); return p
+	p := new(map[string]string)
+	f.StringToStringVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- StringToInt (map[string]int)
@@ -589,10 +625,14 @@ func (f *FlagSet) StringToIntVarP(p *map[string]int, name, shorthand string, val
 	f.VarP(newStringToIntValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) StringToInt(name string, value map[string]int, usage string) *map[string]int {
-	p := new(map[string]int); f.StringToIntVarP(p, name, "", value, usage); return p
+	p := new(map[string]int)
+	f.StringToIntVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) StringToIntP(name, shorthand string, value map[string]int, usage string) *map[string]int {
-	p := new(map[string]int); f.StringToIntVarP(p, name, shorthand, value, usage); return p
+	p := new(map[string]int)
+	f.StringToIntVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- StringToInt64 (map[string]int64)
@@ -604,10 +644,14 @@ func (f *FlagSet) StringToInt64VarP(p *map[string]int64, name, shorthand string,
 	f.VarP(newStringToInt64Value(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) StringToInt64(name string, value map[string]int64, usage string) *map[string]int64 {
-	p := new(map[string]int64); f.StringToInt64VarP(p, name, "", value, usage); return p
+	p := new(map[string]int64)
+	f.StringToInt64VarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) StringToInt64P(name, shorthand string, value map[string]int64, usage string) *map[string]int64 {
-	p := new(map[string]int64); f.StringToInt64VarP(p, name, shorthand, value, usage); return p
+	p := new(map[string]int64)
+	f.StringToInt64VarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- Count (increments on each occurrence, e.g. -vvv)
@@ -619,10 +663,14 @@ func (f *FlagSet) CountVarP(p *int, name, shorthand string, usage string) {
 	f.VarP(newCountValue(0, p), name, shorthand, usage)
 }
 func (f *FlagSet) Count(name string, usage string) *int {
-	p := new(int); f.CountVarP(p, name, "", usage); return p
+	p := new(int)
+	f.CountVarP(p, name, "", usage)
+	return p
 }
 func (f *FlagSet) CountP(name, shorthand string, usage string) *int {
-	p := new(int); f.CountVarP(p, name, shorthand, usage); return p
+	p := new(int)
+	f.CountVarP(p, name, shorthand, usage)
+	return p
 }
 
 // -- TextVar (encoding.TextUnmarshaler)
@@ -643,10 +691,14 @@ func (f *FlagSet) IPVarP(p *net.IP, name, shorthand string, value net.IP, usage 
 	f.VarP(newIPValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) IP(name string, value net.IP, usage string) *net.IP {
-	p := new(net.IP); f.IPVarP(p, name, "", value, usage); return p
+	p := new(net.IP)
+	f.IPVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) IPP(name, shorthand string, value net.IP, usage string) *net.IP {
-	p := new(net.IP); f.IPVarP(p, name, shorthand, value, usage); return p
+	p := new(net.IP)
+	f.IPVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- IPMask
@@ -658,10 +710,14 @@ func (f *FlagSet) IPMaskVarP(p *net.IPMask, name, shorthand string, value net.IP
 	f.VarP(newIPMaskValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) IPMask(name string, value net.IPMask, usage string) *net.IPMask {
-	p := new(net.IPMask); f.IPMaskVarP(p, name, "", value, usage); return p
+	p := new(net.IPMask)
+	f.IPMaskVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) IPMaskP(name, shorthand string, value net.IPMask, usage string) *net.IPMask {
-	p := new(net.IPMask); f.IPMaskVarP(p, name, shorthand, value, usage); return p
+	p := new(net.IPMask)
+	f.IPMaskVarP(p, name, shorthand, value, usage)
+	return p
 }
 
 // -- IPNet
@@ -673,8 +729,12 @@ func (f *FlagSet) IPNetVarP(p *net.IPNet, name, shorthand string, value net.IPNe
 	f.VarP(newIPNetValue(value, p), name, shorthand, usage)
 }
 func (f *FlagSet) IPNet(name string, value net.IPNet, usage string) *net.IPNet {
-	p := new(net.IPNet); f.IPNetVarP(p, name, "", value, usage); return p
+	p := new(net.IPNet)
+	f.IPNetVarP(p, name, "", value, usage)
+	return p
 }
 func (f *FlagSet) IPNetP(name, shorthand string, value net.IPNet, usage string) *net.IPNet {
-	p := new(net.IPNet); f.IPNetVarP(p, name, shorthand, value, usage); return p
+	p := new(net.IPNet)
+	f.IPNetVarP(p, name, shorthand, value, usage)
+	return p
 }

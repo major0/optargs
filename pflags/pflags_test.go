@@ -626,10 +626,10 @@ func TestPOSIXDoubleHyphenTermination(t *testing.T) {
 // TestPOSIXCombinedShortOptions tests -abc style combined short options.
 func TestPOSIXCombinedShortOptions(t *testing.T) {
 	tests := []struct {
-		name            string
-		args            []string
+		name                string
+		args                []string
 		wantA, wantB, wantC bool
-		wantVal         string
+		wantVal             string
 	}{
 		{"combined booleans", []string{"-abc"}, true, true, true, ""},
 		{"combined with trailing value", []string{"-abo", "file.txt"}, true, true, false, "file.txt"},
@@ -1850,7 +1850,7 @@ func TestGlobalWrapperSmoke(t *testing.T) {
 	PrintDefaults()
 	_ = FlagUsages()
 	Usage()
-	MarkHidden("vpf")       //nolint:errcheck
+	MarkHidden("vpf")             //nolint:errcheck
 	MarkDeprecated("vpf", "gone") //nolint:errcheck
 }
 

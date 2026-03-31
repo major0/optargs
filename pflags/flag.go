@@ -394,10 +394,10 @@ func (f *FlagSet) PrintDefaults() {
 // FlagUsagesWrapped can write to a buffer without swapping f.output.
 func (f *FlagSet) printDefaultsTo(w io.Writer) {
 	type flagLine struct {
-		flag    *Flag
-		prefix  string
-		name    string // unquoted type name
-		usage   string // unquoted usage text
+		flag   *Flag
+		prefix string
+		name   string // unquoted type name
+		usage  string // unquoted usage text
 	}
 
 	var lines []flagLine

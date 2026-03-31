@@ -56,4 +56,10 @@ var ExpectedDiffs = []ExpectedDiff{
 		Ours:      `"invalid argument \"abc\" for \"--count\" flag: invalid value \"abc\" for type int"`,
 		Rationale: "Outer format matches upstream exactly. Inner error uses core's unified format instead of raw strconv errors, providing consistent messages across all types",
 	},
+	{
+		Scenario:  "BoolArgValuer interface (BoolTakesArg)",
+		Upstream:  "Not supported; all boolean flags accept optional =value argument",
+		Ours:      "Types implement BoolTakesArg() to declare NoArgument vs OptionalArgument; Count and BoolFunc are strictly no-argument",
+		Rationale: "Prevents Count/BoolFunc flags from consuming the next positional argument as a value",
+	},
 }
