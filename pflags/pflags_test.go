@@ -1772,3 +1772,55 @@ func TestPFlagFromGoFlag(t *testing.T) {
 		t.Errorf("Type = %q", pf.Value.Type())
 	}
 }
+
+// TestGlobalWrapperSmoke exercises a sample of global CommandLine wrappers
+// to verify they delegate correctly. Not exhaustive — these are one-liner
+// delegations to already-tested FlagSet methods.
+func TestGlobalWrapperSmoke(t *testing.T) {
+	// Save and restore CommandLine
+	saved := CommandLine
+	defer func() { CommandLine = saved }()
+	CommandLine = NewFlagSet("test", ContinueOnError)
+
+	Int64Var(new(int64), "i64", 99, "")
+	UintVar(new(uint), "u", 7, "")
+	Uint64Var(new(uint64), "u64", 8, "")
+	Int8Var(new(int8), "i8", 7, "")
+	Int16Var(new(int16), "i16", 16, "")
+	Int32Var(new(int32), "i32", 32, "")
+	Uint8Var(new(uint8), "u8", 8, "")
+	Uint16Var(new(uint16), "u16", 16, "")
+	Uint32Var(new(uint32), "u32", 32, "")
+	Float32Var(new(float32), "f32", 1.5, "")
+	StringSliceVar(new([]string), "ss", nil, "")
+	IntSliceVar(new([]int), "is", nil, "")
+	BoolSliceVar(new([]bool), "bs", nil, "")
+	DurationSliceVar(new([]time.Duration), "ds", nil, "")
+	StringArrayVar(new([]string), "sa", nil, "")
+	StringToStringVar(new(map[string]string), "sts", nil, "")
+	StringToIntVar(new(map[string]int), "sti", nil, "")
+	StringToInt64Var(new(map[string]int64), "sti64", nil, "")
+	CountVar(new(int), "cnt", "")
+	IPVar(new(net.IP), "ip", nil, "")
+	IPMaskVar(new(net.IPMask), "mask", nil, "")
+	IPNetVar(new(net.IPNet), "cidr", net.IPNet{}, "")
+	Func("fn", "", func(string) error { return nil })
+	BoolFunc("bf", "", func(string) error { return nil })
+
+	if !HasFlags() {
+		t.Error("HasFlags should be true")
+	}
+	if !HasAvailableFlags() {
+		t.Error("HasAvailableFlags should be true")
+	}
+	if NFlag() != 0 {
+		t.Error("NFlag should be 0 before parse")
+	}
+	if Changed("i64") {
+		t.Error("i64 should not be changed before parse")
+	}
+	if ArgsLenAtDash() != -1 {
+		t.Error("ArgsLenAtDash should be -1 before parse")
+	}
+	_ = FlagUsagesWrapped(80)
+}
