@@ -2056,7 +2056,7 @@ func TestIPMaskIPv6(t *testing.T) {
 }
 
 // TestParseInvalidValue tests that parsing an invalid value for a typed flag
-// returns an error through the full Parse path.
+// returns an InvalidValueError matching upstream pflag format.
 func TestParseInvalidValue(t *testing.T) {
 	fs := NewFlagSet("test", ContinueOnError)
 	fs.IntVar(new(int), "count", 0, "")
@@ -2064,8 +2064,23 @@ func TestParseInvalidValue(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid int value")
 	}
-	if !strings.Contains(err.Error(), "invalid value") {
-		t.Errorf("error = %q, expected 'invalid value'", err.Error())
+	// Should be an InvalidValueError
+	var ive *InvalidValueError
+	if !errors.As(err, &ive) {
+		t.Fatalf("expected *InvalidValueError, got %T: %v", err, err)
+	}
+	// Format should match upstream: invalid argument "abc" for "--count" flag: <inner>
+	if !strings.Contains(err.Error(), `invalid argument "abc" for "--count" flag`) {
+		t.Errorf("error = %q, expected upstream format", err.Error())
+	}
+	if ive.GetFlag().Name != "count" {
+		t.Errorf("GetFlag().Name = %q", ive.GetFlag().Name)
+	}
+	if ive.GetValue() != "abc" {
+		t.Errorf("GetValue() = %q", ive.GetValue())
+	}
+	if ive.Unwrap() == nil {
+		t.Error("Unwrap() should return inner error")
 	}
 }
 

@@ -50,4 +50,10 @@ var ExpectedDiffs = []ExpectedDiff{
 		Ours:      `"unknown flag: --name" for long, "unknown shorthand flag: 'x'" for short`,
 		Rationale: "Behavioral parity for long flags; short flag errors include quotes around the character for clarity",
 	},
+	{
+		Scenario:  "Error message format for invalid values",
+		Upstream:  `"invalid argument \"abc\" for \"--count\" flag: strconv.ParseInt: parsing \"abc\": invalid syntax"`,
+		Ours:      `"invalid argument \"abc\" for \"--count\" flag: invalid value \"abc\" for type int"`,
+		Rationale: "Outer format matches upstream exactly. Inner error uses core's unified format instead of raw strconv errors, providing consistent messages across all types",
+	},
 }

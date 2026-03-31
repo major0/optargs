@@ -148,7 +148,7 @@ func (f *FlagSet) makeHandler(flag *Flag) func(string, string) error {
 			// implementation decides what no-arg means.
 		}
 		if err := flag.Value.Set(val); err != nil {
-			return err
+			return &InvalidValueError{flag: flag, value: val, err: err}
 		}
 		flag.Changed = true
 		if f.parseAllFn != nil {
