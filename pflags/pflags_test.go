@@ -3,6 +3,7 @@ package pflags
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"net"
 	"strings"
@@ -1695,5 +1696,79 @@ func TestIPNetInvalid(t *testing.T) {
 	fs.IPNetVar(new(net.IPNet), "cidr", net.IPNet{}, "")
 	if err := fs.Parse([]string{"--cidr", "not-a-cidr"}); err == nil {
 		t.Error("expected error for invalid CIDR")
+	}
+}
+
+// TestAddGoFlag tests adding a single Go stdlib flag.
+func TestAddGoFlag(t *testing.T) {
+	goFS := flag.NewFlagSet("go", flag.ContinueOnError)
+	goFS.String("output", "default.txt", "output file")
+
+	fs := NewFlagSet("test", ContinueOnError)
+	goFS.VisitAll(func(gf *flag.Flag) {
+		fs.AddGoFlag(gf)
+	})
+
+	f := fs.Lookup("output")
+	if f == nil {
+		t.Fatal("flag not found after AddGoFlag")
+	}
+	if f.DefValue != "default.txt" {
+		t.Errorf("DefValue = %q", f.DefValue)
+	}
+	if err := fs.Parse([]string{"--output", "result.txt"}); err != nil {
+		t.Fatal(err)
+	}
+	if f.Value.String() != "result.txt" {
+		t.Errorf("value = %q, want result.txt", f.Value.String())
+	}
+}
+
+// TestAddGoFlagSet tests adding all flags from a Go stdlib FlagSet.
+func TestAddGoFlagSet(t *testing.T) {
+	goFS := flag.NewFlagSet("go", flag.ContinueOnError)
+	goFS.String("name", "", "name flag")
+	goFS.Int("count", 0, "count flag")
+
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.AddGoFlagSet(goFS)
+
+	if fs.Lookup("name") == nil || fs.Lookup("count") == nil {
+		t.Error("flags not found after AddGoFlagSet")
+	}
+	// nil should not panic
+	fs.AddGoFlagSet(nil)
+}
+
+// TestCopyToGoFlagSet tests copying pflags to a Go stdlib FlagSet.
+func TestCopyToGoFlagSet(t *testing.T) {
+	pfs := NewFlagSet("test", ContinueOnError)
+	pfs.StringVar(new(string), "output", "default.txt", "output file")
+	pfs.IntVar(new(int), "count", 5, "count")
+
+	goFS := flag.NewFlagSet("go", flag.ContinueOnError)
+	CopyToGoFlagSet(pfs, goFS)
+
+	gf := goFS.Lookup("output")
+	if gf == nil {
+		t.Fatal("output flag not found in Go FlagSet")
+	}
+	if gf.DefValue != "default.txt" {
+		t.Errorf("DefValue = %q", gf.DefValue)
+	}
+}
+
+// TestPFlagFromGoFlag tests the conversion function.
+func TestPFlagFromGoFlag(t *testing.T) {
+	goFS := flag.NewFlagSet("go", flag.ContinueOnError)
+	goFS.String("name", "default", "a name")
+	gf := goFS.Lookup("name")
+
+	pf := PFlagFromGoFlag(gf)
+	if pf.Name != "name" || pf.DefValue != "default" || pf.Usage != "a name" {
+		t.Errorf("PFlagFromGoFlag: Name=%q DefValue=%q Usage=%q", pf.Name, pf.DefValue, pf.Usage)
+	}
+	if pf.Value.Type() != "string" {
+		t.Errorf("Type = %q", pf.Value.Type())
 	}
 }
