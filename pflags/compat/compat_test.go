@@ -6,7 +6,10 @@ package compat
 import (
 	"bytes"
 	"flag"
+	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/spf13/pflag"
 )
@@ -188,4 +191,126 @@ func TestUpstreamMixedFlags(t *testing.T) {
 	}
 	golden(t, "mixed_flags", result)
 	golden(t, "mixed_usage", captureUsage(fs))
+}
+
+// TestUpstreamFloatFlag captures upstream float64 flag behavior.
+func TestUpstreamFloatFlag(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	var f float64
+	fs.Float64Var(&f, "rate", 0, "rate limit")
+	if err := fs.Parse([]string{"--rate", "3.14"}); err != nil {
+		t.Fatal(err)
+	}
+	golden(t, "float_parse", fmt.Sprintf("%g", f))
+}
+
+// TestUpstreamDurationFlag captures upstream duration flag behavior.
+func TestUpstreamDurationFlag(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	var d time.Duration
+	fs.DurationVar(&d, "timeout", 0, "timeout")
+	if err := fs.Parse([]string{"--timeout", "5s"}); err != nil {
+		t.Fatal(err)
+	}
+	golden(t, "duration_parse", d.String())
+}
+
+// TestUpstreamStringArray captures upstream StringArray behavior.
+func TestUpstreamStringArray(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	var sa []string
+	fs.StringArrayVar(&sa, "item", nil, "items")
+	if err := fs.Parse([]string{"--item", "a,b", "--item", "c"}); err != nil {
+		t.Fatal(err)
+	}
+	golden(t, "string_array_parse", strings.Join(sa, "\n"))
+}
+
+// TestUpstreamCountFlag captures upstream Count flag behavior.
+func TestUpstreamCountFlag(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	var c int
+	fs.CountVarP(&c, "verbose", "v", "verbosity")
+	if err := fs.Parse([]string{"-v", "-v", "-v"}); err != nil {
+		t.Fatal(err)
+	}
+	golden(t, "count_parse", fmt.Sprintf("%d", c))
+}
+
+// TestUpstreamLookupSetChanged captures Lookup/Set/Changed behavior.
+func TestUpstreamLookupSetChanged(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs.String("name", "default", "")
+	if err := fs.Parse([]string{"--name", "alice"}); err != nil {
+		t.Fatal(err)
+	}
+	f := fs.Lookup("name")
+	result := fmt.Sprintf("value=%s changed=%t", f.Value.String(), f.Changed)
+	golden(t, "lookup_set_changed", result)
+}
+
+// TestUpstreamNFlagNArg captures NFlag/NArg behavior.
+func TestUpstreamNFlagNArg(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs.String("a", "", "")
+	fs.String("b", "", "")
+	if err := fs.Parse([]string{"--a", "1", "pos1", "pos2"}); err != nil {
+		t.Fatal(err)
+	}
+	result := fmt.Sprintf("nflag=%d narg=%d", fs.NFlag(), fs.NArg())
+	golden(t, "nflag_narg", result)
+}
+
+// TestUpstreamHidden captures hidden flag usage output.
+func TestUpstreamHidden(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs.String("visible", "", "visible flag")
+	fs.String("hidden", "", "hidden flag")
+	fs.MarkHidden("hidden")
+	golden(t, "hidden_usage", captureUsage(fs))
+}
+
+// TestUpstreamSortFlags captures SortFlags behavior.
+func TestUpstreamSortFlags(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs.SortFlags = true
+	fs.String("zebra", "", "z flag")
+	fs.String("alpha", "", "a flag")
+	golden(t, "sort_flags_sorted", captureUsage(fs))
+
+	fs2 := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs2.SortFlags = false
+	fs2.String("zebra", "", "z flag")
+	fs2.String("alpha", "", "a flag")
+	golden(t, "sort_flags_unsorted", captureUsage(fs2))
+}
+
+// TestUpstreamDeprecated captures deprecated flag behavior.
+func TestUpstreamDeprecated(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs.String("old-flag", "", "old flag")
+	fs.MarkDeprecated("old-flag", "use --new-flag instead")
+	golden(t, "deprecated_usage", captureUsage(fs))
+}
+
+// TestUpstreamSetInterspersed captures interspersed behavior.
+func TestUpstreamSetInterspersed(t *testing.T) {
+	// Interspersed enabled (default)
+	fs1 := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs1.String("name", "", "")
+	if err := fs1.Parse([]string{"pos1", "--name", "val", "pos2"}); err != nil {
+		t.Fatal(err)
+	}
+	r1 := fmt.Sprintf("name=%s narg=%d", fs1.Lookup("name").Value.String(), fs1.NArg())
+	golden(t, "interspersed_enabled", r1)
+
+	// Interspersed disabled
+	fs2 := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs2.SetInterspersed(false)
+	fs2.String("name", "", "")
+	if err := fs2.Parse([]string{"pos1", "--name", "val"}); err != nil {
+		t.Fatal(err)
+	}
+	r2 := fmt.Sprintf("name=%s narg=%d", fs2.Lookup("name").Value.String(), fs2.NArg())
+	golden(t, "interspersed_disabled", r2)
 }

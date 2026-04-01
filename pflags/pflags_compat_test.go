@@ -2,10 +2,12 @@ package pflags
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // goldenFile mirrors the compat/ GoldenFile struct for JSON reading.
@@ -219,5 +221,76 @@ func TestCompatMixedUsage(t *testing.T) {
 		if !wantSet[trimmed] {
 			t.Errorf("unexpected line in output: %q\ngot:\n%s\nwant:\n%s", trimmed, got, want)
 		}
+	}
+}
+
+// TestCompatFloatFlag validates float flag parsing matches upstream.
+func TestCompatFloatFlag(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var f float64
+	fs.Float64Var(&f, "rate", 0, "rate limit")
+	if err := fs.Parse([]string{"--rate", "3.14"}); err != nil {
+		t.Fatal(err)
+	}
+	want := strings.TrimSuffix(readJSONGolden(t, "float_parse"), "\n")
+	if got := fmt.Sprintf("%g", f); got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// TestCompatDurationFlag validates duration flag parsing matches upstream.
+func TestCompatDurationFlag(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var d time.Duration
+	fs.DurationVar(&d, "timeout", 0, "timeout")
+	if err := fs.Parse([]string{"--timeout", "5s"}); err != nil {
+		t.Fatal(err)
+	}
+	want := strings.TrimSuffix(readJSONGolden(t, "duration_parse"), "\n")
+	if got := d.String(); got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// TestCompatStringArray validates StringArray behavior matches upstream.
+func TestCompatStringArray(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var sa []string
+	fs.StringArrayVar(&sa, "item", nil, "items")
+	if err := fs.Parse([]string{"--item", "a,b", "--item", "c"}); err != nil {
+		t.Fatal(err)
+	}
+	want := strings.TrimSuffix(readJSONGolden(t, "string_array_parse"), "\n")
+	if got := strings.Join(sa, "\n"); got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// TestCompatCountFlag validates Count flag behavior matches upstream.
+func TestCompatCountFlag(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var c int
+	fs.CountVarP(&c, "verbose", "v", "verbosity")
+	if err := fs.Parse([]string{"-v", "-v", "-v"}); err != nil {
+		t.Fatal(err)
+	}
+	want := strings.TrimSuffix(readJSONGolden(t, "count_parse"), "\n")
+	if got := fmt.Sprintf("%d", c); got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// TestCompatLookupSetChanged validates Lookup/Set/Changed matches upstream.
+func TestCompatLookupSetChanged(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.StringVar(new(string), "name", "default", "")
+	if err := fs.Parse([]string{"--name", "alice"}); err != nil {
+		t.Fatal(err)
+	}
+	f := fs.Lookup("name")
+	got := fmt.Sprintf("value=%s changed=%t", f.Value.String(), f.Changed)
+	want := strings.TrimSuffix(readJSONGolden(t, "lookup_set_changed"), "\n")
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
