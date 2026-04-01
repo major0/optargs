@@ -31,6 +31,13 @@ type Value interface {
 	Type() string
 }
 
+// PrefixPair represents a true/false prefix pair for a boolean flag.
+// Each pair generates --<True>-<name> and --<False>-<name> long options.
+type PrefixPair struct {
+	True  string // e.g. "enable"
+	False string // e.g. "disable"
+}
+
 // Flag represents the state of a flag.
 type Flag struct {
 	Name                string              // name as it appears on command line
@@ -43,6 +50,8 @@ type Flag struct {
 	Deprecated          string              // If this flag is deprecated, this string is the new or now thing to use
 	ShorthandDeprecated string              // If the shorthand of this flag is deprecated, this string is the message
 	Annotations         map[string][]string // used by cobra.Command bash autocomple code
+	Prefixes            []PrefixPair        // registered boolean prefix pairs; nil when none
+	Negatable           bool                // non-boolean flag supports --no-<name> zero-clear
 }
 
 // FlagSet represents a set of defined flags.
