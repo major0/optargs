@@ -75,6 +75,37 @@ make compat-diff    # show documented divergences
 
 Known divergences are documented in `expected_diffs.go`.
 
+## Feature Comparison
+
+| Feature | Upstream go-arg | goarg/ (compat) | OptArgs-exclusive |
+|---------|:-:|:-:|:-:|
+| Struct tag parsing | ✅ | ✅ | — |
+| Short/long options | ✅ | ✅ | — |
+| Positional arguments | ✅ | ✅ | — |
+| Subcommands | ✅ | ✅ | — |
+| Environment variable fallback | ✅ | ✅ | — |
+| Env-only fields | ✅ | ✅ | — |
+| Default values | ✅ | ✅ | — |
+| Map types | ✅ | ⚠️¹ | — |
+| Slice types (repeated flags) | ✅ | ⚠️² | — |
+| Embedded struct inheritance | ✅ | ✅ | — |
+| Versioned/Described/Epilogued | ✅ | ✅ | — |
+| ErrHelp/ErrVersion sentinels | ✅ | ✅ | — |
+| Builtin help/version flags | ✅ | ✅ | — |
+| Subcommand()/SubcommandNames() | ✅ | ✅ | — |
+| POSIX short-option compaction (-abc) | ❌ | — | ✅ |
+| GNU longest-match prefix matching | ❌ | — | ✅ |
+| Boolean negation (--no-flag) | ❌ | — | ✅ |
+| `--` termination | ❌ | — | ✅ |
+| Parent flag inheritance across subcommands | ❌ | — | ✅ |
+| Case-insensitive subcommand matching | ❌ | — | ✅ |
+| getopt_long_only mode | ❌ | — | ✅ |
+| Interspersed argument handling | ❌ | — | ✅ |
+
+¹ Upstream resets map on each repeated flag; ours merges entries (POSIX semantics).
+² Upstream resets slice on each repeated flag; ours appends (POSIX semantics).
+  See `expected_diffs.go` for all documented divergences.
+
 ## Config
 
 ```go
