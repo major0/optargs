@@ -1,8 +1,8 @@
 {
   "metadata": {
     "upstream_version": "v1.6.1",
-    "local_head": "ef07ebc",
-    "captured_at": "2026-04-01T14:25:18Z"
+    "local_head": "2949d27",
+    "captured_at": "2026-04-01T14:53:37Z"
   },
   "output": "Usage: test [--name NAME] [--count COUNT]\n\nOptions:\n  --name NAME, -n NAME   user name\n  --count COUNT, -c COUNT\n                         repeat count\n  --help, -h             display this help and exit\n"
 }

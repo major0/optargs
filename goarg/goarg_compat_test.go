@@ -33,6 +33,12 @@ func compatScenarios() []compatScenario {
 		compatUnknownOption(),
 		compatSubcommandBasic(),
 		compatHelpOutput(),
+		compatMapType(),
+		compatEmbeddedStruct(),
+		compatVersionedInterface(),
+		compatErrhelpSentinel(),
+		compatCaseInsensitiveCmd(),
+		compatEnvOnlyField(),
 	}
 }
 
@@ -195,6 +201,113 @@ func compatHelpOutput() compatScenario {
 		name:       "help_output",
 		args:       []string{},
 		skipValues: true,
+		newParser: func() (*Parser, interface{}, error) {
+			var a Args
+			p, err := NewParser(Config{Program: "test"}, &a)
+			return p, &a, err
+		},
+	}
+}
+
+func compatMapType() compatScenario {
+	type Args struct {
+		Headers map[string]string `arg:"--header" help:"HTTP headers"`
+	}
+	return compatScenario{
+		name: "map_type",
+		args: []string{"--header", "Content-Type=application/json", "--header", "Accept=text/html"},
+		newParser: func() (*Parser, interface{}, error) {
+			var a Args
+			p, err := NewParser(Config{Program: "test"}, &a)
+			return p, &a, err
+		},
+	}
+}
+
+func compatEmbeddedStruct() compatScenario {
+	type Common struct {
+		Verbose bool `arg:"-v,--verbose" help:"verbose output"`
+	}
+	type Args struct {
+		Common
+		Name string `arg:"--name" help:"user name"`
+	}
+	return compatScenario{
+		name: "embedded_struct",
+		args: []string{"--verbose", "--name", "alice"},
+		newParser: func() (*Parser, interface{}, error) {
+			var a Args
+			p, err := NewParser(Config{Program: "test"}, &a)
+			return p, &a, err
+		},
+	}
+}
+
+type compatVersionedArgs struct {
+	Name string `arg:"--name" help:"user name"`
+}
+
+func (compatVersionedArgs) Version() string     { return "1.0.0" }
+func (compatVersionedArgs) Description() string { return "A test program" }
+
+func compatVersionedInterface() compatScenario {
+	return compatScenario{
+		name:       "versioned_interface",
+		args:       []string{},
+		skipValues: true,
+		newParser: func() (*Parser, interface{}, error) {
+			var a compatVersionedArgs
+			p, err := NewParser(Config{Program: "test"}, &a)
+			return p, &a, err
+		},
+	}
+}
+
+func compatErrhelpSentinel() compatScenario {
+	type Args struct {
+		Name string `arg:"--name" help:"user name"`
+	}
+	return compatScenario{
+		name:       "errhelp_sentinel",
+		args:       []string{"--help"},
+		wantErr:    true,
+		skipHelp:   true,
+		skipValues: true,
+		newParser: func() (*Parser, interface{}, error) {
+			var a Args
+			p, err := NewParser(Config{Program: "test"}, &a)
+			return p, &a, err
+		},
+	}
+}
+
+func compatCaseInsensitiveCmd() compatScenario {
+	type ServeCmd struct {
+		Port int `arg:"--port" default:"8080"`
+	}
+	type Args struct {
+		Serve *ServeCmd `arg:"subcommand:serve"`
+	}
+	return compatScenario{
+		name:     "case_insensitive_cmd",
+		args:     []string{"serve", "--port", "9090"},
+		skipHelp: true,
+		newParser: func() (*Parser, interface{}, error) {
+			var a Args
+			p, err := NewParser(Config{Program: "test"}, &a)
+			return p, &a, err
+		},
+	}
+}
+
+func compatEnvOnlyField() compatScenario {
+	type Args struct {
+		Token string `arg:"--,env:SECRET_TOKEN" help:"secret token"`
+	}
+	return compatScenario{
+		name:     "env_only_field",
+		args:     []string{},
+		skipHelp: true,
 		newParser: func() (*Parser, interface{}, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)

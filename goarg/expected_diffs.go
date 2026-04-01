@@ -39,6 +39,16 @@ var expectedDiffs = []ExpectedDiff{
 			"Our error translator uses 'unrecognized argument:' with colon. " +
 			"Both convey the same information; ours follows GNU error conventions.",
 	},
+	{
+		Scenario:         "map_type.values",
+		UpstreamBehavior: "&{Headers:map[Accept:text/html]}",
+		OurBehavior:      "&{Headers:map[Accept:text/html Content-Type:application/json]}",
+		Rationale: "Upstream treats repeated map flags as greedy consumers " +
+			"that reset the map on each occurrence (--header a=b --header c=d → {c:d}). " +
+			"Our POSIX-based core treats each --header as RequiredArgument taking " +
+			"one value, merging into the map (--header a=b --header c=d → {a:b, c:d}). " +
+			"Same root cause as the slice_option divergence.",
+	},
 }
 
 // HelpUsageDiffRationale explains the systematic help/usage formatting

@@ -4,5 +4,5 @@
     "local_head": "2949d27",
     "captured_at": "2026-04-01T14:53:37Z"
   },
-  "output": "INPUT is required"
+  "output": "Usage: test [--header HEADER]\n"
 }
