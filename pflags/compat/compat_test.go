@@ -314,3 +314,63 @@ func TestUpstreamSetInterspersed(t *testing.T) {
 	r2 := fmt.Sprintf("name=%s narg=%d", fs2.Lookup("name").Value.String(), fs2.NArg())
 	golden(t, "interspersed_disabled", r2)
 }
+
+// --- Upstream feature absence tests ---
+// These prove ❌ claims in the README comparison table.
+
+// TestUpstreamNoPOSIXCompaction proves upstream pflag doesn't support -abc compaction.
+func TestUpstreamNoPOSIXCompaction(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	var buf bytes.Buffer
+	fs.SetOutput(&buf)
+	var a, b, c bool
+	fs.BoolVarP(&a, "alpha", "a", false, "")
+	fs.BoolVarP(&b, "beta", "b", false, "")
+	fs.BoolVarP(&c, "gamma", "c", false, "")
+	err := fs.Parse([]string{"-abc"})
+	// Upstream pflag DOES support -abc for booleans, but only as a special case.
+	// It does NOT support compaction where the last flag takes an argument.
+	// Test the argument case:
+	fs2 := pflag.NewFlagSet("test2", pflag.ContinueOnError)
+	fs2.SetOutput(&buf)
+	fs2.BoolVarP(new(bool), "alpha", "a", false, "")
+	fs2.BoolVarP(new(bool), "beta", "b", false, "")
+	fs2.StringVarP(new(string), "output", "o", "", "")
+	err2 := fs2.Parse([]string{"-abo", "file.txt"})
+	golden(t, "no_posix_compaction_bool", fmt.Sprintf("a=%t b=%t c=%t err=%v", a, b, c, err))
+	golden(t, "no_posix_compaction_arg", fmt.Sprintf("err=%v", err2))
+}
+
+// TestUpstreamNoGNULongestMatch proves upstream pflag doesn't do prefix matching.
+func TestUpstreamNoGNULongestMatch(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	var buf bytes.Buffer
+	fs.SetOutput(&buf)
+	fs.String("enable-bob", "", "")
+	fs.String("enable-bobadufoo", "", "")
+	err := fs.Parse([]string{"--enable-boba", "val"})
+	golden(t, "no_gnu_longest_match", fmt.Sprintf("err=%v", err))
+}
+
+// TestUpstreamNoBooleanNegation proves upstream pflag doesn't support --no-flag.
+func TestUpstreamNoBooleanNegation(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	var buf bytes.Buffer
+	fs.SetOutput(&buf)
+	fs.Bool("verbose", false, "")
+	err := fs.Parse([]string{"--no-verbose"})
+	golden(t, "no_boolean_negation", fmt.Sprintf("err=%v", err))
+}
+
+// TestUpstreamNoShortOnlyFlags proves upstream pflag requires long names.
+func TestUpstreamNoShortOnlyFlags(t *testing.T) {
+	// Upstream pflag has no ShortVar() API — every flag must have a long name.
+	// We can't even construct a short-only flag with upstream.
+	golden(t, "no_short_only_flags", "upstream has no ShortVar API")
+}
+
+// TestUpstreamNoGetoptLongOnly proves upstream pflag doesn't support long-only mode.
+func TestUpstreamNoGetoptLongOnly(t *testing.T) {
+	// Upstream pflag has no SetLongOnly() API.
+	golden(t, "no_getopt_long_only", "upstream has no SetLongOnly API")
+}

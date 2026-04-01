@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/alexflint/go-arg"
 )
 
 // ptrRe matches Go pointer addresses like 0x1234abcd.
@@ -115,5 +117,63 @@ func TestValidateGolden(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// --- Upstream feature absence tests ---
+// These prove ❌ claims in the README comparison table by demonstrating
+// that upstream go-arg does NOT support these features.
+
+// TestUpstreamNoPOSIXCompaction proves upstream doesn't support -abc compaction.
+func TestUpstreamNoPOSIXCompaction(t *testing.T) {
+	type Args struct {
+		A bool `arg:"-a"`
+		B bool `arg:"-b"`
+		C bool `arg:"-c"`
+	}
+	var a Args
+	p, err := arg.NewParser(arg.Config{Program: "test"}, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = p.Parse([]string{"-abc"})
+	if err == nil && a.A && a.B && a.C {
+		t.Fatal("upstream unexpectedly supports POSIX compaction")
+	}
+}
+
+// TestUpstreamNoCaseInsensitiveSubcommand proves upstream requires exact case.
+func TestUpstreamNoCaseInsensitiveSubcommand(t *testing.T) {
+	type ServeCmd struct {
+		Port int `arg:"--port" default:"8080"`
+	}
+	type Args struct {
+		Serve *ServeCmd `arg:"subcommand:serve"`
+	}
+	var a Args
+	p, err := arg.NewParser(arg.Config{Program: "test"}, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = p.Parse([]string{"Serve"})
+	if err == nil && a.Serve != nil {
+		t.Fatal("upstream unexpectedly supports case-insensitive subcommands")
+	}
+}
+
+// TestUpstreamNoGNULongestMatch proves upstream doesn't do prefix matching.
+func TestUpstreamNoGNULongestMatch(t *testing.T) {
+	type Args struct {
+		EnableBob       string `arg:"--enable-bob"`
+		EnableBobadufoo string `arg:"--enable-bobadufoo"`
+	}
+	var a Args
+	p, err := arg.NewParser(arg.Config{Program: "test"}, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = p.Parse([]string{"--enable-boba", "val"})
+	if err == nil && a.EnableBobadufoo == "val" {
+		t.Fatal("upstream unexpectedly supports GNU prefix matching")
 	}
 }

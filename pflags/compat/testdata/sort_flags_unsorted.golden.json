@@ -1,8 +1,8 @@
 {
   "metadata": {
     "upstream_version": "v1.0.10",
-    "local_head": "689cd20",
-    "captured_at": "2026-04-01T15:20:11Z"
+    "local_head": "0f4dbbc",
+    "captured_at": "2026-04-01T16:41:18Z"
   },
   "output": "      --zebra string   z flag\n      --alpha string   a flag\n"
 }

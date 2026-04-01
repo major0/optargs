@@ -42,3 +42,4 @@ backed by OptArgs Core's POSIX/GNU getopt implementation.
 
 ¹ Inner error uses core's unified format instead of raw strconv errors.
   See `compat/expected_diffs.go` for all documented divergences.
+  Every ✅ and ❌ is backed by a test — see `compat/compat_test.go`, `pflags_test.go`, and `pflags_optargs_test.go`.

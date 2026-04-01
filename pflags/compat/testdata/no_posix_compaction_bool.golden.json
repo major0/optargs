@@ -4,5 +4,5 @@
     "local_head": "0f4dbbc",
     "captured_at": "2026-04-01T16:41:18Z"
   },
-  "output": "nflag=1 narg=2"
+  "output": "a=true b=true c=true err=\u003cnil\u003e"
 }

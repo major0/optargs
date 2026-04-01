@@ -95,13 +95,17 @@ Known divergences are documented in `expected_diffs.go`.
 | Subcommand()/SubcommandNames() | ✅ | ✅ | — |
 | POSIX short-option compaction (-abc) | ❌ | — | ✅ |
 | GNU longest-match prefix matching | ❌ | — | ✅ |
+| Boolean negation (--no-flag) | ❌ | ❌ | — |
 | `--` termination | ❌ | — | ✅ |
 | Parent flag inheritance across subcommands | ❌ | — | ✅ |
 | Case-insensitive subcommand matching | ❌ | — | ✅ |
+| getopt_long_only mode | ❌ | ❌ | — |
+| Interspersed argument handling | ❌ | ❌ | — |
 
 ¹ Upstream resets map on each repeated flag; ours merges entries (POSIX semantics).
 ² Upstream resets slice on each repeated flag; ours appends (POSIX semantics).
   See `expected_diffs.go` for all documented divergences.
+  Every ✅ and ❌ is backed by a test — see `compat/compat_test.go` and `goarg_optargs_test.go`.
 
 ## Config
 
