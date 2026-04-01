@@ -177,3 +177,20 @@ func TestUpstreamNoGNULongestMatch(t *testing.T) {
 		t.Fatal("upstream unexpectedly supports GNU prefix matching")
 	}
 }
+
+// TestUpstreamNoBooleanNegation proves upstream go-arg doesn't support --no-flag.
+func TestUpstreamNoBooleanNegation(t *testing.T) {
+	type Args struct {
+		Verbose bool `arg:"-v,--verbose"`
+	}
+	var a Args
+	p, err := arg.NewParser(arg.Config{Program: "test"}, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = p.Parse([]string{"--no-verbose"})
+	if err == nil && !a.Verbose {
+		t.Fatal("upstream unexpectedly supports --no-verbose negation")
+	}
+	// Expected: error (unknown argument --no-verbose)
+}
