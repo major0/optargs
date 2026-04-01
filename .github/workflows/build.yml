@@ -131,3 +131,28 @@ jobs:
       env:
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}
+
+  compat-test:
+    name: Compatibility Tests
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-goarg, build-pflags]
+    if: always() && (needs.detect-changes.outputs.goarg-changed == 'true' || needs.detect-changes.outputs.pflags-changed == 'true')
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+    - name: goarg compat-test
+      if: needs.detect-changes.outputs.goarg-changed == 'true'
+      working-directory: goarg
+      run: make compat-test
+    - name: pflags compat-test
+      if: needs.detect-changes.outputs.pflags-changed == 'true'
+      working-directory: pflags
+      run: make compat-test
+    - name: Verify golden files present
+      run: |
+        echo "=== goarg golden files ==="
+        ls goarg/compat/testdata/*.golden.json | wc -l
+        echo "=== pflags golden files ==="
+        ls pflags/compat/testdata/*.golden.json | wc -l
