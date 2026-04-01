@@ -107,3 +107,55 @@ func TestOptArgsCaseInsensitiveSubcommand(t *testing.T) {
 		})
 	}
 }
+
+// TestOptArgsGNULongestMatch tests GNU longest-match prefix resolution
+// through the goarg layer.
+func TestOptArgsGNULongestMatch(t *testing.T) {
+	type Args struct {
+		EnableBob      string `arg:"--enable-bob"`
+		EnableBobadufoo string `arg:"--enable-bobadufoo"`
+	}
+	var a Args
+	p, err := NewParser(Config{Program: "test"}, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Parse([]string{"--enable-bobadufoo", "val"}); err != nil {
+		t.Fatal(err)
+	}
+	if a.EnableBobadufoo != "val" {
+		t.Errorf("enable-bobadufoo = %q, want val", a.EnableBobadufoo)
+	}
+	if a.EnableBob != "" {
+		t.Errorf("enable-bob = %q, want empty", a.EnableBob)
+	}
+}
+
+// TestOptArgsSubcommandQuery tests Subcommand() and SubcommandNames() methods.
+func TestOptArgsSubcommandQuery(t *testing.T) {
+	type ServeCmd struct {
+		Port int `arg:"--port" default:"8080"`
+	}
+	type Args struct {
+		Serve *ServeCmd `arg:"subcommand:serve"`
+	}
+	var a Args
+	p, err := NewParser(Config{Program: "test"}, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Parse([]string{"serve", "--port", "9090"}); err != nil {
+		t.Fatal(err)
+	}
+	sub := p.Subcommand()
+	if sub == nil {
+		t.Fatal("Subcommand() returned nil")
+	}
+	names := p.SubcommandNames()
+	if len(names) == 0 {
+		t.Fatal("SubcommandNames() returned empty")
+	}
+	if names[0] != "serve" {
+		t.Errorf("SubcommandNames()[0] = %q, want serve", names[0])
+	}
+}
