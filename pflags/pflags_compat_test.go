@@ -1,28 +1,37 @@
 package pflags
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// readGolden reads a golden file from compat/testdata/.
-func readGolden(t *testing.T, name string) string {
-	t.Helper()
-	path := filepath.Join("compat", "testdata", name+".golden")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("golden file %s not found: %v", path, err)
-	}
-	return string(data)
+// goldenFile mirrors the compat/ GoldenFile struct for JSON reading.
+// Duplicated here because compat/ is a separate go.mod module.
+type goldenFile struct {
+	Output string `json:"output"`
 }
 
-// readGoldenValue reads a golden file and trims the trailing newline.
-// Used for single-value comparisons where the golden was written with a newline
-// but the compared value is a plain string.
-func readGoldenValue(t *testing.T, name string) string {
-	return strings.TrimSuffix(readGolden(t, name), "\n")
+// readJSONGolden reads a JSON golden file and returns the output string.
+func readJSONGolden(t *testing.T, name string) string {
+	t.Helper()
+	path := filepath.Join("compat", "testdata", name+".golden.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("golden file %s not found; run 'make compat-update' to generate", path)
+	}
+	var gf goldenFile
+	if err := json.Unmarshal(data, &gf); err != nil {
+		t.Fatalf("golden file %s is not valid JSON; run 'make compat-update' to regenerate: %v", path, err)
+	}
+	return gf.Output
+}
+
+// readJSONGoldenValue reads a JSON golden file and trims trailing newline.
+func readJSONGoldenValue(t *testing.T, name string) string {
+	return strings.TrimSuffix(readJSONGolden(t, name), "\n")
 }
 
 // TestCompatStringFlag validates string flag parsing matches upstream.
@@ -33,8 +42,8 @@ func TestCompatStringFlag(t *testing.T) {
 	if err := fs.Parse([]string{"--output", "result.txt"}); err != nil {
 		t.Fatal(err)
 	}
-	if s != readGoldenValue(t, "string_parse") {
-		t.Errorf("string parse = %q, want %q", s, readGoldenValue(t, "string_parse"))
+	if s != readJSONGoldenValue(t, "string_parse") {
+		t.Errorf("string parse = %q, want %q", s, readJSONGoldenValue(t, "string_parse"))
 	}
 }
 
@@ -61,7 +70,7 @@ func TestCompatBoolFlag(t *testing.T) {
 			if v {
 				got = "true"
 			}
-			want := readGoldenValue(t, "bool_"+tt.name)
+			want := readJSONGoldenValue(t, "bool_"+tt.name)
 			if got != want {
 				t.Errorf("got %q, want %q", got, want)
 			}
@@ -77,8 +86,8 @@ func TestCompatShorthand(t *testing.T) {
 	if err := fs.Parse([]string{"-o", "file.txt"}); err != nil {
 		t.Fatal(err)
 	}
-	if s != readGoldenValue(t, "shorthand_parse") {
-		t.Errorf("shorthand parse = %q, want %q", s, readGoldenValue(t, "shorthand_parse"))
+	if s != readJSONGoldenValue(t, "shorthand_parse") {
+		t.Errorf("shorthand parse = %q, want %q", s, readJSONGoldenValue(t, "shorthand_parse"))
 	}
 }
 
@@ -90,7 +99,7 @@ func TestCompatUnknownFlag(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	want := readGoldenValue(t, "unknown_flag_error")
+	want := readJSONGoldenValue(t, "unknown_flag_error")
 	if err.Error() != want {
 		t.Errorf("error = %q, want %q", err.Error(), want)
 	}
@@ -108,7 +117,7 @@ func TestCompatDoubleHyphen(t *testing.T) {
 	for _, a := range fs.Args() {
 		result += a + "\n"
 	}
-	want := readGoldenValue(t, "double_hyphen")
+	want := readJSONGoldenValue(t, "double_hyphen")
 	if strings.TrimSuffix(result, "\n") != want {
 		t.Errorf("got:\n%s\nwant:\n%s", result, want)
 	}
@@ -126,7 +135,7 @@ func TestCompatSliceFlag(t *testing.T) {
 	for _, s := range ss {
 		result += s + "\n"
 	}
-	want := readGoldenValue(t, "slice_parse")
+	want := readJSONGoldenValue(t, "slice_parse")
 	if strings.TrimSuffix(result, "\n") != want {
 		t.Errorf("got:\n%s\nwant:\n%s", result, want)
 	}
@@ -162,7 +171,7 @@ func TestCompatUsageFormat(t *testing.T) {
 			fs := NewFlagSet("test", ContinueOnError)
 			tt.setup(fs)
 			got := fs.FlagUsages()
-			want := readGolden(t, tt.golden)
+			want := readJSONGolden(t, tt.golden)
 			if got != want {
 				t.Errorf("usage differs:\ngot:  %q\nwant: %q", got, want)
 				// Show character-level diff for debugging
@@ -189,7 +198,7 @@ func TestCompatMixedUsage(t *testing.T) {
 	fs.IntVarP(new(int), "count", "c", 0, "count")
 
 	got := fs.FlagUsages()
-	want := readGolden(t, "mixed_usage")
+	want := readJSONGolden(t, "mixed_usage")
 
 	// Compare line by line — order may differ since we use definition order
 	gotLines := strings.Split(strings.TrimRight(got, "\n"), "\n")

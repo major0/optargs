@@ -1,3 +1,0 @@
-  -c, --count int       count
-  -o, --output string   output file
-  -v, --verbose         enable verbose

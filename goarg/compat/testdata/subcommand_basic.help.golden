@@ -1,8 +1,0 @@
-Usage: test server [--port PORT]
-
-Options:
-  --port PORT, -p PORT   listen port [default: 8080]
-
-Global options:
-  --verbose, -v          verbose output
-  --help, -h             display this help and exit

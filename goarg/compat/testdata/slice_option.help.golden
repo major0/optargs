@@ -1,5 +1,0 @@
-Usage: test [--file FILE]
-
-Options:
-  --file FILE, -f FILE   input files
-  --help, -h             display this help and exit

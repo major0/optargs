@@ -6,8 +6,6 @@ package compat
 import (
 	"bytes"
 	"flag"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/spf13/pflag"
@@ -23,27 +21,16 @@ func captureUsage(fs *pflag.FlagSet) string {
 	return buf.String()
 }
 
-// golden reads or writes a golden file depending on the -update flag.
+// golden writes or reads a JSON golden file depending on the -update flag.
 func golden(t *testing.T, name, got string) {
 	t.Helper()
-	path := filepath.Join("testdata", name+".golden")
-
 	if *update {
-		if err := os.MkdirAll("testdata", 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
-			t.Fatal(err)
-		}
+		WriteGolden(t, name, got)
 		return
 	}
-
-	want, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("golden file %s not found; run with -update to generate", path)
-	}
-	if got != string(want) {
-		t.Errorf("output differs from golden file %s:\ngot:\n%s\nwant:\n%s", path, got, string(want))
+	want := ReadGolden(t, name)
+	if got != want {
+		t.Errorf("output differs from golden %s:\ngot:\n%s\nwant:\n%s", name, got, want)
 	}
 }
 

@@ -1,7 +1,0 @@
-Usage: test [--name NAME] [--count COUNT]
-
-Options:
-  --name NAME, -n NAME   user name
-  --count COUNT, -c COUNT
-                         repeat count
-  --help, -h             display this help and exit

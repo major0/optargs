@@ -1,0 +1,8 @@
+{
+  "metadata": {
+    "upstream_version": "v1.6.1",
+    "local_head": "ef07ebc",
+    "captured_at": "2026-04-01T14:25:18Z"
+  },
+  "output": "Usage: test [--verbose] [--count COUNT] [--output OUTPUT]\n\nOptions:\n  --verbose, -v          enable verbose output\n  --count COUNT, -c COUNT\n                         number of items\n  --output OUTPUT, -o OUTPUT\n                         output file\n  --help, -h             display this help and exit\n"
+}

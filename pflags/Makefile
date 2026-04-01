@@ -73,5 +73,5 @@ compat-update:
 	cd compat && go test -update ./...
 
 compat-diff:
-	@echo "=== Upstream golden files ===" && ls -1 compat/testdata/*.golden 2>/dev/null || echo "No golden files"
+	@echo "=== Upstream golden files ===" && ls -1 compat/testdata/*.golden.json 2>/dev/null || echo "No golden files"
 	@echo "=== Running compat tests ===" && go test -v -run TestCompat ./... 2>&1 || true

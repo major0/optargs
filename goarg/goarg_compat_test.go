@@ -2,6 +2,7 @@ package goarg
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -318,14 +319,24 @@ func TestCompatHelp(t *testing.T) {
 
 // --- helpers ---
 
+// goldenFile mirrors the compat/ GoldenFile struct for JSON reading.
+type goldenFile struct {
+	Output string `json:"output"`
+}
+
 func readCompatGolden(t *testing.T, scenario, kind string) string {
 	t.Helper()
-	path := filepath.Join("compat", "testdata", scenario+"."+kind+".golden")
+	name := scenario + "." + kind
+	path := filepath.Join("compat", "testdata", name+".golden.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""
 	}
-	return strings.TrimRight(string(data), "\n")
+	var gf goldenFile
+	if err := json.Unmarshal(data, &gf); err != nil {
+		t.Fatalf("golden file %s is not valid JSON; run 'make compat-update': %v", path, err)
+	}
+	return strings.TrimRight(gf.Output, "\n")
 }
 
 func assertCompatMatch(t *testing.T, scenario, kind, got, want string) {
