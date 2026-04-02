@@ -9,10 +9,10 @@ import (
 // mapValue is the generic implementation for map typed values.
 // First Set() replaces the default map; subsequent calls merge.
 type mapValue struct {
-	p         interface{} // pointer to destination map
-	valType   reflect.Type
-	typeName  string
-	firstSet  bool // tracks whether first Set() has been called
+	p        interface{} // pointer to destination map
+	valType  reflect.Type
+	typeName string
+	firstSet bool // tracks whether first Set() has been called
 }
 
 func (v *mapValue) Set(s string) error {

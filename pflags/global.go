@@ -457,8 +457,12 @@ func MarkShorthandDeprecated(name, usageMessage string) error {
 func SetAnnotation(name, key string, values []string) error {
 	return CommandLine.SetAnnotation(name, key, values)
 }
-func AddFlag(f *Flag)            { CommandLine.AddFlag(f) }
-func AddFlagSet(newSet *FlagSet) { CommandLine.AddFlagSet(newSet) }
+func MarkBoolPrefix(name, truePrefix, falsePrefix string) error {
+	return CommandLine.MarkBoolPrefix(name, truePrefix, falsePrefix)
+}
+func MarkNegatable(name string) error { return CommandLine.MarkNegatable(name) }
+func AddFlag(f *Flag)                 { CommandLine.AddFlag(f) }
+func AddFlagSet(newSet *FlagSet)      { CommandLine.AddFlagSet(newSet) }
 
 // --- Go flag interop ---
 

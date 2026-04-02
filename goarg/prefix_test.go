@@ -122,7 +122,6 @@ func TestNegatableTagParsing(t *testing.T) {
 	})
 }
 
-
 func TestGoargPrefixPairParsing(t *testing.T) {
 	type Args struct {
 		Shared bool `arg:"--shared" prefix:"enable,disable"`
@@ -198,10 +197,10 @@ func TestGoargNegatableZeroClear(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
-		args       []string
-		wantRoot   string
-		wantPort   int
+		name     string
+		args     []string
+		wantRoot string
+		wantPort int
 	}{
 		{"no-sysroot clears to empty", []string{"--no-sysroot"}, "", 8080},
 		{"no-port clears to zero", []string{"--no-port"}, "/usr", 0},

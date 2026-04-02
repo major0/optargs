@@ -42,8 +42,8 @@ func (ci *CoreIntegration) buildPositionalArgs() {
 
 // Cached reflect.Type for time.Duration and TextUnmarshaler interface.
 var (
-	durationType        = reflect.TypeOf(time.Duration(0))
-	durationSliceType   = reflect.TypeOf([]time.Duration{})
+	durationType         = reflect.TypeOf(time.Duration(0))
+	durationSliceType    = reflect.TypeOf([]time.Duration{})
 	textUnmarshalerIface = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 )
 

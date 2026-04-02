@@ -1,6 +1,7 @@
 package pflags
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -104,7 +105,6 @@ func TestMarkBoolPrefixNormalizeFunc(t *testing.T) {
 	}
 }
 
-
 func TestMarkNegatable(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -169,7 +169,6 @@ func TestMarkNegatable(t *testing.T) {
 		})
 	}
 }
-
 
 func TestBoolPrefixParsing(t *testing.T) {
 	tests := []struct {
@@ -423,13 +422,12 @@ func TestNegatableUnregistered(t *testing.T) {
 	}
 }
 
-
 func TestPrefixHelpText(t *testing.T) {
 	tests := []struct {
-		name       string
-		setup      func(fs *FlagSet)
-		wantIn     []string // substrings that must appear
-		wantNotIn  []string // substrings that must not appear
+		name      string
+		setup     func(fs *FlagSet)
+		wantIn    []string // substrings that must appear
+		wantNotIn []string // substrings that must not appear
 	}{
 		{
 			name: "visible flag with prefix pairs",
@@ -492,5 +490,32 @@ func TestPrefixHelpText(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestGlobalMarkBoolPrefix(t *testing.T) {
+	// Reset CommandLine for this test
+	CommandLine = NewFlagSet(os.Args[0], ExitOnError)
+	Bool("shared", false, "shared library")
+
+	if err := MarkBoolPrefix("shared", "enable", "disable"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	flag := Lookup("shared")
+	if len(flag.Prefixes) != 1 {
+		t.Errorf("Prefixes count: got %d, want 1", len(flag.Prefixes))
+	}
+}
+
+func TestGlobalMarkNegatable(t *testing.T) {
+	CommandLine = NewFlagSet(os.Args[0], ExitOnError)
+	String("sysroot", "/usr", "system root")
+
+	if err := MarkNegatable("sysroot"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	flag := Lookup("sysroot")
+	if !flag.Negatable {
+		t.Error("Negatable: got false, want true")
 	}
 }
