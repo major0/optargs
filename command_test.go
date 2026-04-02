@@ -387,7 +387,10 @@ func TestSubcommandOverlappingLongOpts(t *testing.T) {
 // TestNativeSubcommandDispatch exercises the full dispatch flow.
 func TestNativeSubcommandDispatch(t *testing.T) {
 	t.Run("dispatch_and_inherit", func(t *testing.T) {
-		root, _ := GetOptLong([]string{"--verbose", "serve", "--port", "8080"}, "v", []Flag{{Name: "verbose", HasArg: NoArgument}})
+		root, _ := GetOptLong(
+			[]string{"--verbose", "serve", "--port", "8080"}, "v",
+			[]Flag{{Name: "verbose", HasArg: NoArgument}},
+		)
 		child, _ := GetOptLong([]string{}, "p:", []Flag{{Name: "port", HasArg: RequiredArgument}})
 		root.AddCmd("serve", child)
 
@@ -402,7 +405,10 @@ func TestNativeSubcommandDispatch(t *testing.T) {
 	})
 
 	t.Run("multi_level_dispatch", func(t *testing.T) {
-		root, _ := GetOptLong([]string{"-v", "db", "--name", "mydb", "migrate", "--steps", "3"}, "v", []Flag{{Name: "verbose", HasArg: NoArgument}})
+		root, _ := GetOptLong(
+			[]string{"-v", "db", "--name", "mydb", "migrate", "--steps", "3"}, "v",
+			[]Flag{{Name: "verbose", HasArg: NoArgument}},
+		)
 		db, _ := GetOptLong([]string{}, "n:", []Flag{{Name: "name", HasArg: RequiredArgument}})
 		root.AddCmd("db", db)
 		migrate, _ := GetOptLong([]string{}, "s:", []Flag{{Name: "steps", HasArg: RequiredArgument}})
@@ -425,7 +431,13 @@ func TestNativeSubcommandDispatch(t *testing.T) {
 // TestDispatchErrorModes verifies error modes through dispatch + inheritance.
 func TestDispatchErrorModes(t *testing.T) {
 	t.Run("silent_child_inherits_parent_option", func(t *testing.T) {
-		root, _ := GetOptLong([]string{"sub", "-v", "--file", "test.txt"}, "v", []Flag{{Name: "verbose", HasArg: NoArgument}, {Name: "file", HasArg: RequiredArgument}})
+		root, _ := GetOptLong(
+			[]string{"sub", "-v", "--file", "test.txt"}, "v",
+			[]Flag{
+				{Name: "verbose", HasArg: NoArgument},
+				{Name: "file", HasArg: RequiredArgument},
+			},
+		)
 		child, _ := GetOpt([]string{}, ":")
 		root.AddCmd("sub", child)
 		collectNamedOptions(t, root)
@@ -504,7 +516,7 @@ func TestPropertyActiveCommandCorrectness(t *testing.T) {
 			root.AddCmd(cmdName, child)
 
 			// Drain the iterator to trigger dispatch.
-			for range root.Options() {
+			for range root.Options() { //nolint:revive // intentional drain
 			}
 
 			name, parser := root.ActiveCommand()
@@ -534,7 +546,7 @@ func TestPropertyActiveCommandCorrectness(t *testing.T) {
 				return false
 			}
 			// No commands registered — nothing to dispatch.
-			for range root.Options() {
+			for range root.Options() { //nolint:revive // intentional drain
 			}
 
 			name, parser := root.ActiveCommand()
@@ -573,11 +585,11 @@ func TestPropertyActiveCommandCorrectness(t *testing.T) {
 
 			// Set args on root and drain.
 			parsers[0].Args = args
-			for range parsers[0].Options() {
+			for range parsers[0].Options() { //nolint:revive // intentional drain
 			}
 			// Drain each child's Options() to trigger nested dispatch.
 			for i := 1; i < n; i++ {
-				for range parsers[i].Options() {
+				for range parsers[i].Options() { //nolint:revive // intentional drain
 				}
 			}
 

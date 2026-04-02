@@ -55,35 +55,56 @@ func (v *scalarValue[T]) Set(s string) error {
 func (v *scalarValue[T]) String() string { return fmt.Sprintf(v.fmtStr, *v.p) }
 func (v *scalarValue[T]) Type() string   { return v.tname }
 
-// --- Scalar constructors ---
+// NewIntValue returns a TypedValue backed by *p, initialized to val.
+func NewIntValue(val int, p *int) TypedValue { return newScalar(val, p, intType, "int", "%d") }
 
-func NewIntValue(val int, p *int) TypedValue    { return newScalar(val, p, intType, "int", "%d") }
+// NewInt8Value returns a TypedValue backed by *p, initialized to val.
 func NewInt8Value(val int8, p *int8) TypedValue { return newScalar(val, p, int8Type, "int8", "%d") }
+
+// NewInt16Value returns a TypedValue backed by *p, initialized to val.
 func NewInt16Value(val int16, p *int16) TypedValue {
 	return newScalar(val, p, int16Type, "int16", "%d")
 }
+
+// NewInt32Value returns a TypedValue backed by *p, initialized to val.
 func NewInt32Value(val int32, p *int32) TypedValue {
 	return newScalar(val, p, int32Type, "int32", "%d")
 }
+
+// NewInt64Value returns a TypedValue backed by *p, initialized to val.
 func NewInt64Value(val int64, p *int64) TypedValue {
 	return newScalar(val, p, int64Type, "int64", "%d")
 }
+
+// NewUintValue returns a TypedValue backed by *p, initialized to val.
 func NewUintValue(val uint, p *uint) TypedValue { return newScalar(val, p, uintType, "uint", "%d") }
+
+// NewUint8Value returns a TypedValue backed by *p, initialized to val.
 func NewUint8Value(val uint8, p *uint8) TypedValue {
 	return newScalar(val, p, uint8Type, "uint8", "%d")
 }
+
+// NewUint16Value returns a TypedValue backed by *p, initialized to val.
 func NewUint16Value(val uint16, p *uint16) TypedValue {
 	return newScalar(val, p, uint16Type, "uint16", "%d")
 }
+
+// NewUint32Value returns a TypedValue backed by *p, initialized to val.
 func NewUint32Value(val uint32, p *uint32) TypedValue {
 	return newScalar(val, p, uint32Type, "uint32", "%d")
 }
+
+// NewUint64Value returns a TypedValue backed by *p, initialized to val.
 func NewUint64Value(val uint64, p *uint64) TypedValue {
 	return newScalar(val, p, uint64Type, "uint64", "%d")
 }
+
+// NewFloat32Value returns a TypedValue backed by *p, initialized to val.
 func NewFloat32Value(val float32, p *float32) TypedValue {
 	return newScalar(val, p, float32Type, "float32", "%g")
 }
+
+// NewFloat64Value returns a TypedValue backed by *p, initialized to val.
 func NewFloat64Value(val float64, p *float64) TypedValue {
 	return newScalar(val, p, float64Type, "float64", "%g")
 }
@@ -92,6 +113,7 @@ func NewFloat64Value(val float64, p *float64) TypedValue {
 
 type stringValue struct{ p *string }
 
+// NewStringValue returns a TypedValue backed by *p, initialized to val.
 func NewStringValue(val string, p *string) TypedValue {
 	if p == nil {
 		p = new(string)
@@ -108,6 +130,7 @@ func (v *stringValue) Type() string       { return "string" }
 
 type boolValue struct{ p *bool }
 
+// NewBoolValue returns a TypedValue backed by *p, initialized to val.
 func NewBoolValue(val bool, p *bool) TypedValue {
 	if p == nil {
 		p = new(bool)
@@ -134,6 +157,7 @@ func (v *boolValue) BoolTakesArg() bool { return true }
 
 type durationValue struct{ p *time.Duration }
 
+// NewDurationValue returns a TypedValue backed by *p, initialized to val.
 func NewDurationValue(val time.Duration, p *time.Duration) TypedValue {
 	if p == nil {
 		p = new(time.Duration)

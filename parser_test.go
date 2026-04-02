@@ -658,13 +658,21 @@ func TestOverlappingOptionNames(t *testing.T) {
 		{
 			name:     "three_level_prefix_chain",
 			args:     []string{"--output=file.txt"},
-			longOpts: []Flag{{Name: "o", HasArg: RequiredArgument}, {Name: "out", HasArg: RequiredArgument}, {Name: "output", HasArg: RequiredArgument}},
+			longOpts: []Flag{
+				{Name: "o", HasArg: RequiredArgument},
+				{Name: "out", HasArg: RequiredArgument},
+				{Name: "output", HasArg: RequiredArgument},
+			},
 			expected: []Option{{Name: "output", Arg: "file.txt", HasArg: true}},
 		},
 		{
 			name:     "three_level_mid_match",
 			args:     []string{"--out=file.txt"},
-			longOpts: []Flag{{Name: "o", HasArg: RequiredArgument}, {Name: "out", HasArg: RequiredArgument}, {Name: "output", HasArg: RequiredArgument}},
+			longOpts: []Flag{
+				{Name: "o", HasArg: RequiredArgument},
+				{Name: "out", HasArg: RequiredArgument},
+				{Name: "output", HasArg: RequiredArgument},
+			},
 			expected: []Option{{Name: "out", Arg: "file.txt", HasArg: true}},
 		},
 		{
@@ -791,16 +799,76 @@ func TestObscureLongOptCharacters(t *testing.T) {
 		input    []string
 		expected []Option
 	}{
-		{"brackets equals arg", "config[key]", RequiredArgument, []string{"--config[key]=val"}, []Option{{Name: "config[key]", Arg: "val", HasArg: true}}},
-		{"braces space arg", "data{category.key}", RequiredArgument, []string{"--data{category.key}", "val"}, []Option{{Name: "data{category.key}", Arg: "val", HasArg: true}}},
-		{"colon equals arg", "command:arg", RequiredArgument, []string{"--command:arg=value"}, []Option{{Name: "command:arg", Arg: "value", HasArg: true}}},
-		{"dot space arg", "section.key", RequiredArgument, []string{"--section.key", "value"}, []Option{{Name: "section.key", Arg: "value", HasArg: true}}},
-		{"tilde equals arg", "path~backup", RequiredArgument, []string{"--path~backup=/tmp"}, []Option{{Name: "path~backup", Arg: "/tmp", HasArg: true}}},
-		{"plus space arg", "level+1", RequiredArgument, []string{"--level+1", "high"}, []Option{{Name: "level+1", Arg: "high", HasArg: true}}},
-		{"at equals arg", "user@host", RequiredArgument, []string{"--user@host=root"}, []Option{{Name: "user@host", Arg: "root", HasArg: true}}},
-		{"brackets no arg", "flag[x]", NoArgument, []string{"--flag[x]"}, []Option{{Name: "flag[x]", HasArg: false}}},
-		{"braces optional with equals", "opt{a.b}", OptionalArgument, []string{"--opt{a.b}=yes"}, []Option{{Name: "opt{a.b}", Arg: "yes", HasArg: true}}},
-		{"braces optional without arg", "opt{a.b}", OptionalArgument, []string{"--opt{a.b}"}, []Option{{Name: "opt{a.b}", HasArg: false}}},
+		{
+			name:     "brackets equals arg",
+			optName:  "config[key]",
+			hasArg:   RequiredArgument,
+			input:    []string{"--config[key]=val"},
+			expected: []Option{{Name: "config[key]", Arg: "val", HasArg: true}},
+		},
+		{
+			name:     "braces space arg",
+			optName:  "data{category.key}",
+			hasArg:   RequiredArgument,
+			input:    []string{"--data{category.key}", "val"},
+			expected: []Option{{Name: "data{category.key}", Arg: "val", HasArg: true}},
+		},
+		{
+			name:     "colon equals arg",
+			optName:  "command:arg",
+			hasArg:   RequiredArgument,
+			input:    []string{"--command:arg=value"},
+			expected: []Option{{Name: "command:arg", Arg: "value", HasArg: true}},
+		},
+		{
+			name:     "dot space arg",
+			optName:  "section.key",
+			hasArg:   RequiredArgument,
+			input:    []string{"--section.key", "value"},
+			expected: []Option{{Name: "section.key", Arg: "value", HasArg: true}},
+		},
+		{
+			name:     "tilde equals arg",
+			optName:  "path~backup",
+			hasArg:   RequiredArgument,
+			input:    []string{"--path~backup=/tmp"},
+			expected: []Option{{Name: "path~backup", Arg: "/tmp", HasArg: true}},
+		},
+		{
+			name:     "plus space arg",
+			optName:  "level+1",
+			hasArg:   RequiredArgument,
+			input:    []string{"--level+1", "high"},
+			expected: []Option{{Name: "level+1", Arg: "high", HasArg: true}},
+		},
+		{
+			name:     "at equals arg",
+			optName:  "user@host",
+			hasArg:   RequiredArgument,
+			input:    []string{"--user@host=root"},
+			expected: []Option{{Name: "user@host", Arg: "root", HasArg: true}},
+		},
+		{
+			name:     "brackets no arg",
+			optName:  "flag[x]",
+			hasArg:   NoArgument,
+			input:    []string{"--flag[x]"},
+			expected: []Option{{Name: "flag[x]", HasArg: false}},
+		},
+		{
+			name:     "braces optional with equals",
+			optName:  "opt{a.b}",
+			hasArg:   OptionalArgument,
+			input:    []string{"--opt{a.b}=yes"},
+			expected: []Option{{Name: "opt{a.b}", Arg: "yes", HasArg: true}},
+		},
+		{
+			name:     "braces optional without arg",
+			optName:  "opt{a.b}",
+			hasArg:   OptionalArgument,
+			input:    []string{"--opt{a.b}"},
+			expected: []Option{{Name: "opt{a.b}", HasArg: false}},
+		},
 	}
 
 	for _, tt := range tests {
@@ -826,9 +894,33 @@ func TestObscureCharOverlappingPrefixes(t *testing.T) {
 		args     []string
 		expected []Option
 	}{
-		{"bracket_prefix_overlap", []Flag{{Name: "config", HasArg: RequiredArgument}, {Name: "config[key]", HasArg: RequiredArgument}}, []string{"--config[key]=val"}, []Option{{Name: "config[key]", Arg: "val", HasArg: true}}},
-		{"bracket_falls_back_to_shorter", []Flag{{Name: "config", HasArg: RequiredArgument}, {Name: "config[key]", HasArg: RequiredArgument}}, []string{"--config=val"}, []Option{{Name: "config", Arg: "val", HasArg: true}}},
-		{"colon_prefix_overlap", []Flag{{Name: "cmd", HasArg: RequiredArgument}, {Name: "cmd:sub", HasArg: RequiredArgument}}, []string{"--cmd:sub=val"}, []Option{{Name: "cmd:sub", Arg: "val", HasArg: true}}},
+		{
+			name: "bracket_prefix_overlap",
+			longOpts: []Flag{
+				{Name: "config", HasArg: RequiredArgument},
+				{Name: "config[key]", HasArg: RequiredArgument},
+			},
+			args:     []string{"--config[key]=val"},
+			expected: []Option{{Name: "config[key]", Arg: "val", HasArg: true}},
+		},
+		{
+			name: "bracket_falls_back_to_shorter",
+			longOpts: []Flag{
+				{Name: "config", HasArg: RequiredArgument},
+				{Name: "config[key]", HasArg: RequiredArgument},
+			},
+			args:     []string{"--config=val"},
+			expected: []Option{{Name: "config", Arg: "val", HasArg: true}},
+		},
+		{
+			name: "colon_prefix_overlap",
+			longOpts: []Flag{
+				{Name: "cmd", HasArg: RequiredArgument},
+				{Name: "cmd:sub", HasArg: RequiredArgument},
+			},
+			args:     []string{"--cmd:sub=val"},
+			expected: []Option{{Name: "cmd:sub", Arg: "val", HasArg: true}},
+		},
 	}
 
 	for _, tt := range tests {

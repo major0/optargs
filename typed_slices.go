@@ -54,6 +54,7 @@ func (v *sliceValue) Reset() { reflect.ValueOf(v.p).Elem().SetLen(0) }
 
 // --- Slice constructors ---
 
+// NewStringSliceValue returns a TypedValue backed by *p, initialized to val.
 func NewStringSliceValue(val []string, p *[]string) TypedValue {
 	if p == nil {
 		p = new([]string)
@@ -62,6 +63,7 @@ func NewStringSliceValue(val []string, p *[]string) TypedValue {
 	return &sliceValue{p: p, elemType: stringType, typeName: "stringSlice"}
 }
 
+// NewBoolSliceValue returns a TypedValue backed by *p, initialized to val.
 func NewBoolSliceValue(val []bool, p *[]bool) TypedValue {
 	if p == nil {
 		p = new([]bool)
@@ -70,6 +72,7 @@ func NewBoolSliceValue(val []bool, p *[]bool) TypedValue {
 	return &sliceValue{p: p, elemType: boolType, typeName: "boolSlice"}
 }
 
+// NewIntSliceValue returns a TypedValue backed by *p, initialized to val.
 func NewIntSliceValue(val []int, p *[]int) TypedValue {
 	if p == nil {
 		p = new([]int)
@@ -78,6 +81,7 @@ func NewIntSliceValue(val []int, p *[]int) TypedValue {
 	return &sliceValue{p: p, elemType: intType, typeName: "intSlice"}
 }
 
+// NewInt32SliceValue returns a TypedValue backed by *p, initialized to val.
 func NewInt32SliceValue(val []int32, p *[]int32) TypedValue {
 	if p == nil {
 		p = new([]int32)
@@ -86,6 +90,7 @@ func NewInt32SliceValue(val []int32, p *[]int32) TypedValue {
 	return &sliceValue{p: p, elemType: int32Type, typeName: "int32Slice"}
 }
 
+// NewInt64SliceValue returns a TypedValue backed by *p, initialized to val.
 func NewInt64SliceValue(val []int64, p *[]int64) TypedValue {
 	if p == nil {
 		p = new([]int64)
@@ -94,6 +99,7 @@ func NewInt64SliceValue(val []int64, p *[]int64) TypedValue {
 	return &sliceValue{p: p, elemType: int64Type, typeName: "int64Slice"}
 }
 
+// NewUintSliceValue returns a TypedValue backed by *p, initialized to val.
 func NewUintSliceValue(val []uint, p *[]uint) TypedValue {
 	if p == nil {
 		p = new([]uint)
@@ -102,6 +108,7 @@ func NewUintSliceValue(val []uint, p *[]uint) TypedValue {
 	return &sliceValue{p: p, elemType: uintType, typeName: "uintSlice"}
 }
 
+// NewFloat32SliceValue returns a TypedValue backed by *p, initialized to val.
 func NewFloat32SliceValue(val []float32, p *[]float32) TypedValue {
 	if p == nil {
 		p = new([]float32)
@@ -110,6 +117,7 @@ func NewFloat32SliceValue(val []float32, p *[]float32) TypedValue {
 	return &sliceValue{p: p, elemType: float32Type, typeName: "float32Slice"}
 }
 
+// NewFloat64SliceValue returns a TypedValue backed by *p, initialized to val.
 func NewFloat64SliceValue(val []float64, p *[]float64) TypedValue {
 	if p == nil {
 		p = new([]float64)
@@ -122,6 +130,7 @@ func NewFloat64SliceValue(val []float64, p *[]float64) TypedValue {
 // under the hood, and Convert() dispatches on kind (int64), not named type.
 type durationSliceValue struct{ p *[]time.Duration }
 
+// NewDurationSliceValue returns a TypedValue backed by *p, initialized to val.
 func NewDurationSliceValue(val []time.Duration, p *[]time.Duration) TypedValue {
 	if p == nil {
 		p = new([]time.Duration)

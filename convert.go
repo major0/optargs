@@ -66,7 +66,7 @@ func Convert(value string, targetType reflect.Type) (any, error) {
 	}
 
 	// Try TextUnmarshaler before basic types — user-defined types take priority.
-	if result, err, ok := tryTextUnmarshaler(value, targetType); ok {
+	if result, ok, err := tryTextUnmarshaler(value, targetType); ok {
 		return result, err
 	}
 
@@ -122,18 +122,18 @@ func convertBool(value string) (bool, error) {
 }
 
 // tryTextUnmarshaler checks if targetType (or *targetType) implements
-// encoding.TextUnmarshaler and attempts conversion. The third return
+// encoding.TextUnmarshaler and attempts conversion. The bool return
 // value indicates whether the interface was found.
-func tryTextUnmarshaler(value string, targetType reflect.Type) (any, error, bool) {
+func tryTextUnmarshaler(value string, targetType reflect.Type) (any, bool, error) {
 	// Check if *targetType implements TextUnmarshaler.
 	ptrType := reflect.PointerTo(targetType)
 	if ptrType.Implements(textUnmarshalerType) {
 		v := reflect.New(targetType)
 		u := v.Interface().(encoding.TextUnmarshaler)
 		if err := u.UnmarshalText([]byte(value)); err != nil {
-			return nil, fmt.Errorf("invalid value %q for type %s: %w", value, targetType, err), true
+			return nil, true, fmt.Errorf("invalid value %q for type %s: %w", value, targetType, err)
 		}
-		return v.Elem().Interface(), nil, true
+		return v.Elem().Interface(), true, nil
 	}
 
 	// Check if targetType itself implements TextUnmarshaler (already a pointer type, etc.).
@@ -141,12 +141,12 @@ func tryTextUnmarshaler(value string, targetType reflect.Type) (any, error, bool
 		v := reflect.New(targetType.Elem())
 		u := v.Interface().(encoding.TextUnmarshaler)
 		if err := u.UnmarshalText([]byte(value)); err != nil {
-			return nil, fmt.Errorf("invalid value %q for type %s: %w", value, targetType, err), true
+			return nil, true, fmt.Errorf("invalid value %q for type %s: %w", value, targetType, err)
 		}
-		return v.Interface(), nil, true
+		return v.Interface(), true, nil
 	}
 
-	return nil, nil, false
+	return nil, false, nil
 }
 
 // ConvertSlice converts a comma-separated string to a slice of the

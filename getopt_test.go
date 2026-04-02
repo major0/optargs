@@ -444,18 +444,11 @@ func TestPOSIXLYCORRECTEnvironmentVariable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalValue := os.Getenv("POSIXLY_CORRECT")
-			defer func() {
-				if originalValue == "" {
-					_ = os.Unsetenv("POSIXLY_CORRECT")
-				} else {
-					_ = os.Setenv("POSIXLY_CORRECT", originalValue)
-				}
-			}()
 			if tt.envValue == "" {
+				t.Setenv("POSIXLY_CORRECT", "")
 				_ = os.Unsetenv("POSIXLY_CORRECT")
 			} else {
-				_ = os.Setenv("POSIXLY_CORRECT", tt.envValue)
+				t.Setenv("POSIXLY_CORRECT", tt.envValue)
 			}
 
 			parser, err := GetOpt(tt.args, tt.optstring)

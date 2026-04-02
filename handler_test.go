@@ -1,8 +1,10 @@
 package optargs
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 	"testing/quick"
 )
@@ -66,22 +68,23 @@ func TestPropertyNilHandleBackwardCompat(t *testing.T) {
 		// Generate a random optstring with 1–6 short options.
 		nShort := 1 + rng.Intn(6)
 		perm := rng.Perm(len(safeChars))
-		var optstring string
+		var ob strings.Builder
 		shortChars := make([]byte, nShort)
 		argTypes := make([]ArgType, nShort)
-		for i := 0; i < nShort; i++ {
+		for i := range nShort {
 			c := safeChars[perm[i]]
 			shortChars[i] = c
-			optstring += string(c)
+			ob.WriteByte(c)
 			at := ArgType(rng.Intn(3))
 			argTypes[i] = at
 			switch at {
 			case RequiredArgument:
-				optstring += ":"
+				ob.WriteByte(':')
 			case OptionalArgument:
-				optstring += "::"
+				ob.WriteString("::")
 			}
 		}
+		optstring := ob.String()
 
 		// Generate 0–4 random long options.
 		nLong := rng.Intn(5)
@@ -97,7 +100,7 @@ func TestPropertyNilHandleBackwardCompat(t *testing.T) {
 		// Build a random argument list using the generated options.
 		nArgs := rng.Intn(8)
 		var args []string
-		for i := 0; i < nArgs; i++ {
+		for range nArgs {
 			switch rng.Intn(3) {
 			case 0: // short option
 				idx := rng.Intn(nShort)
@@ -130,7 +133,7 @@ func TestPropertyNilHandleBackwardCompat(t *testing.T) {
 
 		// Build an equivalent parser via NewParser with explicit nil Handle.
 		shortMap := make(map[byte]*Flag)
-		for i := 0; i < nShort; i++ {
+		for i := range nShort {
 			shortMap[shortChars[i]] = &Flag{
 				Name:   string(shortChars[i]),
 				HasArg: argTypes[i],
@@ -230,7 +233,10 @@ func TestHandlerSuppressesYield(t *testing.T) {
 		{
 			name:  "mixed short+long handled and non-handled",
 			short: map[byte]*Flag{'v': {Name: "v", HasArg: NoArgument}, 'x': {Name: "x", HasArg: NoArgument}},
-			long:  map[string]*Flag{"output": {Name: "output", HasArg: RequiredArgument}, "debug": {Name: "debug", HasArg: NoArgument}},
+			long: map[string]*Flag{
+				"output": {Name: "output", HasArg: RequiredArgument},
+				"debug":  {Name: "debug", HasArg: NoArgument},
+			},
 			args:  []string{"-v", "--output=f", "-x", "--debug"},
 			// v, output handled; x, debug not
 			wantHandled: []string{"v", "output"},
@@ -300,7 +306,11 @@ func TestHandlerErrorPropagation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sentinel := fmt.Errorf("handler error on %c", tt.errChar)
 			shortMap := map[byte]*Flag{
-				tt.errChar: {Name: string(tt.errChar), HasArg: NoArgument, Handle: func(string, string) error { return sentinel }},
+				tt.errChar: {
+					Name: string(tt.errChar),
+					HasArg: NoArgument,
+					Handle: func(string, string) error { return sentinel },
+				},
 			}
 			args := []string{"-" + string(tt.errChar)}
 			for _, c := range tt.otherChars {
@@ -336,18 +346,46 @@ func TestChildOverloadingWins(t *testing.T) {
 		wantChildCalls  []string
 		wantYielded     []string
 	}{
-		{"short child-handled overrides parent-handled", map[byte]bool{'v': true}, nil, []string{"v"}, nil},
-		{"short child-nil-handle yields Option despite parent handler", map[byte]bool{'v': false}, nil, nil, []string{"v"}},
-		{"long child-handled overrides parent-handled", nil, map[string]bool{"verbose": true}, []string{"verbose"}, nil},
-		{"long child-nil-handle yields Option despite parent handler", nil, map[string]bool{"verbose": false}, nil, []string{"verbose"}},
-		{"mixed short+long handled and non-handled", map[byte]bool{'v': true, 'x': false}, map[string]bool{"output": true, "debug": false}, []string{"v", "output"}, []string{"x", "debug"}},
+		{
+			name:            "short child-handled overrides parent-handled",
+			childShortFlags: map[byte]bool{'v': true},
+			wantChildCalls:  []string{"v"},
+		},
+		{
+			name:            "short child-nil-handle yields Option despite parent handler",
+			childShortFlags: map[byte]bool{'v': false},
+			wantYielded:     []string{"v"},
+		},
+		{
+			name:           "long child-handled overrides parent-handled",
+			childLongFlags: map[string]bool{"verbose": true},
+			wantChildCalls: []string{"verbose"},
+		},
+		{
+			name:           "long child-nil-handle yields Option despite parent handler",
+			childLongFlags: map[string]bool{"verbose": false},
+			wantYielded:    []string{"verbose"},
+		},
+		{
+			name:            "mixed short+long handled and non-handled",
+			childShortFlags: map[byte]bool{'v': true, 'x': false},
+			childLongFlags:  map[string]bool{"output": true, "debug": false},
+			wantChildCalls:  []string{"v", "output"},
+			wantYielded:     []string{"x", "debug"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var parentCalls, childCalls []handlerCall
-			parentHandler := func(name, arg string) error { parentCalls = append(parentCalls, handlerCall{name, arg}); return nil }
-			childHandler := func(name, arg string) error { childCalls = append(childCalls, handlerCall{name, arg}); return nil }
+			parentHandler := func(name, arg string) error {
+				parentCalls = append(parentCalls, handlerCall{name, arg})
+				return nil
+			}
+			childHandler := func(name, arg string) error {
+				childCalls = append(childCalls, handlerCall{name, arg})
+				return nil
+			}
 
 			parentShort := make(map[byte]*Flag)
 			for c := range tt.childShortFlags {
@@ -417,9 +455,25 @@ func TestCompactionHandlerDispatchOrder(t *testing.T) {
 		wantCalls   []string
 		wantYielded []string
 	}{
-		{"alternating handled/non-handled", []byte{'a', 'b', 'c', 'd'}, []bool{true, false, true, false}, []string{"a", "c"}, []string{"b", "d"}},
-		{"all handled", []byte{'x', 'y', 'z'}, []bool{true, true, true}, []string{"x", "y", "z"}, nil},
-		{"none handled", []byte{'a', 'b', 'c'}, []bool{false, false, false}, nil, []string{"a", "b", "c"}},
+		{
+			name:        "alternating handled/non-handled",
+			chars:       []byte{'a', 'b', 'c', 'd'},
+			handled:     []bool{true, false, true, false},
+			wantCalls:   []string{"a", "c"},
+			wantYielded: []string{"b", "d"},
+		},
+		{
+			name:      "all handled",
+			chars:     []byte{'x', 'y', 'z'},
+			handled:   []bool{true, true, true},
+			wantCalls: []string{"x", "y", "z"},
+		},
+		{
+			name:        "none handled",
+			chars:       []byte{'a', 'b', 'c'},
+			handled:     []bool{false, false, false},
+			wantYielded: []string{"a", "b", "c"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -429,14 +483,11 @@ func TestCompactionHandlerDispatchOrder(t *testing.T) {
 			for i, c := range tt.chars {
 				f := &Flag{Name: string(c), HasArg: NoArgument}
 				if tt.handled[i] {
-					f.Handle = func(name, arg string) error { calls = append(calls, name); return nil }
+					f.Handle = func(name, _ string) error { calls = append(calls, name); return nil }
 				}
 				shortMap[c] = f
 			}
-			compacted := "-"
-			for _, c := range tt.chars {
-				compacted += string(c)
-			}
+			compacted := "-" + string(tt.chars)
 			p, _ := NewParser(ParserConfig{enableErrors: true}, shortMap, nil, []string{compacted})
 			var yielded []string
 			for opt, err := range p.Options() {
@@ -543,19 +594,70 @@ func TestSetHandler(t *testing.T) {
 	}
 
 	// --- Error tests: registration on unregistered/invalid names ---
+
+	shortParser := func() *Parser {
+		p, _ := GetOpt(nil, "v")
+		return p
+	}
+	longParser := func() *Parser {
+		p, _ := GetOptLong(nil, "", []Flag{
+			{Name: "verbose", HasArg: NoArgument},
+		})
+		return p
+	}
+	longParserWithShort := func() *Parser {
+		p, _ := GetOptLong(nil, "v", []Flag{
+			{Name: "verbose", HasArg: NoArgument},
+		})
+		return p
+	}
+
 	errorTests := []struct {
 		name    string
 		setup   func() *Parser
 		setFn   func(*Parser) error
 		wantErr bool
 	}{
-		{"reject_unregistered_short", func() *Parser { p, _ := GetOpt(nil, "v"); return p }, func(p *Parser) error { return p.SetShortHandler('x', handler) }, true},
-		{"reject_unregistered_long", func() *Parser { p, _ := GetOptLong(nil, "", []Flag{{Name: "verbose", HasArg: NoArgument}}); return p }, func(p *Parser) error { return p.SetLongHandler("quiet", handler) }, true},
-		{"reject_SetHandler_unregistered_long", func() *Parser { p, _ := GetOptLong(nil, "", []Flag{{Name: "verbose", HasArg: NoArgument}}); return p }, func(p *Parser) error { return p.SetHandler("--quiet", handler) }, true},
-		{"registered_short_succeeds", func() *Parser { p, _ := GetOpt(nil, "v"); return p }, func(p *Parser) error { return p.SetShortHandler('v', handler) }, false},
-		{"registered_long_succeeds", func() *Parser { p, _ := GetOptLong(nil, "", []Flag{{Name: "verbose", HasArg: NoArgument}}); return p }, func(p *Parser) error { return p.SetLongHandler("verbose", handler) }, false},
-		{"no_dash_bare_name", func() *Parser { p, _ := GetOptLong(nil, "v", []Flag{{Name: "verbose", HasArg: NoArgument}}); return p }, func(p *Parser) error { return p.SetHandler("verbose", handler) }, true},
-		{"no_dash_empty_string", func() *Parser { p, _ := GetOptLong(nil, "v", []Flag{{Name: "verbose", HasArg: NoArgument}}); return p }, func(p *Parser) error { return p.SetHandler("", handler) }, true},
+		{
+			name:    "reject_unregistered_short",
+			setup:   shortParser,
+			setFn:   func(p *Parser) error { return p.SetShortHandler('x', handler) },
+			wantErr: true,
+		},
+		{
+			name:    "reject_unregistered_long",
+			setup:   longParser,
+			setFn:   func(p *Parser) error { return p.SetLongHandler("quiet", handler) },
+			wantErr: true,
+		},
+		{
+			name:    "reject_SetHandler_unregistered_long",
+			setup:   longParser,
+			setFn:   func(p *Parser) error { return p.SetHandler("--quiet", handler) },
+			wantErr: true,
+		},
+		{
+			name:  "registered_short_succeeds",
+			setup: shortParser,
+			setFn: func(p *Parser) error { return p.SetShortHandler('v', handler) },
+		},
+		{
+			name:  "registered_long_succeeds",
+			setup: longParser,
+			setFn: func(p *Parser) error { return p.SetLongHandler("verbose", handler) },
+		},
+		{
+			name:    "no_dash_bare_name",
+			setup:   longParserWithShort,
+			setFn:   func(p *Parser) error { return p.SetHandler("verbose", handler) },
+			wantErr: true,
+		},
+		{
+			name:    "no_dash_empty_string",
+			setup:   longParserWithShort,
+			setFn:   func(p *Parser) error { return p.SetHandler("", handler) },
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range errorTests {
@@ -605,7 +707,7 @@ func TestSetHandler(t *testing.T) {
 func TestHandlerLongOnly(t *testing.T) {
 	t.Run("matched dispatch", func(t *testing.T) {
 		var called string
-		handler := func(name string, arg string) error {
+		handler := func(name string, _ string) error {
 			called = name
 			return nil
 		}
@@ -629,8 +731,8 @@ func TestHandlerLongOnly(t *testing.T) {
 	})
 
 	t.Run("error propagation", func(t *testing.T) {
-		sentinel := fmt.Errorf("long-only handler error")
-		handler := func(name string, arg string) error { return sentinel }
+		sentinel := errors.New("long-only handler error")
+		handler := func(_, _ string) error { return sentinel }
 		longOpts := map[string]*Flag{
 			"verbose": {Name: "verbose", HasArg: NoArgument, Handle: handler},
 		}
@@ -693,19 +795,22 @@ func TestHandlerIteratorBreak(t *testing.T) {
 		{
 			name: "long option error break",
 			setup: func() *Parser {
-				sentinel := fmt.Errorf("stop here")
+				sentinel := errors.New("stop here")
 				longOpts := map[string]*Flag{
 					"verbose": {Name: "verbose", HasArg: NoArgument, Handle: func(string, string) error { return sentinel }},
 					"debug":   {Name: "debug", HasArg: NoArgument, Handle: func(string, string) error { return sentinel }},
 				}
-				p, _ := NewParser(ParserConfig{enableErrors: true, longCaseIgnore: true}, nil, longOpts, []string{"--verbose", "--debug"})
+				p, _ := NewParser(
+					ParserConfig{enableErrors: true, longCaseIgnore: true},
+					nil, longOpts, []string{"--verbose", "--debug"},
+				)
 				return p
 			},
 		},
 		{
 			name: "long-only error break",
 			setup: func() *Parser {
-				sentinel := fmt.Errorf("long-only stop")
+				sentinel := errors.New("long-only stop")
 				longOpts := map[string]*Flag{
 					"verbose": {Name: "verbose", HasArg: NoArgument, Handle: func(string, string) error { return sentinel }},
 					"debug":   {Name: "debug", HasArg: NoArgument, Handle: func(string, string) error { return sentinel }},
@@ -718,7 +823,7 @@ func TestHandlerIteratorBreak(t *testing.T) {
 		{
 			name: "compaction error break",
 			setup: func() *Parser {
-				sentinel := fmt.Errorf("compaction stop")
+				sentinel := errors.New("compaction stop")
 				shortOpts := map[byte]*Flag{
 					'a': {Name: "a", HasArg: NoArgument, Handle: func(string, string) error { return sentinel }},
 					'b': {Name: "b", HasArg: NoArgument},
@@ -750,7 +855,10 @@ func TestHandlerIteratorBreak(t *testing.T) {
 			"verbose": {Name: "verbose", HasArg: NoArgument},
 			"debug":   {Name: "debug", HasArg: NoArgument},
 		}
-		p, _ := NewParser(ParserConfig{enableErrors: true, longCaseIgnore: true}, nil, longOpts, []string{"--verbose", "--debug"})
+		p, _ := NewParser(
+			ParserConfig{enableErrors: true, longCaseIgnore: true},
+			nil, longOpts, []string{"--verbose", "--debug"},
+		)
 		count := 0
 		for _, err := range p.Options() {
 			if err != nil {

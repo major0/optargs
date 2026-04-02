@@ -179,8 +179,11 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 	return &parser, nil
 }
 
-// NewParserWithCaseInsensitiveCommands creates a new parser with case insensitive command matching enabled.
-func NewParserWithCaseInsensitiveCommands(shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string) (*Parser, error) {
+// NewParserWithCaseInsensitiveCommands creates a new parser with case insensitive
+// command matching enabled.
+func NewParserWithCaseInsensitiveCommands(
+	shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string,
+) (*Parser, error) {
 	config := ParserConfig{
 		commandCaseIgnore: true,
 	}
@@ -420,7 +423,9 @@ func (p *Parser) lookupShortOpt(c byte) (byte, *Flag) {
 // per getopt_long_only(3). Returns (true, option, err) on match or when
 // no short-option fallback is possible. Returns (false, ...) when the
 // caller should fall through to short option parsing.
-func (p *Parser) tryLongOnly(word string, remaining []string) (matched bool, args []string, flag *Flag, option Option, err error) {
+func (p *Parser) tryLongOnly(
+	word string, remaining []string,
+) (matched bool, args []string, flag *Flag, option Option, err error) {
 	// Suppress error logging during the long option probe —
 	// we may fall back to short options.
 	savedErrors := p.config.enableErrors

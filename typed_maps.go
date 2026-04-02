@@ -70,6 +70,7 @@ func (v *mapValue) Reset() {
 
 // --- Map constructors ---
 
+// NewStringToStringValue returns a TypedValue backed by *p, initialized to val.
 func NewStringToStringValue(val map[string]string, p *map[string]string) TypedValue {
 	if p == nil {
 		p = new(map[string]string)
@@ -78,6 +79,7 @@ func NewStringToStringValue(val map[string]string, p *map[string]string) TypedVa
 	return &mapValue{p: p, valType: stringType, typeName: "stringToString"}
 }
 
+// NewStringToIntValue returns a TypedValue backed by *p, initialized to val.
 func NewStringToIntValue(val map[string]int, p *map[string]int) TypedValue {
 	if p == nil {
 		p = new(map[string]int)
@@ -86,6 +88,7 @@ func NewStringToIntValue(val map[string]int, p *map[string]int) TypedValue {
 	return &mapValue{p: p, valType: intType, typeName: "stringToInt"}
 }
 
+// NewStringToInt64Value returns a TypedValue backed by *p, initialized to val.
 func NewStringToInt64Value(val map[string]int64, p *map[string]int64) TypedValue {
 	if p == nil {
 		p = new(map[string]int64)

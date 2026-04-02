@@ -6,7 +6,7 @@ import (
 )
 
 func FuzzIsGraph(f *testing.F) {
-	f.Fuzz(func(t *testing.T, c byte) {
+	f.Fuzz(func(_ *testing.T, c byte) {
 		isGraph(c)
 	})
 }
