@@ -500,3 +500,37 @@ func TestGlobalMarkNegatable(t *testing.T) {
 		t.Error("Negatable: got false, want true")
 	}
 }
+
+
+func TestParseAllWithPrefixAndNegatable(t *testing.T) {
+	// Verify that ParseAll callbacks fire for prefix pair and negatable handlers.
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.SetOutput(&strings.Builder{})
+	fs.Bool("shared", false, "shared library")
+	fs.String("sysroot", "/usr", "system root")
+	if err := fs.MarkBoolPrefix("shared", "enable", "disable"); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.MarkNegatable("sysroot"); err != nil {
+		t.Fatal(err)
+	}
+
+	var callbacks []string
+	err := fs.ParseAll([]string{"--enable-shared", "--no-sysroot"}, func(flag *Flag, value string) error {
+		callbacks = append(callbacks, flag.Name+"="+value)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(callbacks) != 2 {
+		t.Fatalf("expected 2 callbacks, got %d: %v", len(callbacks), callbacks)
+	}
+	if callbacks[0] != "shared=true" {
+		t.Errorf("callback[0]: got %q, want %q", callbacks[0], "shared=true")
+	}
+	if callbacks[1] != "sysroot=" {
+		t.Errorf("callback[1]: got %q, want %q", callbacks[1], "sysroot=")
+	}
+}

@@ -101,6 +101,10 @@ func boolLongArgType(v Value) optargs.ArgType {
 	return optargs.OptionalArgument
 }
 
+// resetter is implemented by collection Value types (slices, maps) that
+// support clearing to their zero value. Used by the negatable handler.
+type resetter interface{ Reset() }
+
 // buildLongOpts constructs the long option map for optargs.NewParser
 // from the FlagSet's registered flags. Also registers --no-<name>
 // negation flags for boolean flags.
@@ -134,51 +138,25 @@ func (f *FlagSet) buildLongOpts() map[string]*optargs.Flag {
 		for _, pp := range flag.Prefixes {
 			trueName := f.normalizeFlagName(pp.True + "-" + normalizedName)
 			falseName := f.normalizeFlagName(pp.False + "-" + normalizedName)
-			fl := flag // capture for closure
 			longOpts[trueName] = &optargs.Flag{
 				Name:   trueName,
 				HasArg: optargs.NoArgument,
-				Handle: func(_, _ string) error {
-					if err := fl.Value.Set("true"); err != nil {
-						return err
-					}
-					fl.Changed = true
-					return nil
-				},
+				Handle: f.makeBoolPrefixHandler(flag, "true"),
 			}
 			longOpts[falseName] = &optargs.Flag{
 				Name:   falseName,
 				HasArg: optargs.NoArgument,
-				Handle: func(_, _ string) error {
-					if err := fl.Value.Set("false"); err != nil {
-						return err
-					}
-					fl.Changed = true
-					return nil
-				},
+				Handle: f.makeBoolPrefixHandler(flag, "false"),
 			}
 		}
 
 		// Register --no-<name> for negatable non-boolean flags (always NoArgument)
 		if flag.Negatable && !isBool {
 			negName := f.normalizeFlagName("no-" + normalizedName)
-			fl := flag // capture for closure
-			zeroVal := zeroStrings[fl.Value.Type()]
 			longOpts[negName] = &optargs.Flag{
 				Name:   negName,
 				HasArg: optargs.NoArgument,
-				Handle: func(_, _ string) error {
-					// Collection types implement Reset() to clear to zero.
-					// Scalar types use Set(zeroVal) to overwrite.
-					type resetter interface{ Reset() }
-					if r, ok := fl.Value.(resetter); ok {
-						r.Reset()
-					} else if err := fl.Value.Set(zeroVal); err != nil {
-						return err
-					}
-					fl.Changed = true
-					return nil
-				},
+				Handle: f.makeNegatableHandler(flag),
 			}
 		}
 	}
@@ -229,6 +207,43 @@ func (f *FlagSet) makeNegationHandler(flag *Flag) func(string, string) error {
 			return fmt.Errorf("invalid boolean value '%s'", arg)
 		}
 		flag.Changed = true
+		return nil
+	}
+}
+
+// makeBoolPrefixHandler returns a handler for a prefixed boolean option
+// (e.g. --enable-shared, --disable-shared). The val argument is "true" or "false".
+func (f *FlagSet) makeBoolPrefixHandler(flag *Flag, val string) func(string, string) error {
+	return func(_, _ string) error {
+		if err := flag.Value.Set(val); err != nil {
+			return err
+		}
+		flag.Changed = true
+		if f.parseAllFn != nil {
+			if err := f.parseAllFn(flag, val); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+// makeNegatableHandler returns a handler for --no-<name> on a non-boolean flag.
+// Clears the value to its type's zero value: Reset() for collections, Set(zeroVal) for scalars.
+func (f *FlagSet) makeNegatableHandler(flag *Flag) func(string, string) error {
+	zeroVal := zeroStrings[flag.Value.Type()]
+	return func(_, _ string) error {
+		if r, ok := flag.Value.(resetter); ok {
+			r.Reset()
+		} else if err := flag.Value.Set(zeroVal); err != nil {
+			return err
+		}
+		flag.Changed = true
+		if f.parseAllFn != nil {
+			if err := f.parseAllFn(flag, zeroVal); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 }
