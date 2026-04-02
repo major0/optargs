@@ -51,6 +51,28 @@ jobs:
           fi
         } >> "$GITHUB_OUTPUT"
 
+  lint-optargs:
+    name: Lint OptArgs Core
+    needs: detect-changes
+    if: needs.detect-changes.outputs.optargs-changed == 'true'
+    uses: ./.github/workflows/lint.yaml
+
+  lint-goarg:
+    name: Lint GoArg
+    needs: detect-changes
+    if: needs.detect-changes.outputs.goarg-changed == 'true'
+    uses: ./.github/workflows/lint.yaml
+    with:
+      directory: goarg
+
+  lint-pflags:
+    name: Lint PFlags
+    needs: detect-changes
+    if: needs.detect-changes.outputs.pflags-changed == 'true'
+    uses: ./.github/workflows/lint.yaml
+    with:
+      directory: pflags
+
   build-optargs:
     name: Build OptArgs Core
     runs-on: ubuntu-latest
