@@ -5,13 +5,52 @@ run:
   issues-exit-code: 1
   tests: true
   modules-download-mode: readonly
-  # Only analyze files in the current module
   build-tags: []
 
 output:
   print-issued-lines: true
   print-linter-name: true
   sort-results: true
+
+linters:
+  default: all
+  disable:
+    # Style-opinion linters that conflict with Go conventions or project design philosophy
+    - exhaustruct      # requires all struct fields — conflicts with zero-value idiom
+    - nlreturn         # blank line before return — formatting opinion
+    - wsl              # whitespace style — pure formatting opinion (deprecated)
+    - wsl_v5           # whitespace style — pure formatting opinion
+    - noinlineerr      # bans if err := ...; err != nil — standard Go idiom
+    - varnamelen       # minimum name length — conflicts with Go convention (i, v, p)
+    - paralleltest     # t.Parallel() everywhere — not always appropriate
+    - testpackage      # forces _test package — we use white-box testing intentionally
+    - ireturn          # return concrete types — we return interfaces by design
+    - nonamedreturns   # bans named returns — useful for documentation
+    - funcorder        # function ordering — we group by logical concern, not alphabetical
+    - gochecknoglobals # bans globals — we use package-level lookup tables by design
+    - gochecknoinits   # bans init() — we use it for the shortOptStrings table
+    - err113           # wrapped static errors — too strict for a parser that generates contextual errors
+    - mnd              # magic numbers — too noisy for parser code with ASCII constants
+    - depguard         # dependency allowlist — not needed for this project
+    - gomoddirectives  # go.mod directives — not needed
+    - gomodguard       # module guard — not needed
+    - goheader         # file headers — not needed
+    - musttag          # struct tags — not applicable
+    - tagliatelle      # tag naming — not applicable
+    - tagalign         # tag alignment — formatting opinion
+    - inamedparam      # interface param names — too strict
+    - interfacebloat   # interface method count — our interfaces are minimal
+    - containedctx     # context in struct — not applicable
+    - contextcheck     # context propagation — not applicable
+    - noctx            # missing context — not applicable (CLI parser, no HTTP)
+    - wrapcheck        # error wrapping — too strict for internal errors
+    - exhaustive       # enum exhaustiveness — too strict for ArgType switch in tests
+    - forcetypeassert  # type assertions — we check ok where needed
+    - gosmopolitan     # i18n — not applicable
+    - ginkgolinter     # ginkgo — not used
+    - loggercheck      # logger checks — we use slog correctly
+    - zerologlint      # zerolog — not used
+    - arangolint       # arangodb — not used
 
 linters-settings:
   errcheck:
@@ -23,36 +62,28 @@ linters-settings:
       - fmt.Fprintln
 
   goconst:
-    min-len: 2
-    min-occurrences: 2
+    min-len: 3
+    min-occurrences: 3
 
   gocritic:
     enabled-tags:
       - diagnostic
-      - experimental
-      - opinionated
       - performance
-      - style
     disabled-checks:
       - dupImport
       - ifElseChain
-      - octalLiteral
       - whyNoLint
       - wrapperFunc
+      - hugeParam
 
   gocyclo:
-    min-complexity: 15
+    min-complexity: 20
 
-  goimports:
-    local-prefixes: github.com/major0/optargs
+  cyclop:
+    max-complexity: 20
 
-  golint:
-    min-confidence: 0
-
-  gomnd:
-    settings:
-      mnd:
-        checks: argument,case,condition,return
+  gocognit:
+    min-complexity: 30
 
   govet:
     enable-all: true
@@ -61,26 +92,33 @@ linters-settings:
       - fieldalignment
 
   lll:
-    line-length: 140
+    line-length: 160
 
   misspell:
     locale: US
 
+  funlen:
+    lines: 120
+    statements: 60
+
+  nestif:
+    min-complexity: 6
+
   nolintlint:
-    allow-leading-space: true
     allow-unused: false
     require-explanation: false
     require-specific: false
 
-linters:
-  disable-all: true
-  enable:
-    - errcheck
-    - govet
-    - ineffassign
-    - misspell
-    - staticcheck
-    - unused
+  godot:
+    scope: toplevel
+    period: true
+
+  perfsprint:
+    int-conversion: true
+    err-error: false
+    errorf: true
+    sprintf1: true
+    strconcat: false
 
 issues:
   exclude-dirs:
@@ -89,22 +127,21 @@ issues:
   exclude-files:
     - ".*\\.pb\\.go$"
   exclude-rules:
+    # Tests get relaxed rules for complexity and error checking
     - path: _test\.go
       linters:
-        - gomnd
         - funlen
         - gocyclo
+        - cyclop
+        - gocognit
         - errcheck
+        - dogsled
+        - dupword
+        - godot
+        - usetesting
 
-    - linters:
-        - gocritic
-      text: "unnecessaryDefer:"
-
-  exclude-use-default: false
-  exclude-case-sensitive: false
   max-issues-per-linter: 0
   max-same-issues: 0
-  new: false
 
 severity:
   default-severity: error
