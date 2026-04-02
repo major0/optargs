@@ -471,6 +471,15 @@ func (f *FlagSet) printDefaultsTo(w io.Writer) {
 			prefix += " " + typeName
 		}
 
+		// Append prefix pair forms
+		for _, pp := range fl.Prefixes {
+			prefix += ", --" + pp.True + "-" + fl.Name + ", --" + pp.False + "-" + fl.Name
+		}
+		// Append negatable form
+		if fl.Negatable {
+			prefix += ", --no-" + fl.Name
+		}
+
 		lines = append(lines, flagLine{flag: fl, prefix: prefix, name: typeName, usage: usageText})
 		if len(prefix) > maxLen {
 			maxLen = len(prefix)

@@ -422,3 +422,75 @@ func TestNegatableUnregistered(t *testing.T) {
 		t.Errorf("error %q does not mention no-sysroot", err)
 	}
 }
+
+
+func TestPrefixHelpText(t *testing.T) {
+	tests := []struct {
+		name       string
+		setup      func(fs *FlagSet)
+		wantIn     []string // substrings that must appear
+		wantNotIn  []string // substrings that must not appear
+	}{
+		{
+			name: "visible flag with prefix pairs",
+			setup: func(fs *FlagSet) {
+				fs.Bool("shared", false, "shared library")
+				_ = fs.MarkBoolPrefix("shared", "enable", "disable")
+			},
+			wantIn: []string{"--enable-shared", "--disable-shared", "--shared"},
+		},
+		{
+			name: "hidden flag with prefix pairs",
+			setup: func(fs *FlagSet) {
+				fs.Bool("shared", false, "shared library")
+				_ = fs.MarkBoolPrefix("shared", "enable", "disable")
+				_ = fs.MarkHidden("shared")
+			},
+			wantNotIn: []string{"--shared", "--enable-shared", "--disable-shared"},
+		},
+		{
+			name: "negatable flag shows --no-X",
+			setup: func(fs *FlagSet) {
+				fs.String("sysroot", "/usr", "system root")
+				_ = fs.MarkNegatable("sysroot")
+			},
+			wantIn: []string{"--sysroot", "--no-sysroot"},
+		},
+		{
+			name: "non-negatable flag does not show --no-X",
+			setup: func(fs *FlagSet) {
+				fs.String("sysroot", "/usr", "system root")
+			},
+			wantNotIn: []string{"--no-sysroot"},
+			wantIn:    []string{"--sysroot"},
+		},
+		{
+			name: "multiple prefix pairs all shown",
+			setup: func(fs *FlagSet) {
+				fs.Bool("shared", false, "shared library")
+				_ = fs.MarkBoolPrefix("shared", "enable", "disable")
+				_ = fs.MarkBoolPrefix("shared", "with", "without")
+			},
+			wantIn: []string{"--enable-shared", "--disable-shared", "--with-shared", "--without-shared"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := NewFlagSet("test", ContinueOnError)
+			tt.setup(fs)
+			usage := fs.FlagUsages()
+
+			for _, s := range tt.wantIn {
+				if !strings.Contains(usage, s) {
+					t.Errorf("usage missing %q:\n%s", s, usage)
+				}
+			}
+			for _, s := range tt.wantNotIn {
+				if strings.Contains(usage, s) {
+					t.Errorf("usage should not contain %q:\n%s", s, usage)
+				}
+			}
+		})
+	}
+}
