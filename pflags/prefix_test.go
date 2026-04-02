@@ -23,69 +23,50 @@ func TestFlagPrefixZeroValues(t *testing.T) {
 }
 
 func TestMarkBoolPrefix(t *testing.T) {
-	tests := []struct {
-		name      string
-		flag      string
-		trueP     string
-		falseP    string
-		wantErr   string
-		wantPairs int
-	}{
-		{
-			name:    "non-existent flag",
-			flag:    "missing",
-			trueP:   "enable",
-			falseP:  "disable",
-			wantErr: "does not exist",
-		},
-		{
-			name:    "non-boolean flag",
-			flag:    "count",
-			trueP:   "enable",
-			falseP:  "disable",
-			wantErr: "is not a boolean flag",
-		},
-		{
-			name:      "success on bool flag",
-			flag:      "verbose",
-			trueP:     "enable",
-			falseP:    "disable",
-			wantPairs: 1,
-		},
-		{
-			name:      "multiple pairs on same flag",
-			flag:      "verbose",
-			trueP:     "with",
-			falseP:    "without",
-			wantPairs: 2, // cumulative after previous test case — see below
-		},
-	}
+	t.Run("non-existent flag", func(t *testing.T) {
+		fs := NewFlagSet("test", ContinueOnError)
+		fs.Bool("verbose", false, "verbose output")
+		err := fs.MarkBoolPrefix("missing", "enable", "disable")
+		if err == nil || !strings.Contains(err.Error(), "does not exist") {
+			t.Fatalf("expected 'does not exist' error, got: %v", err)
+		}
+	})
 
-	fs := NewFlagSet("test", ContinueOnError)
-	fs.Bool("verbose", false, "verbose output")
-	fs.Int("count", 0, "count things")
+	t.Run("non-boolean flag", func(t *testing.T) {
+		fs := NewFlagSet("test", ContinueOnError)
+		fs.Int("count", 0, "count things")
+		err := fs.MarkBoolPrefix("count", "enable", "disable")
+		if err == nil || !strings.Contains(err.Error(), "is not a boolean flag") {
+			t.Fatalf("expected 'is not a boolean flag' error, got: %v", err)
+		}
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := fs.MarkBoolPrefix(tt.flag, tt.trueP, tt.falseP)
-			if tt.wantErr != "" {
-				if err == nil {
-					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
-				}
-				if !strings.Contains(err.Error(), tt.wantErr) {
-					t.Fatalf("error %q does not contain %q", err, tt.wantErr)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			flag := fs.Lookup(tt.flag)
-			if len(flag.Prefixes) != tt.wantPairs {
-				t.Errorf("Prefixes count: got %d, want %d", len(flag.Prefixes), tt.wantPairs)
-			}
-		})
-	}
+	t.Run("success on bool flag", func(t *testing.T) {
+		fs := NewFlagSet("test", ContinueOnError)
+		fs.Bool("verbose", false, "verbose output")
+		if err := fs.MarkBoolPrefix("verbose", "enable", "disable"); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		flag := fs.Lookup("verbose")
+		if len(flag.Prefixes) != 1 {
+			t.Errorf("Prefixes count: got %d, want 1", len(flag.Prefixes))
+		}
+	})
+
+	t.Run("multiple pairs on same flag", func(t *testing.T) {
+		fs := NewFlagSet("test", ContinueOnError)
+		fs.Bool("verbose", false, "verbose output")
+		if err := fs.MarkBoolPrefix("verbose", "enable", "disable"); err != nil {
+			t.Fatal(err)
+		}
+		if err := fs.MarkBoolPrefix("verbose", "with", "without"); err != nil {
+			t.Fatal(err)
+		}
+		flag := fs.Lookup("verbose")
+		if len(flag.Prefixes) != 2 {
+			t.Errorf("Prefixes count: got %d, want 2", len(flag.Prefixes))
+		}
+	})
 }
 
 func TestMarkBoolPrefixNormalizeFunc(t *testing.T) {
