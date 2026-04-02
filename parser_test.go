@@ -998,10 +998,22 @@ func TestEdgeCaseLongOptionErrors(t *testing.T) {
 // multiple levels using the Options() iterator.
 func TestMultiLevelInheritanceViaIterator(t *testing.T) {
 	t.Run("short_and_long_opts_4_levels", func(t *testing.T) {
-		root, _ := NewParser(ParserConfig{}, map[byte]*Flag{'r': {Name: "r", HasArg: NoArgument}}, map[string]*Flag{"root": {Name: "root", HasArg: NoArgument}}, []string{})
-		l1, _ := NewParser(ParserConfig{}, map[byte]*Flag{'a': {Name: "a", HasArg: NoArgument}}, map[string]*Flag{"level1": {Name: "level1", HasArg: NoArgument}}, []string{})
-		l2, _ := NewParser(ParserConfig{}, map[byte]*Flag{'b': {Name: "b", HasArg: NoArgument}}, map[string]*Flag{"level2": {Name: "level2", HasArg: NoArgument}}, []string{})
-		l3, _ := NewParser(ParserConfig{}, map[byte]*Flag{'c': {Name: "c", HasArg: NoArgument}}, map[string]*Flag{"level3": {Name: "level3", HasArg: NoArgument}}, []string{"-r", "-a", "-b", "-c"})
+		root, _ := NewParser(ParserConfig{},
+			map[byte]*Flag{'r': {Name: "r", HasArg: NoArgument}},
+			map[string]*Flag{"root": {Name: "root", HasArg: NoArgument}},
+			[]string{})
+		l1, _ := NewParser(ParserConfig{},
+			map[byte]*Flag{'a': {Name: "a", HasArg: NoArgument}},
+			map[string]*Flag{"level1": {Name: "level1", HasArg: NoArgument}},
+			[]string{})
+		l2, _ := NewParser(ParserConfig{},
+			map[byte]*Flag{'b': {Name: "b", HasArg: NoArgument}},
+			map[string]*Flag{"level2": {Name: "level2", HasArg: NoArgument}},
+			[]string{})
+		l3, _ := NewParser(ParserConfig{},
+			map[byte]*Flag{'c': {Name: "c", HasArg: NoArgument}},
+			map[string]*Flag{"level3": {Name: "level3", HasArg: NoArgument}},
+			[]string{"-r", "-a", "-b", "-c"})
 		root.AddCmd("l1", l1)
 		l1.AddCmd("l2", l2)
 		l2.AddCmd("l3", l3)
@@ -1022,9 +1034,15 @@ func TestMultiLevelInheritanceViaIterator(t *testing.T) {
 	})
 
 	t.Run("inherited_options_with_arguments", func(t *testing.T) {
-		root, _ := NewParser(ParserConfig{}, map[byte]*Flag{'v': {Name: "v", HasArg: RequiredArgument}}, nil, []string{})
-		l1, _ := NewParser(ParserConfig{}, map[byte]*Flag{'o': {Name: "o", HasArg: OptionalArgument}}, nil, []string{})
-		l2, _ := NewParser(ParserConfig{}, map[byte]*Flag{'f': {Name: "f", HasArg: RequiredArgument}}, nil, []string{"-v", "verbose", "-o", "optional", "-f", "file"})
+		root, _ := NewParser(ParserConfig{},
+			map[byte]*Flag{'v': {Name: "v", HasArg: RequiredArgument}},
+			nil, []string{})
+		l1, _ := NewParser(ParserConfig{},
+			map[byte]*Flag{'o': {Name: "o", HasArg: OptionalArgument}},
+			nil, []string{})
+		l2, _ := NewParser(ParserConfig{},
+			map[byte]*Flag{'f': {Name: "f", HasArg: RequiredArgument}},
+			nil, []string{"-v", "verbose", "-o", "optional", "-f", "file"})
 		root.AddCmd("l1", l1)
 		l1.AddCmd("l2", l2)
 
@@ -1045,9 +1063,15 @@ func TestMultiLevelInheritanceViaIterator(t *testing.T) {
 	})
 
 	t.Run("inherited_long_options", func(t *testing.T) {
-		root, _ := NewParser(ParserConfig{}, nil, map[string]*Flag{"verbose": {Name: "verbose", HasArg: NoArgument}}, []string{})
-		l1, _ := NewParser(ParserConfig{}, nil, map[string]*Flag{"output": {Name: "output", HasArg: RequiredArgument}}, []string{})
-		l2, _ := NewParser(ParserConfig{}, nil, map[string]*Flag{"file": {Name: "file", HasArg: RequiredArgument}}, []string{"--verbose", "--output", "out.txt", "--file", "input.txt"})
+		root, _ := NewParser(ParserConfig{}, nil,
+			map[string]*Flag{"verbose": {Name: "verbose", HasArg: NoArgument}},
+			[]string{})
+		l1, _ := NewParser(ParserConfig{}, nil,
+			map[string]*Flag{"output": {Name: "output", HasArg: RequiredArgument}},
+			[]string{})
+		l2, _ := NewParser(ParserConfig{}, nil,
+			map[string]*Flag{"file": {Name: "file", HasArg: RequiredArgument}},
+			[]string{"--verbose", "--output", "out.txt", "--file", "input.txt"})
 		root.AddCmd("l1", l1)
 		l1.AddCmd("l2", l2)
 
