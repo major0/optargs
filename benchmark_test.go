@@ -26,7 +26,7 @@ func benchParse(b *testing.B, newParser newParserFunc, args []string, optstring 
 }
 
 // BenchmarkGetOpt benchmarks the core GetOpt function with various scenarios
-// BenchmarkGetOpt benchmarks the core GetOpt function
+// BenchmarkGetOpt benchmarks the core GetOpt function.
 func BenchmarkGetOpt(b *testing.B) {
 	testCases := []struct {
 		name      string
@@ -40,7 +40,7 @@ func BenchmarkGetOpt(b *testing.B) {
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				benchParse(b, GetOptLong, tc.args, tc.optstring, nil)
 			}
 		})
@@ -48,7 +48,7 @@ func BenchmarkGetOpt(b *testing.B) {
 }
 
 // BenchmarkGetOptLong benchmarks the GetOptLong function with long options
-// BenchmarkGetOptLong benchmarks the GetOptLong function with long options
+// BenchmarkGetOptLong benchmarks the GetOptLong function with long options.
 func BenchmarkGetOptLong(b *testing.B) {
 	longOpts := []Flag{
 		{Name: "verbose", HasArg: NoArgument},
@@ -67,14 +67,14 @@ func BenchmarkGetOptLong(b *testing.B) {
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				benchParse(b, GetOptLong, tc.args, tc.optstring, longOpts)
 			}
 		})
 	}
 }
 
-// BenchmarkGetOptLongOnly benchmarks the GetOptLongOnly function
+// BenchmarkGetOptLongOnly benchmarks the GetOptLongOnly function.
 func BenchmarkGetOptLongOnly(b *testing.B) {
 	longOpts := []Flag{
 		{Name: "verbose", HasArg: NoArgument},
@@ -109,14 +109,14 @@ func BenchmarkGetOptLongOnly(b *testing.B) {
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				benchParse(b, GetOptLongOnly, tc.args, tc.optstring, longOpts)
 			}
 		})
 	}
 }
 
-// BenchmarkLargeArgumentLists benchmarks performance with large argument lists
+// BenchmarkLargeArgumentLists benchmarks performance with large argument lists.
 func BenchmarkLargeArgumentLists(b *testing.B) {
 	sizes := []int{100, 1000}
 
@@ -138,14 +138,14 @@ func BenchmarkLargeArgumentLists(b *testing.B) {
 			}
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				benchParse(b, GetOptLong, args, "ab:c", nil)
 			}
 		})
 	}
 }
 
-// BenchmarkMemoryAllocation benchmarks memory allocation patterns
+// BenchmarkMemoryAllocation benchmarks memory allocation patterns.
 func BenchmarkMemoryAllocation(b *testing.B) {
 	shortArgs := []string{"prog", "-a", "arg1", "-b", "arg2", "-c", "arg3"}
 	longArgs := []string{"prog", "-a", "arg1", "-b", "arg2", "-c", "arg3", "--long", "longarg"}
@@ -157,7 +157,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 	b.Run("GetOpt", func(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			benchParse(b, GetOptLong, shortArgs, "a:b:c:", nil)
 		}
 	})
@@ -165,27 +165,27 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 	b.Run("GetOptLong", func(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			benchParse(b, GetOptLong, longArgs, "a:b:c:", longOpts)
 		}
 	})
 }
 
-// BenchmarkIteratorEfficiency benchmarks the iterator pattern efficiency
+// BenchmarkIteratorEfficiency benchmarks the iterator pattern efficiency.
 func BenchmarkIteratorEfficiency(b *testing.B) {
 	args := []string{"prog", "-a", "-b", "-c", "-d", "-e", "-f", "-g", "-h"}
 	optstring := "abcdefgh"
 
 	b.Run("IteratorConsumption", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			benchParse(b, GetOptLong, args, optstring, nil)
 		}
 	})
 
 	b.Run("IteratorPartialConsumption", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			parser, err := GetOpt(args, optstring)
 			if err != nil {
 				b.Fatal(err)

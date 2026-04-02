@@ -179,7 +179,7 @@ func NewParser(config ParserConfig, shortOpts map[byte]*Flag, longOpts map[strin
 	return &parser, nil
 }
 
-// NewParserWithCaseInsensitiveCommands creates a new parser with case insensitive command matching enabled
+// NewParserWithCaseInsensitiveCommands creates a new parser with case insensitive command matching enabled.
 func NewParserWithCaseInsensitiveCommands(shortOpts map[byte]*Flag, longOpts map[string]*Flag, args []string) (*Parser, error) {
 	config := ParserConfig{
 		commandCaseIgnore: true,
@@ -622,22 +622,22 @@ func (p *Parser) AddCmd(name string, parser *Parser) *Parser {
 	return p.Commands.AddCmd(name, parser)
 }
 
-// AddAlias creates an alias for an existing command
+// AddAlias creates an alias for an existing command.
 func (p *Parser) AddAlias(alias, existingCommand string) error {
 	return p.Commands.AddAlias(alias, existingCommand)
 }
 
-// GetCommand retrieves a parser by command name
+// GetCommand retrieves a parser by command name.
 func (p *Parser) GetCommand(name string) (*Parser, bool) {
 	return p.Commands.getCommand(name, p.config.commandCaseIgnore)
 }
 
-// ListCommands returns all command mappings
+// ListCommands returns all command mappings.
 func (p *Parser) ListCommands() map[string]*Parser {
 	return p.Commands.ListCommands()
 }
 
-// ExecuteCommand finds and executes a command
+// ExecuteCommand finds and executes a command.
 func (p *Parser) ExecuteCommand(name string, args []string) (*Parser, error) {
 	return p.Commands.executeCommand(name, args, p.config.commandCaseIgnore)
 }
@@ -655,7 +655,7 @@ func (p *Parser) StrictSubcommands() bool {
 	return p.config.strictSubcommands
 }
 
-// GetAliases returns all aliases for a given parser
+// GetAliases returns all aliases for a given parser.
 func (p *Parser) GetAliases(targetParser *Parser) []string {
 	return p.Commands.GetAliases(targetParser)
 }

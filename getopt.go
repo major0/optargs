@@ -17,7 +17,7 @@
 //   - long and short options that do not require a value. I.e. it should
 //     be possible to pass `--foo` and specify that it never takes a
 //     value, and any attempt to pass it a value should be ignored or
-//     or result in an error.
+//     result in an error.
 //   - short-options of any character that is a valid `isgraph()`
 //     character; with the exception of `-`, `:` and `;`. This means that
 //     the following options are valid: -=, -+, -{, -}, -^, -!, -@, etc.
@@ -202,7 +202,7 @@ func getOpt(args []string, optstring string, longopts []Flag, longOnly bool) (*P
 	//       handle it.
 	// - `+` Behave as if POSIXLY_CORRECT has been set
 	// - `-` Treat all non-option arguments as an argument to a
-	//       a short-option with the opt name equal to the binary
+	//       short-option with the opt name equal to the binary
 	//	 value of `1`, i.e. `true`.
 	//       See `getopt_long(3)` for more information.
 	shortOpts := make(map[byte]*Flag)

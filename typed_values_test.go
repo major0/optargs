@@ -14,7 +14,6 @@ var (
 	_ Resetter   = (*mapValue)(nil)
 )
 
-
 func TestZeroString(t *testing.T) {
 	tests := []struct {
 		typeName string

@@ -39,7 +39,7 @@ func TestCountValue(t *testing.T) {
 	v := NewCountValue(0, &c)
 
 	// Each Set() increments.
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		if err := v.Set(""); err != nil {
 			t.Fatal(err)
 		}

@@ -3,25 +3,26 @@ package optargs
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"time"
 )
 
 // Cached reflect.Type values — avoids allocation on every Set() call.
 var (
-	boolType    = reflect.TypeOf(false)
-	intType     = reflect.TypeOf(int(0))
-	int8Type    = reflect.TypeOf(int8(0))
-	int16Type   = reflect.TypeOf(int16(0))
-	int32Type   = reflect.TypeOf(int32(0))
-	int64Type   = reflect.TypeOf(int64(0))
-	uintType    = reflect.TypeOf(uint(0))
-	uint8Type   = reflect.TypeOf(uint8(0))
-	uint16Type  = reflect.TypeOf(uint16(0))
-	uint32Type  = reflect.TypeOf(uint32(0))
-	uint64Type  = reflect.TypeOf(uint64(0))
-	float32Type = reflect.TypeOf(float32(0))
-	float64Type = reflect.TypeOf(float64(0))
-	stringType  = reflect.TypeOf("")
+	boolType    = reflect.TypeFor[bool]()
+	intType     = reflect.TypeFor[int]()
+	int8Type    = reflect.TypeFor[int8]()
+	int16Type   = reflect.TypeFor[int16]()
+	int32Type   = reflect.TypeFor[int32]()
+	int64Type   = reflect.TypeFor[int64]()
+	uintType    = reflect.TypeFor[uint]()
+	uint8Type   = reflect.TypeFor[uint8]()
+	uint16Type  = reflect.TypeFor[uint16]()
+	uint32Type  = reflect.TypeFor[uint32]()
+	uint64Type  = reflect.TypeFor[uint64]()
+	float32Type = reflect.TypeFor[float32]()
+	float64Type = reflect.TypeFor[float64]()
+	stringType  = reflect.TypeFor[string]()
 )
 
 // scalarValue is the generic implementation for all scalar typed values
@@ -124,7 +125,7 @@ func (v *boolValue) Set(s string) error {
 	return nil
 }
 
-func (v *boolValue) String() string     { return fmt.Sprintf("%t", *v.p) }
+func (v *boolValue) String() string     { return strconv.FormatBool(*v.p) }
 func (v *boolValue) Type() string       { return "bool" }
 func (v *boolValue) IsBoolFlag() bool   { return true }
 func (v *boolValue) BoolTakesArg() bool { return true }

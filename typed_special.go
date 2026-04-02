@@ -2,7 +2,7 @@ package optargs
 
 import (
 	"encoding"
-	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -54,7 +54,7 @@ func (v *countValue) Set(_ string) error {
 	return nil
 }
 
-func (v *countValue) String() string     { return fmt.Sprintf("%d", *v.p) }
+func (v *countValue) String() string     { return strconv.Itoa(*v.p) }
 func (v *countValue) Type() string       { return "count" }
 func (v *countValue) IsBoolFlag() bool   { return true }
 func (v *countValue) BoolTakesArg() bool { return false }
@@ -77,7 +77,7 @@ func NewTextValue(val encoding.TextMarshaler, dest encoding.TextUnmarshaler) Typ
 	// Initialize from val if provided and dest supports it.
 	if val != nil {
 		if b, err := val.MarshalText(); err == nil {
-			_ = dest.UnmarshalText(b) //nolint:errcheck // best-effort init
+			_ = dest.UnmarshalText(b)
 		}
 	}
 	return tv

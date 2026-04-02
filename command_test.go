@@ -477,7 +477,7 @@ func TestDispatchErrorModes(t *testing.T) {
 	})
 }
 
-// Feature: goarg-optargs-integration, Property 10: Active subcommand detection correctness
+// Feature: goarg-optargs-integration, Property 10: Active subcommand detection correctness.
 func TestPropertyActiveCommandCorrectness(t *testing.T) {
 	// Sub-property A: After dispatching a subcommand, ActiveCommand returns
 	// the correct name and parser pointer.
@@ -561,7 +561,7 @@ func TestPropertyActiveCommandCorrectness(t *testing.T) {
 				return false
 			}
 			args := make([]string, n)
-			for i := 0; i < n; i++ {
+			for i := range n {
 				names[i] = string(rune('a' + i))
 				args[i] = names[i]
 				parsers[i+1], err = GetOptLong([]string{}, "", []Flag{})
@@ -583,7 +583,7 @@ func TestPropertyActiveCommandCorrectness(t *testing.T) {
 
 			// Walk the chain via ActiveCommand.
 			current := parsers[0]
-			for i := 0; i < n; i++ {
+			for i := range n {
 				name, p := current.ActiveCommand()
 				if name != names[i] || p != parsers[i+1] {
 					return false

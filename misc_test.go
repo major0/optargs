@@ -12,7 +12,7 @@ func FuzzIsGraph(f *testing.F) {
 }
 
 func BenchmarkIsGraphValid(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		isGraph('c')
 	}
 }
@@ -47,13 +47,13 @@ func TestHasPrefix(t *testing.T) {
 }
 
 func BenchmarkHasPrefixMatch(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		hasPrefix("abc123ABC123Abc123", "abc123", false) // pragma: allowlist secret
 	}
 }
 
 func BenchmarkHasPrefixMatchIgnoreCase(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		hasPrefix("abc123ABC123Abc123", "ABC123", true) // pragma: allowlist secret
 	}
 }
@@ -92,13 +92,13 @@ func TestTrimPrefix(t *testing.T) {
 }
 
 func BenchmarkTrimPrefixMatch(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		trimPrefix("abc123ABC123Abc123", "abc123", false) // pragma: allowlist secret
 	}
 }
 
 func BenchmarkTrimPrefixMatchIgnoreCase(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		trimPrefix("abc123ABC123Abc123", "ABC123", true) // pragma: allowlist secret
 	}
 }

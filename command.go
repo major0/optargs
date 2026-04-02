@@ -5,22 +5,22 @@ import (
 	"strings"
 )
 
-// CommandRegistry manages subcommands for a parser using a simple map
+// CommandRegistry manages subcommands for a parser using a simple map.
 type CommandRegistry map[string]*Parser
 
-// NewCommandRegistry creates a new command registry
+// NewCommandRegistry creates a new command registry.
 func NewCommandRegistry() CommandRegistry {
 	return make(map[string]*Parser)
 }
 
 // AddCmd registers a new subcommand with the parser
-// Returns the registered parser for chaining
+// Returns the registered parser for chaining.
 func (cr CommandRegistry) AddCmd(name string, parser *Parser) *Parser {
 	cr[name] = parser
 	return parser
 }
 
-// AddAlias creates an alias for an existing command
+// AddAlias creates an alias for an existing command.
 func (cr CommandRegistry) AddAlias(alias, existingCommand string) error {
 	parser, exists := cr[existingCommand]
 	if !exists {
@@ -53,7 +53,7 @@ func (cr CommandRegistry) getCommand(name string, caseIgnore bool) (*Parser, boo
 	return nil, false
 }
 
-// ListCommands returns all command mappings
+// ListCommands returns all command mappings.
 func (cr CommandRegistry) ListCommands() map[string]*Parser {
 	return map[string]*Parser(cr)
 }
@@ -83,7 +83,7 @@ func (cr CommandRegistry) executeCommand(name string, args []string, caseIgnore 
 	return prepareCommand(name, parser, exists, args)
 }
 
-// GetAliases returns all aliases for a given parser
+// GetAliases returns all aliases for a given parser.
 func (cr CommandRegistry) GetAliases(targetParser *Parser) []string {
 	var aliases []string
 	for name, parser := range cr {

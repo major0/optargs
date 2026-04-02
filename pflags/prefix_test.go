@@ -501,7 +501,6 @@ func TestGlobalMarkNegatable(t *testing.T) {
 	}
 }
 
-
 func TestParseAllWithPrefixAndNegatable(t *testing.T) {
 	// Verify that ParseAll callbacks fire for prefix pair and negatable handlers.
 	fs := NewFlagSet("test", ContinueOnError)

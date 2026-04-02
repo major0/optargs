@@ -9,7 +9,7 @@ import (
 )
 
 // Cached reflect.Type for TextUnmarshaler interface check.
-var textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+var textUnmarshalerType = reflect.TypeFor[encoding.TextUnmarshaler]()
 
 // intBitSize maps signed integer kinds to their strconv bit-size parameter.
 var intBitSize = [...]int{
@@ -40,7 +40,7 @@ var floatBitSize = [...]int{
 // slice types, and types implementing encoding.TextUnmarshaler.
 // Bool parsing accepts: true/t/1/yes/y/on and false/f/0/no/n/off
 // (case-insensitive), matching alexflint/go-arg behavior.
-func Convert(value string, targetType reflect.Type) (interface{}, error) {
+func Convert(value string, targetType reflect.Type) (any, error) {
 	// Handle pointer types: unwrap, convert, wrap in pointer.
 	if targetType.Kind() == reflect.Ptr {
 		elemType := targetType.Elem()
@@ -124,12 +124,12 @@ func convertBool(value string) (bool, error) {
 // tryTextUnmarshaler checks if targetType (or *targetType) implements
 // encoding.TextUnmarshaler and attempts conversion. The third return
 // value indicates whether the interface was found.
-func tryTextUnmarshaler(value string, targetType reflect.Type) (interface{}, error, bool) {
+func tryTextUnmarshaler(value string, targetType reflect.Type) (any, error, bool) {
 	// Check if *targetType implements TextUnmarshaler.
 	ptrType := reflect.PointerTo(targetType)
 	if ptrType.Implements(textUnmarshalerType) {
 		v := reflect.New(targetType)
-		u := v.Interface().(encoding.TextUnmarshaler) //nolint:errcheck // Implements() guarantees success
+		u := v.Interface().(encoding.TextUnmarshaler)
 		if err := u.UnmarshalText([]byte(value)); err != nil {
 			return nil, fmt.Errorf("invalid value %q for type %s: %w", value, targetType, err), true
 		}
@@ -139,7 +139,7 @@ func tryTextUnmarshaler(value string, targetType reflect.Type) (interface{}, err
 	// Check if targetType itself implements TextUnmarshaler (already a pointer type, etc.).
 	if targetType.Implements(textUnmarshalerType) {
 		v := reflect.New(targetType.Elem())
-		u := v.Interface().(encoding.TextUnmarshaler) //nolint:errcheck // Implements() guarantees success
+		u := v.Interface().(encoding.TextUnmarshaler)
 		if err := u.UnmarshalText([]byte(value)); err != nil {
 			return nil, fmt.Errorf("invalid value %q for type %s: %w", value, targetType, err), true
 		}
@@ -153,7 +153,7 @@ func tryTextUnmarshaler(value string, targetType reflect.Type) (interface{}, err
 // specified element type. Used for default value processing.
 // Splits by comma, trims whitespace on each element, skips empty
 // elements after trimming. Returns empty slice for empty input.
-func ConvertSlice(csv string, sliceType reflect.Type) (interface{}, error) {
+func ConvertSlice(csv string, sliceType reflect.Type) (any, error) {
 	if sliceType.Kind() != reflect.Slice {
 		return nil, fmt.Errorf("unsupported type: %s", sliceType)
 	}

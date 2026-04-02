@@ -1,9 +1,11 @@
 package optargs
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/quick"
@@ -22,73 +24,73 @@ func TestPropertyTypeConversionRoundTrip(t *testing.T) {
 	}{
 		{"string", func(cfg *quick.Config) error {
 			return quick.Check(func(v string) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(v, reflect.TypeFor[string]())
 				return err == nil && got == v
 			}, cfg)
 		}},
 		{"bool", func(cfg *quick.Config) error {
 			return quick.Check(func(v bool) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(strconv.FormatBool(v), reflect.TypeFor[bool]())
 				return err == nil && got == v
 			}, cfg)
 		}},
 		{"int", func(cfg *quick.Config) error {
 			return quick.Check(func(v int) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(strconv.Itoa(v), reflect.TypeFor[int]())
 				return err == nil && got == v
 			}, cfg)
 		}},
 		{"int8", func(cfg *quick.Config) error {
 			return quick.Check(func(v int8) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(strconv.Itoa(int(v)), reflect.TypeFor[int8]())
 				return err == nil && got == v
 			}, cfg)
 		}},
 		{"int16", func(cfg *quick.Config) error {
 			return quick.Check(func(v int16) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(strconv.Itoa(int(v)), reflect.TypeFor[int16]())
 				return err == nil && got == v
 			}, cfg)
 		}},
 		{"int32", func(cfg *quick.Config) error {
 			return quick.Check(func(v int32) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(strconv.Itoa(int(v)), reflect.TypeFor[int32]())
 				return err == nil && got == v
 			}, cfg)
 		}},
 		{"int64", func(cfg *quick.Config) error {
 			return quick.Check(func(v int64) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(strconv.FormatInt(v, 10), reflect.TypeFor[int64]())
 				return err == nil && got == v
 			}, cfg)
 		}},
 		{"uint", func(cfg *quick.Config) error {
 			return quick.Check(func(v uint) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(strconv.FormatUint(uint64(v), 10), reflect.TypeFor[uint]())
 				return err == nil && got == v
 			}, cfg)
 		}},
 		{"uint8", func(cfg *quick.Config) error {
 			return quick.Check(func(v uint8) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(strconv.FormatUint(uint64(v), 10), reflect.TypeFor[uint8]())
 				return err == nil && got == v
 			}, cfg)
 		}},
 		{"uint16", func(cfg *quick.Config) error {
 			return quick.Check(func(v uint16) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(strconv.FormatUint(uint64(v), 10), reflect.TypeFor[uint16]())
 				return err == nil && got == v
 			}, cfg)
 		}},
 		{"uint32", func(cfg *quick.Config) error {
 			return quick.Check(func(v uint32) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(strconv.FormatUint(uint64(v), 10), reflect.TypeFor[uint32]())
 				return err == nil && got == v
 			}, cfg)
 		}},
 		{"uint64", func(cfg *quick.Config) error {
 			return quick.Check(func(v uint64) bool {
-				got, err := Convert(fmt.Sprint(v), reflect.TypeOf(v))
+				got, err := Convert(strconv.FormatUint(v, 10), reflect.TypeFor[uint64]())
 				return err == nil && got == v
 			}, cfg)
 		}},
@@ -97,7 +99,7 @@ func TestPropertyTypeConversionRoundTrip(t *testing.T) {
 				if math.IsNaN(float64(v)) || math.IsInf(float64(v), 0) {
 					return true
 				}
-				got, err := Convert(fmt.Sprintf("%v", v), reflect.TypeOf(v))
+				got, err := Convert(fmt.Sprintf("%v", v), reflect.TypeFor[float32]())
 				return err == nil && got == v
 			}, cfg)
 		}},
@@ -106,7 +108,7 @@ func TestPropertyTypeConversionRoundTrip(t *testing.T) {
 				if math.IsNaN(v) || math.IsInf(v, 0) {
 					return true
 				}
-				got, err := Convert(fmt.Sprintf("%v", v), reflect.TypeOf(v))
+				got, err := Convert(fmt.Sprintf("%v", v), reflect.TypeFor[float64]())
 				return err == nil && got == v
 			}, cfg)
 		}},
@@ -147,7 +149,7 @@ func TestPropertyConvertSliceRoundTrip(t *testing.T) {
 					return true
 				}
 				csv := strings.Join(clean, ",")
-				got, err := ConvertSlice(csv, reflect.TypeOf(clean))
+				got, err := ConvertSlice(csv, reflect.TypeFor[[]string]())
 				if err != nil {
 					return false
 				}
@@ -161,9 +163,9 @@ func TestPropertyConvertSliceRoundTrip(t *testing.T) {
 				}
 				parts := make([]string, len(vs))
 				for i, v := range vs {
-					parts[i] = fmt.Sprint(v)
+					parts[i] = strconv.FormatBool(v)
 				}
-				got, err := ConvertSlice(strings.Join(parts, ","), reflect.TypeOf(vs))
+				got, err := ConvertSlice(strings.Join(parts, ","), reflect.TypeFor[[]bool]())
 				if err != nil {
 					return false
 				}
@@ -177,9 +179,9 @@ func TestPropertyConvertSliceRoundTrip(t *testing.T) {
 				}
 				parts := make([]string, len(vs))
 				for i, v := range vs {
-					parts[i] = fmt.Sprint(v)
+					parts[i] = strconv.Itoa(v)
 				}
-				got, err := ConvertSlice(strings.Join(parts, ","), reflect.TypeOf(vs))
+				got, err := ConvertSlice(strings.Join(parts, ","), reflect.TypeFor[[]int]())
 				if err != nil {
 					return false
 				}
@@ -193,9 +195,9 @@ func TestPropertyConvertSliceRoundTrip(t *testing.T) {
 				}
 				parts := make([]string, len(vs))
 				for i, v := range vs {
-					parts[i] = fmt.Sprint(v)
+					parts[i] = strconv.FormatInt(v, 10)
 				}
-				got, err := ConvertSlice(strings.Join(parts, ","), reflect.TypeOf(vs))
+				got, err := ConvertSlice(strings.Join(parts, ","), reflect.TypeFor[[]int64]())
 				if err != nil {
 					return false
 				}
@@ -209,9 +211,9 @@ func TestPropertyConvertSliceRoundTrip(t *testing.T) {
 				}
 				parts := make([]string, len(vs))
 				for i, v := range vs {
-					parts[i] = fmt.Sprint(v)
+					parts[i] = strconv.FormatUint(uint64(v), 10)
 				}
-				got, err := ConvertSlice(strings.Join(parts, ","), reflect.TypeOf(vs))
+				got, err := ConvertSlice(strings.Join(parts, ","), reflect.TypeFor[[]uint]())
 				if err != nil {
 					return false
 				}
@@ -233,7 +235,7 @@ func TestPropertyConvertSliceRoundTrip(t *testing.T) {
 				for i, v := range clean {
 					parts[i] = fmt.Sprintf("%v", v)
 				}
-				got, err := ConvertSlice(strings.Join(parts, ","), reflect.TypeOf(clean))
+				got, err := ConvertSlice(strings.Join(parts, ","), reflect.TypeFor[[]float64]())
 				if err != nil {
 					return false
 				}
@@ -264,10 +266,10 @@ func TestPropertyConvertErrorMessage(t *testing.T) {
 		targetType reflect.Type
 		typeName   string // substring to check in error
 	}{
-		{"int", reflect.TypeOf(int(0)), "int"},
-		{"uint", reflect.TypeOf(uint(0)), "uint"},
-		{"bool", reflect.TypeOf(false), "bool"},
-		{"float64", reflect.TypeOf(float64(0)), "float64"},
+		{"int", reflect.TypeFor[int](), "int"},
+		{"uint", reflect.TypeFor[uint](), "uint"},
+		{"bool", reflect.TypeFor[bool](), "bool"},
+		{"float64", reflect.TypeFor[float64](), "float64"},
 	}
 
 	cfg := &quick.Config{MaxCount: 100}
@@ -302,7 +304,7 @@ type testTextUnmarshaler struct {
 func (t *testTextUnmarshaler) UnmarshalText(text []byte) error {
 	s := string(text)
 	if s == "FAIL" {
-		return fmt.Errorf("unmarshal refused")
+		return errors.New("unmarshal refused")
 	}
 	t.Value = s
 	return nil
@@ -313,32 +315,32 @@ func TestConvertEdgeCases(t *testing.T) {
 		name       string
 		value      string
 		targetType reflect.Type
-		want       interface{}
+		want       any
 		wantErr    string // substring match; empty means no error
 	}{
 		// Empty string handling
 		{
 			name:       "empty string to string succeeds",
 			value:      "",
-			targetType: reflect.TypeOf(""),
+			targetType: reflect.TypeFor[string](),
 			want:       "",
 		},
 		{
 			name:       "empty string to bool returns false",
 			value:      "",
-			targetType: reflect.TypeOf(false),
+			targetType: reflect.TypeFor[bool](),
 			want:       false,
 		},
 		{
 			name:       "empty string to int errors",
 			value:      "",
-			targetType: reflect.TypeOf(0),
+			targetType: reflect.TypeFor[int](),
 			wantErr:    "invalid value",
 		},
 		{
 			name:       "empty string to float64 errors",
 			value:      "",
-			targetType: reflect.TypeOf(float64(0)),
+			targetType: reflect.TypeFor[float64](),
 			wantErr:    "invalid value",
 		},
 
@@ -346,31 +348,31 @@ func TestConvertEdgeCases(t *testing.T) {
 		{
 			name:       "256 overflows int8",
 			value:      "256",
-			targetType: reflect.TypeOf(int8(0)),
+			targetType: reflect.TypeFor[int8](),
 			wantErr:    "invalid value",
 		},
 		{
 			name:       "-129 overflows int8",
 			value:      "-129",
-			targetType: reflect.TypeOf(int8(0)),
+			targetType: reflect.TypeFor[int8](),
 			wantErr:    "invalid value",
 		},
 		{
 			name:       "huge number overflows int",
 			value:      "99999999999999999999",
-			targetType: reflect.TypeOf(0),
+			targetType: reflect.TypeFor[int](),
 			wantErr:    "invalid value",
 		},
 		{
 			name:       "256 overflows uint8",
 			value:      "256",
-			targetType: reflect.TypeOf(uint8(0)),
+			targetType: reflect.TypeFor[uint8](),
 			wantErr:    "invalid value",
 		},
 		{
 			name:       "negative overflows uint",
 			value:      "-1",
-			targetType: reflect.TypeOf(uint(0)),
+			targetType: reflect.TypeFor[uint](),
 			wantErr:    "invalid value",
 		},
 
@@ -378,7 +380,7 @@ func TestConvertEdgeCases(t *testing.T) {
 		{
 			name:       "chan type unsupported",
 			value:      "x",
-			targetType: reflect.TypeOf(make(chan int)),
+			targetType: reflect.TypeFor[chan int](),
 			wantErr:    "unsupported type",
 		},
 		{
@@ -390,45 +392,45 @@ func TestConvertEdgeCases(t *testing.T) {
 		{
 			name:       "map type unsupported",
 			value:      "x",
-			targetType: reflect.TypeOf(map[string]int{}),
+			targetType: reflect.TypeFor[map[string]int](),
 			wantErr:    "unsupported type",
 		},
 		{
 			name:       "complex128 type unsupported",
 			value:      "x",
-			targetType: reflect.TypeOf(complex128(0)),
+			targetType: reflect.TypeFor[complex128](),
 			wantErr:    "unsupported type",
 		},
 
 		// Bool extended aliases (case-insensitive variants not reachable by property round-trip)
-		{"YES", "YES", reflect.TypeOf(false), true, ""},
-		{"Yes", "Yes", reflect.TypeOf(false), true, ""},
-		{"ON", "ON", reflect.TypeOf(false), true, ""},
-		{"On", "On", reflect.TypeOf(false), true, ""},
-		{"NO", "NO", reflect.TypeOf(false), false, ""},
-		{"OFF", "OFF", reflect.TypeOf(false), false, ""},
-		{"t", "t", reflect.TypeOf(false), true, ""},
-		{"f", "f", reflect.TypeOf(false), false, ""},
-		{"1", "1", reflect.TypeOf(false), true, ""},
-		{"0", "0", reflect.TypeOf(false), false, ""},
+		{"YES", "YES", reflect.TypeFor[bool](), true, ""},
+		{"Yes", "Yes", reflect.TypeFor[bool](), true, ""},
+		{"ON", "ON", reflect.TypeFor[bool](), true, ""},
+		{"On", "On", reflect.TypeFor[bool](), true, ""},
+		{"NO", "NO", reflect.TypeFor[bool](), false, ""},
+		{"OFF", "OFF", reflect.TypeFor[bool](), false, ""},
+		{"t", "t", reflect.TypeFor[bool](), true, ""},
+		{"f", "f", reflect.TypeFor[bool](), false, ""},
+		{"1", "1", reflect.TypeFor[bool](), true, ""},
+		{"0", "0", reflect.TypeFor[bool](), false, ""},
 
 		// Pointer types
 		{
 			name:       "pointer to int",
 			value:      "42",
-			targetType: reflect.TypeOf((*int)(nil)),
-			want:       func() interface{} { v := 42; return &v }(),
+			targetType: reflect.TypeFor[*int](),
+			want:       func() any { v := 42; return &v }(),
 		},
 		{
 			name:       "pointer to string",
 			value:      "hello",
-			targetType: reflect.TypeOf((*string)(nil)),
-			want:       func() interface{} { v := "hello"; return &v }(),
+			targetType: reflect.TypeFor[*string](),
+			want:       func() any { v := "hello"; return &v }(),
 		},
 		{
 			name:       "pointer to invalid int errors",
 			value:      "abc",
-			targetType: reflect.TypeOf((*int)(nil)),
+			targetType: reflect.TypeFor[*int](),
 			wantErr:    "invalid value",
 		},
 
@@ -436,7 +438,7 @@ func TestConvertEdgeCases(t *testing.T) {
 		{
 			name:       "single int to int slice",
 			value:      "7",
-			targetType: reflect.TypeOf([]int{}),
+			targetType: reflect.TypeFor[[]int](),
 			want:       []int{7},
 		},
 
@@ -444,13 +446,13 @@ func TestConvertEdgeCases(t *testing.T) {
 		{
 			name:       "TextUnmarshaler success",
 			value:      "hello",
-			targetType: reflect.TypeOf(testTextUnmarshaler{}),
+			targetType: reflect.TypeFor[testTextUnmarshaler](),
 			want:       testTextUnmarshaler{Value: "hello"},
 		},
 		{
 			name:       "TextUnmarshaler failure",
 			value:      "FAIL",
-			targetType: reflect.TypeOf(testTextUnmarshaler{}),
+			targetType: reflect.TypeFor[testTextUnmarshaler](),
 			wantErr:    "unmarshal refused",
 		},
 	}
@@ -482,18 +484,18 @@ func TestConvertSliceEdgeCases(t *testing.T) {
 		name      string
 		csv       string
 		sliceType reflect.Type
-		want      interface{}
+		want      any
 		wantErr   string
 	}{
-		{"empty string returns empty slice", "", reflect.TypeOf([]int{}), []int{}, ""},
-		{"whitespace-only elements skipped", " , , ", reflect.TypeOf([]string{}), []string{}, ""},
-		{"trailing comma skipped", "1,2,", reflect.TypeOf([]int{}), []int{1, 2}, ""},
-		{"leading comma skipped", ",1,2", reflect.TypeOf([]int{}), []int{1, 2}, ""},
-		{"whitespace trimmed", " a , b , c ", reflect.TypeOf([]string{}), []string{"a", "b", "c"}, ""},
-		{"non-slice type errors", "1,2,3", reflect.TypeOf(0), nil, "unsupported type"},
-		{"invalid element errors", "1,abc,3", reflect.TypeOf([]int{}), nil, "invalid value"},
-		{"single element", "42", reflect.TypeOf([]int{}), []int{42}, ""},
-		{"bool slice", "true,false,yes,no", reflect.TypeOf([]bool{}), []bool{true, false, true, false}, ""},
+		{"empty string returns empty slice", "", reflect.TypeFor[[]int](), []int{}, ""},
+		{"whitespace-only elements skipped", " , , ", reflect.TypeFor[[]string](), []string{}, ""},
+		{"trailing comma skipped", "1,2,", reflect.TypeFor[[]int](), []int{1, 2}, ""},
+		{"leading comma skipped", ",1,2", reflect.TypeFor[[]int](), []int{1, 2}, ""},
+		{"whitespace trimmed", " a , b , c ", reflect.TypeFor[[]string](), []string{"a", "b", "c"}, ""},
+		{"non-slice type errors", "1,2,3", reflect.TypeFor[int](), nil, "unsupported type"},
+		{"invalid element errors", "1,abc,3", reflect.TypeFor[[]int](), nil, "invalid value"},
+		{"single element", "42", reflect.TypeFor[[]int](), []int{42}, ""},
+		{"bool slice", "true,false,yes,no", reflect.TypeFor[[]bool](), []bool{true, false, true, false}, ""},
 	}
 
 	for _, tt := range tests {

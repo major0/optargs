@@ -11,7 +11,7 @@ import (
 // It stores a pointer to the destination slice and the element type
 // for Convert() delegation.
 type sliceValue struct {
-	p        interface{} // pointer to destination slice
+	p        any // pointer to destination slice
 	elemType reflect.Type
 	typeName string
 }

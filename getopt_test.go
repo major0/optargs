@@ -36,7 +36,7 @@ func representativeOptstrings(opts string) []string {
 // TestShortOptsGraph validates that every isgraph() character allowed by
 // the spec is usable as a short option.
 func TestShortOptsGraph(t *testing.T) {
-	for i := 0; i < 127; i++ {
+	for i := range 127 {
 		if !isGraph(byte(i)) {
 			continue
 		}

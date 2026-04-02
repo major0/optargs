@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"strconv"
 	"testing"
 	"testing/quick"
 	"time"
@@ -147,12 +148,12 @@ func TestPropertyConvertDelegation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := func(n int64) bool {
 				// Use absolute value to avoid uint issues with negatives.
-				s := fmt.Sprintf("%d", n)
+				s := strconv.FormatInt(n, 10)
 				if tt.name == "uint" || tt.name == "uint64" {
 					if n < 0 {
 						return true // skip negatives for unsigned
 					}
-					s = fmt.Sprintf("%d", uint64(n))
+					s = strconv.FormatUint(uint64(n), 10)
 				}
 				if tt.name == "float64" {
 					s = fmt.Sprintf("%g", float64(n))
