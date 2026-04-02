@@ -68,7 +68,7 @@ func (v *mapValue) Reset() {
 	v.firstSet = false
 }
 
-// --- Map constructors ---
+// Map constructors.
 
 // NewStringToStringValue returns a TypedValue backed by *p, initialized to val.
 func NewStringToStringValue(val map[string]string, p *map[string]string) TypedValue {

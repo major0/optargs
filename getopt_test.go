@@ -114,7 +114,7 @@ func TestNoOptions(t *testing.T) {
 // we consume any number of prefix characters, toggling parser mode and
 // error mode settings as we go.
 func TestShortOptsDisableErrors(t *testing.T) {
-	for _, opts := range representativeOptstrings("ab") {
+	for _, opts := range representativeOptstrings("xy") {
 		optstring := ":" + opts
 		getopt, err := GetOpt(nil, optstring)
 		if err != nil {
@@ -145,7 +145,7 @@ var parseModeTests = []struct {
 func TestShortOptsParseMode(t *testing.T) {
 	for _, tt := range parseModeTests {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, opts := range representativeOptstrings("ab") {
+			for _, opts := range representativeOptstrings("cd") {
 				optstring := tt.prefix + opts
 				getopt, err := GetOpt(nil, optstring)
 				if err != nil {
@@ -197,7 +197,7 @@ func TestOptstringInvalid(t *testing.T) {
 // The `;` is never allowed in the optstring unless it follows `W`.
 // This is a GNU extension to POSIX.
 func TestShortOptsGnuWords(t *testing.T) {
-	for _, opts := range representativeOptstrings("ab") {
+	for _, opts := range representativeOptstrings("f") {
 		optstring := opts + "W;"
 		getopt, err := GetOpt(nil, optstring)
 		if err != nil {

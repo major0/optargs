@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// --- StringArray: appends raw string without comma splitting ---
+// StringArray: appends raw string without comma splitting.
 
 type stringArrayValue struct{ p *[]string }
 
@@ -34,7 +34,7 @@ func (v *stringArrayValue) String() string {
 
 func (v *stringArrayValue) Type() string { return "stringArray" }
 
-// --- Count: increments on each Set(), implements BoolValuer ---
+// Count value: increments on each Set(), implements BoolValuer.
 
 type countValue struct{ p *int }
 
@@ -59,7 +59,7 @@ func (v *countValue) Type() string       { return "count" }
 func (v *countValue) IsBoolFlag() bool   { return true }
 func (v *countValue) BoolTakesArg() bool { return false }
 
-// --- TextValue: wraps encoding.TextUnmarshaler/TextMarshaler ---
+// TextValue wraps encoding.TextUnmarshaler/TextMarshaler.
 
 type textValue struct {
 	dest encoding.TextUnmarshaler
@@ -77,7 +77,7 @@ func NewTextValue(val encoding.TextMarshaler, dest encoding.TextUnmarshaler) Typ
 	// Initialize from val if provided and dest supports it.
 	if val != nil {
 		if b, err := val.MarshalText(); err == nil {
-			_ = dest.UnmarshalText(b)
+			_ = dest.UnmarshalText(b) //nolint:errcheck // best-effort initialization from default value
 		}
 	}
 	return tv
@@ -98,7 +98,7 @@ func (v *textValue) String() string {
 
 func (v *textValue) Type() string { return "textUnmarshaler" }
 
-// --- FuncValue: wraps a callback function ---
+// FuncValue wraps a callback function.
 
 type funcValue struct {
 	fn       func(string) error

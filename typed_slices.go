@@ -52,7 +52,7 @@ func (v *sliceValue) Type() string { return v.typeName }
 // Reset clears the slice to its zero value (empty slice).
 func (v *sliceValue) Reset() { reflect.ValueOf(v.p).Elem().SetLen(0) }
 
-// --- Slice constructors ---
+// Slice constructors.
 
 // NewStringSliceValue returns a TypedValue backed by *p, initialized to val.
 func NewStringSliceValue(val []string, p *[]string) TypedValue {

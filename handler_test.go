@@ -63,7 +63,7 @@ func TestPropertyNilHandleBackwardCompat(t *testing.T) {
 	safeChars := []byte("abcdefghijklmnopqrstuvxyz") // exclude 'W' (gnuWords)
 
 	property := func(seed int64) bool {
-		rng := rand.New(rand.NewSource(seed))
+		rng := rand.New(rand.NewSource(seed)) //nolint:gosec // deterministic seed for reproducible property tests
 
 		// Generate a random optstring with 1–6 short options.
 		nShort := 1 + rng.Intn(6)
@@ -273,7 +273,7 @@ func TestHandlerSuppressesYield(t *testing.T) {
 				yielded = append(yielded, opt.Name)
 			}
 
-			var gotHandled []string
+			gotHandled := make([]string, 0, len(calls))
 			for _, c := range calls {
 				gotHandled = append(gotHandled, c.name)
 			}
@@ -433,7 +433,7 @@ func TestChildOverloadingWins(t *testing.T) {
 			if len(parentCalls) != 0 {
 				t.Errorf("parent handler invoked %d times, want 0", len(parentCalls))
 			}
-			var gotChildCalls []string
+			gotChildCalls := make([]string, 0, len(childCalls))
 			for _, c := range childCalls {
 				gotChildCalls = append(gotChildCalls, c.name)
 			}

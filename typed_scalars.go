@@ -48,7 +48,7 @@ func (v *scalarValue[T]) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	*v.p = result.(T)
+	*v.p = result.(T) //nolint:errcheck // Convert guarantees the correct type for v.rtype
 	return nil
 }
 
@@ -109,7 +109,7 @@ func NewFloat64Value(val float64, p *float64) TypedValue {
 	return newScalar(val, p, float64Type, "float64", "%g")
 }
 
-// --- String: no Convert needed ---
+// String value: no Convert needed.
 
 type stringValue struct{ p *string }
 
@@ -126,7 +126,7 @@ func (v *stringValue) Set(s string) error { *v.p = s; return nil }
 func (v *stringValue) String() string     { return *v.p }
 func (v *stringValue) Type() string       { return "string" }
 
-// --- Bool: implements BoolValuer ---
+// Bool value: implements BoolValuer.
 
 type boolValue struct{ p *bool }
 
@@ -144,7 +144,7 @@ func (v *boolValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	*v.p = b.(bool)
+	*v.p = b.(bool) //nolint:errcheck // Convert guarantees bool for boolType
 	return nil
 }
 
@@ -153,7 +153,7 @@ func (v *boolValue) Type() string       { return "bool" }
 func (v *boolValue) IsBoolFlag() bool   { return true }
 func (v *boolValue) BoolTakesArg() bool { return true }
 
-// --- Duration: uses time.ParseDuration, not Convert ---
+// Duration value: uses time.ParseDuration, not Convert.
 
 type durationValue struct{ p *time.Duration }
 

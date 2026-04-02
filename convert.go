@@ -129,7 +129,7 @@ func tryTextUnmarshaler(value string, targetType reflect.Type) (any, bool, error
 	ptrType := reflect.PointerTo(targetType)
 	if ptrType.Implements(textUnmarshalerType) {
 		v := reflect.New(targetType)
-		u := v.Interface().(encoding.TextUnmarshaler)
+		u := v.Interface().(encoding.TextUnmarshaler) //nolint:errcheck // guarded by Implements() check above
 		if err := u.UnmarshalText([]byte(value)); err != nil {
 			return nil, true, fmt.Errorf("invalid value %q for type %s: %w", value, targetType, err)
 		}
@@ -139,7 +139,7 @@ func tryTextUnmarshaler(value string, targetType reflect.Type) (any, bool, error
 	// Check if targetType itself implements TextUnmarshaler (already a pointer type, etc.).
 	if targetType.Implements(textUnmarshalerType) {
 		v := reflect.New(targetType.Elem())
-		u := v.Interface().(encoding.TextUnmarshaler)
+		u := v.Interface().(encoding.TextUnmarshaler) //nolint:errcheck // guarded by Implements() check above
 		if err := u.UnmarshalText([]byte(value)); err != nil {
 			return nil, true, fmt.Errorf("invalid value %q for type %s: %w", value, targetType, err)
 		}

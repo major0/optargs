@@ -201,6 +201,7 @@ func (p *Parser) optErrorf(msg string, args ...any) error {
 	return p.optError(fmt.Sprintf(msg, args...))
 }
 
+//nolint:gocognit,gocyclo,cyclop // prefix matching with ancestor walk and ambiguity detection is inherently complex
 func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Option, error) {
 	// Fast path: exact match via direct map lookup (covers 95%+ of real usage).
 	// Walk self + ancestors for the exact key.
@@ -261,7 +262,7 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Optio
 	}
 
 	// Prefix match with '=' boundary.
-	if bestFlag.HasArg == NoArgument {
+	if bestFlag.HasArg == NoArgument { //nolint:nestif // NoArgument fallback search walks ancestors with multiple filter conditions
 		// NoArgument option can't accept the '=value' portion.
 		// Look for a shorter candidate that can.
 		var fallbackName string
@@ -356,12 +357,13 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 			if debug {
 				slog.Debug("findShortOpt", "hasArg", "required", "c", byteString(c))
 			}
-			if len(word) > 0 {
+			switch {
+			case len(word) > 0:
 				option.Arg = word
 				word = ""
-			} else if len(args) == 0 {
+			case len(args) == 0:
 				return args, word, nil, option, p.optError("option requires an argument: " + byteString(c))
-			} else {
+			default:
 				option.Arg = args[0]
 				args = args[1:]
 			}
@@ -406,11 +408,12 @@ func (p *Parser) lookupShortOpt(c byte) (byte, *Flag) {
 	}
 	// Case-insensitive fallback: try the opposite case.
 	var alt byte
-	if c >= 'a' && c <= 'z' {
+	switch {
+	case c >= 'a' && c <= 'z':
 		alt = c - 32
-	} else if c >= 'A' && c <= 'Z' {
+	case c >= 'A' && c <= 'Z':
 		alt = c + 32
-	} else {
+	default:
 		return 0, nil
 	}
 	if flag := p.shortOpts[alt]; flag != nil {
@@ -451,6 +454,7 @@ func (p *Parser) tryLongOnly(
 // Options returns an iterator over parsed options. Each iteration yields
 // an [Option] and an error. When a subcommand is encountered, the iterator
 // dispatches to the child parser automatically.
+//nolint:gocognit,gocyclo,cyclop,funlen // main parser loop handles --, --long, -short, long-only, commands, and parse modes
 func (p *Parser) Options() iter.Seq2[Option, error] {
 	if debug {
 		slog.Debug("Iterator")
@@ -510,7 +514,7 @@ func (p *Parser) Options() iter.Seq2[Option, error] {
 				if debug {
 					slog.Debug("Options", "prefix", "-")
 				}
-				if p.config.longOptsOnly {
+				if p.config.longOptsOnly { //nolint:nestif // long-only dispatch requires try-long then fall-through-to-short
 					var matched bool
 					var flag *Flag
 					matched, p.Args, flag, option, err = p.tryLongOnly(p.Args[0][1:], p.Args[1:])
