@@ -410,6 +410,29 @@ func (ci *CoreIntegration) makeHandler(field *FieldMetadata, destValue reflect.V
 	}, nil
 }
 
+// makeBoolPrefixHandler returns a handler for a prefixed boolean option
+// (e.g. --enable-shared). The val argument controls whether the field is
+// set to true or false.
+func (ci *CoreIntegration) makeBoolPrefixHandler(field *FieldMetadata, destValue reflect.Value, val bool) func(string, string) error {
+	return func(_, _ string) error {
+		fv := fieldByMeta(destValue, field)
+		fv.SetBool(val)
+		ci.setFields[field.FieldIndex] = true
+		return nil
+	}
+}
+
+// makeNegatableHandler returns a handler for --no-<name> on a non-boolean field.
+// Clears the field to its type's zero value via reflect.Zero.
+func (ci *CoreIntegration) makeNegatableHandler(field *FieldMetadata, destValue reflect.Value) func(string, string) error {
+	return func(_, _ string) error {
+		fv := fieldByMeta(destValue, field)
+		fv.Set(reflect.Zero(fv.Type()))
+		ci.setFields[field.FieldIndex] = true
+		return nil
+	}
+}
+
 // buildFlags builds short and long option maps in a single pass over
 // metadata.Options. For fields with both short and long names, a single
 // shared *Flag is created. Handlers and Peer links are wired inline,
@@ -469,44 +492,25 @@ func (ci *CoreIntegration) buildFlags(destValue reflect.Value) (map[byte]*optarg
 			for _, pp := range field.Prefixes {
 				trueName := pp.True + "-" + field.Long
 				falseName := pp.False + "-" + field.Long
-				fld := field // capture for closure
-				dv := destValue
 				longOpts[trueName] = &optargs.Flag{
 					Name:   trueName,
 					HasArg: optargs.NoArgument,
-					Handle: func(_, _ string) error {
-						fv := fieldByMeta(dv, fld)
-						fv.SetBool(true)
-						ci.setFields[fld.FieldIndex] = true
-						return nil
-					},
+					Handle: ci.makeBoolPrefixHandler(field, destValue, true),
 				}
 				longOpts[falseName] = &optargs.Flag{
 					Name:   falseName,
 					HasArg: optargs.NoArgument,
-					Handle: func(_, _ string) error {
-						fv := fieldByMeta(dv, fld)
-						fv.SetBool(false)
-						ci.setFields[fld.FieldIndex] = true
-						return nil
-					},
+					Handle: ci.makeBoolPrefixHandler(field, destValue, false),
 				}
 			}
 
 			// Register --no-<name> for negatable non-boolean fields
 			if field.Negatable && field.Type.Kind() != reflect.Bool {
 				negName := "no-" + field.Long
-				fld := field
-				dv := destValue
 				longOpts[negName] = &optargs.Flag{
 					Name:   negName,
 					HasArg: optargs.NoArgument,
-					Handle: func(_, _ string) error {
-						fv := fieldByMeta(dv, fld)
-						fv.Set(reflect.Zero(fv.Type()))
-						ci.setFields[fld.FieldIndex] = true
-						return nil
-					},
+					Handle: ci.makeNegatableHandler(field, destValue),
 				}
 			}
 		}
@@ -673,8 +677,9 @@ func (ci *CoreIntegration) dispatchSubcommand(childParser *optargs.Parser, invok
 	// PostParse on the subcommand
 	subDestValue := fieldValue.Elem()
 	childCI := &CoreIntegration{
-		metadata: subMeta,
-		config:   ci.config,
+		metadata:  subMeta,
+		config:    ci.config,
+		setFields: make(map[int]bool),
 	}
 	childCI.buildPositionalArgs()
 	if err := childCI.PostParse(childParser, subDestValue); err != nil {
