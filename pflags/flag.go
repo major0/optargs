@@ -316,6 +316,22 @@ func (f *FlagSet) SetAnnotation(name, key string, values []string) error {
 	return nil
 }
 
+// MarkBoolPrefix registers a true/false prefix pair on a boolean flag.
+// For example, MarkBoolPrefix("shared", "enable", "disable") registers
+// --enable-shared (sets true) and --disable-shared (sets false).
+// Multiple pairs may be registered on the same flag.
+func (f *FlagSet) MarkBoolPrefix(name, truePrefix, falsePrefix string) error {
+	flag := f.Lookup(name)
+	if flag == nil {
+		return fmt.Errorf("flag %q does not exist", name)
+	}
+	if !isBoolFlag(flag.Value) {
+		return fmt.Errorf("flag %q is not a boolean flag", name)
+	}
+	flag.Prefixes = append(flag.Prefixes, PrefixPair{True: truePrefix, False: falsePrefix})
+	return nil
+}
+
 // AddFlag adds the flag to the FlagSet. If a flag with the same name already
 // exists, the new flag is silently ignored (matching upstream pflag behavior).
 func (f *FlagSet) AddFlag(flag *Flag) {
