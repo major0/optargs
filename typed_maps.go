@@ -61,6 +61,13 @@ func (v *mapValue) String() string {
 
 func (v *mapValue) Type() string { return v.typeName }
 
+// Reset clears the map to its zero value (empty map).
+func (v *mapValue) Reset() {
+	dest := reflect.ValueOf(v.p).Elem()
+	dest.Set(reflect.MakeMap(dest.Type()))
+	v.firstSet = false
+}
+
 // --- Map constructors ---
 
 func NewStringToStringValue(val map[string]string, p *map[string]string) TypedValue {

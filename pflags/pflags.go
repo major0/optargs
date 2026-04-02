@@ -129,6 +129,58 @@ func (f *FlagSet) buildLongOpts() map[string]*optargs.Flag {
 				Handle: f.makeNegationHandler(flag),
 			}
 		}
+
+		// Register prefix pair options for boolean flags (always NoArgument)
+		for _, pp := range flag.Prefixes {
+			trueName := f.normalizeFlagName(pp.True + "-" + normalizedName)
+			falseName := f.normalizeFlagName(pp.False + "-" + normalizedName)
+			fl := flag // capture for closure
+			longOpts[trueName] = &optargs.Flag{
+				Name:   trueName,
+				HasArg: optargs.NoArgument,
+				Handle: func(_, _ string) error {
+					if err := fl.Value.Set("true"); err != nil {
+						return err
+					}
+					fl.Changed = true
+					return nil
+				},
+			}
+			longOpts[falseName] = &optargs.Flag{
+				Name:   falseName,
+				HasArg: optargs.NoArgument,
+				Handle: func(_, _ string) error {
+					if err := fl.Value.Set("false"); err != nil {
+						return err
+					}
+					fl.Changed = true
+					return nil
+				},
+			}
+		}
+
+		// Register --no-<name> for negatable non-boolean flags (always NoArgument)
+		if flag.Negatable && !isBool {
+			negName := f.normalizeFlagName("no-" + normalizedName)
+			fl := flag // capture for closure
+			zeroVal := zeroStrings[fl.Value.Type()]
+			longOpts[negName] = &optargs.Flag{
+				Name:   negName,
+				HasArg: optargs.NoArgument,
+				Handle: func(_, _ string) error {
+					// Collection types implement Reset() to clear to zero.
+					// Scalar types use Set(zeroVal) to overwrite.
+					type resetter interface{ Reset() }
+					if r, ok := fl.Value.(resetter); ok {
+						r.Reset()
+					} else if err := fl.Value.Set(zeroVal); err != nil {
+						return err
+					}
+					fl.Changed = true
+					return nil
+				},
+			}
+		}
 	}
 	return longOpts
 }

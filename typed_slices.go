@@ -49,6 +49,9 @@ func (v *sliceValue) String() string {
 
 func (v *sliceValue) Type() string { return v.typeName }
 
+// Reset clears the slice to its zero value (empty slice).
+func (v *sliceValue) Reset() { reflect.ValueOf(v.p).Elem().SetLen(0) }
+
 // --- Slice constructors ---
 
 func NewStringSliceValue(val []string, p *[]string) TypedValue {
@@ -155,3 +158,6 @@ func (v *durationSliceValue) String() string {
 }
 
 func (v *durationSliceValue) Type() string { return "durationSlice" }
+
+// Reset clears the duration slice to its zero value (empty slice).
+func (v *durationSliceValue) Reset() { *v.p = (*v.p)[:0] }
