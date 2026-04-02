@@ -103,3 +103,69 @@ func TestMarkBoolPrefixNormalizeFunc(t *testing.T) {
 		t.Errorf("Prefixes count: got %d, want 1", len(flag.Prefixes))
 	}
 }
+
+
+func TestMarkNegatable(t *testing.T) {
+	tests := []struct {
+		name    string
+		flag    string
+		wantErr string
+	}{
+		{
+			name:    "non-existent flag",
+			flag:    "missing",
+			wantErr: "does not exist",
+		},
+		{
+			name:    "boolean flag rejected",
+			flag:    "verbose",
+			wantErr: "is a boolean flag",
+		},
+		{
+			name:    "custom type no zero value",
+			flag:    "custom",
+			wantErr: "has no known zero value",
+		},
+		{
+			name: "success on string flag",
+			flag: "sysroot",
+		},
+		{
+			name: "success on int flag",
+			flag: "port",
+		},
+		{
+			name: "success on stringSlice flag",
+			flag: "tags",
+		},
+	}
+
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.Bool("verbose", false, "verbose output")
+	fs.String("sysroot", "/usr", "system root")
+	fs.Int("port", 8080, "port number")
+	fs.StringSlice("tags", []string{"a", "b"}, "tags")
+	fs.Var(&customValue{value: "x"}, "custom", "custom value")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := fs.MarkNegatable(tt.flag)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("error %q does not contain %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			flag := fs.Lookup(tt.flag)
+			if !flag.Negatable {
+				t.Error("Negatable: got false, want true")
+			}
+		})
+	}
+}

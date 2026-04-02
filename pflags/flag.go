@@ -332,6 +332,25 @@ func (f *FlagSet) MarkBoolPrefix(name, truePrefix, falsePrefix string) error {
 	return nil
 }
 
+// MarkNegatable marks a non-boolean flag as supporting --no-<name> to clear
+// it to the type's zero value. Boolean flags are rejected since they already
+// have automatic --no-<name>. Custom Value types without a known zero value
+// are also rejected.
+func (f *FlagSet) MarkNegatable(name string) error {
+	flag := f.Lookup(name)
+	if flag == nil {
+		return fmt.Errorf("flag %q does not exist", name)
+	}
+	if isBoolFlag(flag.Value) {
+		return fmt.Errorf("flag %q is a boolean flag (use MarkBoolPrefix instead)", name)
+	}
+	if _, ok := zeroStrings[flag.Value.Type()]; !ok {
+		return fmt.Errorf("flag %q type %q has no known zero value", name, flag.Value.Type())
+	}
+	flag.Negatable = true
+	return nil
+}
+
 // AddFlag adds the flag to the FlagSet. If a flag with the same name already
 // exists, the new flag is silently ignored (matching upstream pflag behavior).
 func (f *FlagSet) AddFlag(flag *Flag) {
