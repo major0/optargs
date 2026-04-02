@@ -16,6 +16,7 @@ type CoreIntegration struct {
 	metadata    *StructMetadata
 	config      Config
 	positionals []PositionalArg
+	setFields   map[int]bool // tracks field indices explicitly set during parsing
 }
 
 // PositionalArg represents a positional argument
@@ -334,6 +335,11 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 			continue
 		}
 
+		// Skip fields explicitly set during parsing (including negatable zero-clear)
+		if ci.setFields[field.FieldIndex] {
+			continue
+		}
+
 		if ci.isFieldSet(fieldValue) {
 			continue
 		}
@@ -385,13 +391,22 @@ func (ci *CoreIntegration) makeHandler(field *FieldMetadata, destValue reflect.V
 	if err != nil {
 		return nil, err
 	}
+	idx := field.FieldIndex
 	return func(name, arg string) error {
 		if arg == "" {
 			if _, ok := tv.(optargs.BoolValuer); ok {
-				return tv.Set("true")
+				if err := tv.Set("true"); err != nil {
+					return err
+				}
+				ci.setFields[idx] = true
+				return nil
 			}
 		}
-		return tv.Set(arg)
+		if err := tv.Set(arg); err != nil {
+			return err
+		}
+		ci.setFields[idx] = true
+		return nil
 	}, nil
 }
 
@@ -448,6 +463,53 @@ func (ci *CoreIntegration) buildFlags(destValue reflect.Value) (map[byte]*optarg
 				Handle:       handler,
 			}
 		}
+
+		// Register prefix pair options for boolean fields (always NoArgument)
+		if hasLong {
+			for _, pp := range field.Prefixes {
+				trueName := pp.True + "-" + field.Long
+				falseName := pp.False + "-" + field.Long
+				fld := field // capture for closure
+				dv := destValue
+				longOpts[trueName] = &optargs.Flag{
+					Name:   trueName,
+					HasArg: optargs.NoArgument,
+					Handle: func(_, _ string) error {
+						fv := fieldByMeta(dv, fld)
+						fv.SetBool(true)
+						ci.setFields[fld.FieldIndex] = true
+						return nil
+					},
+				}
+				longOpts[falseName] = &optargs.Flag{
+					Name:   falseName,
+					HasArg: optargs.NoArgument,
+					Handle: func(_, _ string) error {
+						fv := fieldByMeta(dv, fld)
+						fv.SetBool(false)
+						ci.setFields[fld.FieldIndex] = true
+						return nil
+					},
+				}
+			}
+
+			// Register --no-<name> for negatable non-boolean fields
+			if field.Negatable && field.Type.Kind() != reflect.Bool {
+				negName := "no-" + field.Long
+				fld := field
+				dv := destValue
+				longOpts[negName] = &optargs.Flag{
+					Name:   negName,
+					HasArg: optargs.NoArgument,
+					Handle: func(_, _ string) error {
+						fv := fieldByMeta(dv, fld)
+						fv.Set(reflect.Zero(fv.Type()))
+						ci.setFields[fld.FieldIndex] = true
+						return nil
+					},
+				}
+			}
+		}
 	}
 
 	return shortOpts, longOpts, nil
@@ -458,6 +520,7 @@ func (ci *CoreIntegration) buildFlags(destValue reflect.Value) (map[byte]*optarg
 // case-insensitive commands and prepares positional arg metadata.
 // It does NOT register subcommands.
 func (ci *CoreIntegration) CreateParserWithHandlers(args []string, destValue reflect.Value) (*optargs.Parser, error) {
+	ci.setFields = make(map[int]bool)
 	shortOpts, longOpts, err := ci.buildFlags(destValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build flags: %w", err)

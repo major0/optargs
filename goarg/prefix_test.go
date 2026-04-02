@@ -121,3 +121,128 @@ func TestNegatableTagParsing(t *testing.T) {
 		}
 	})
 }
+
+
+func TestGoargPrefixPairParsing(t *testing.T) {
+	type Args struct {
+		Shared bool `arg:"--shared" prefix:"enable,disable"`
+	}
+
+	tests := []struct {
+		name    string
+		args    []string
+		want    bool
+		wantErr string
+	}{
+		{"enable sets true", []string{"--enable-shared"}, true, ""},
+		{"disable sets false", []string{"--disable-shared"}, false, ""},
+		{"last writer wins", []string{"--disable-shared", "--enable-shared"}, true, ""},
+		{"enable=value rejected", []string{"--enable-shared=true"}, false, "argument"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var a Args
+			err := ParseArgs(&a, tt.args)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("error %q does not contain %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if a.Shared != tt.want {
+				t.Errorf("Shared: got %v, want %v", a.Shared, tt.want)
+			}
+		})
+	}
+}
+
+func TestGoargPrefixPairMultiple(t *testing.T) {
+	type Args struct {
+		Shared bool `arg:"--shared" prefix:"enable,disable;with,without"`
+	}
+
+	tests := []struct {
+		name string
+		args []string
+		want bool
+	}{
+		{"with sets true", []string{"--with-shared"}, true},
+		{"without sets false", []string{"--without-shared"}, false},
+		{"last writer wins across pairs", []string{"--enable-shared", "--without-shared"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var a Args
+			if err := ParseArgs(&a, tt.args); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if a.Shared != tt.want {
+				t.Errorf("Shared: got %v, want %v", a.Shared, tt.want)
+			}
+		})
+	}
+}
+
+func TestGoargNegatableZeroClear(t *testing.T) {
+	type Args struct {
+		Sysroot string `arg:"--sysroot" default:"/usr" negatable:""`
+		Port    int    `arg:"--port" default:"8080" negatable:""`
+	}
+
+	tests := []struct {
+		name       string
+		args       []string
+		wantRoot   string
+		wantPort   int
+	}{
+		{"no-sysroot clears to empty", []string{"--no-sysroot"}, "", 8080},
+		{"no-port clears to zero", []string{"--no-port"}, "/usr", 0},
+		{"both cleared", []string{"--no-sysroot", "--no-port"}, "", 0},
+		{"set then clear", []string{"--sysroot=/opt", "--no-sysroot"}, "", 8080},
+		{"clear then set", []string{"--no-sysroot", "--sysroot=/opt"}, "/opt", 8080},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var a Args
+			if err := ParseArgs(&a, tt.args); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if a.Sysroot != tt.wantRoot {
+				t.Errorf("Sysroot: got %q, want %q", a.Sysroot, tt.wantRoot)
+			}
+			if a.Port != tt.wantPort {
+				t.Errorf("Port: got %d, want %d", a.Port, tt.wantPort)
+			}
+		})
+	}
+}
+
+func TestGoargPrefixHelpText(t *testing.T) {
+	type Args struct {
+		Shared  bool   `arg:"--shared" prefix:"enable,disable" help:"shared library"`
+		Sysroot string `arg:"--sysroot" negatable:"" help:"system root"`
+	}
+
+	p, err := NewParser(Config{Program: "test"}, &Args{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf strings.Builder
+	p.WriteHelp(&buf)
+	help := buf.String()
+
+	for _, want := range []string{"--enable-shared", "--disable-shared", "--no-sysroot"} {
+		if !strings.Contains(help, want) {
+			t.Errorf("help missing %q:\n%s", want, help)
+		}
+	}
+}

@@ -106,6 +106,15 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 				optStr += fmt.Sprintf(" %s", argName)
 			}
 
+			// Append prefix pair forms
+			for _, pp := range field.Prefixes {
+				optStr += fmt.Sprintf(", --%s-%s, --%s-%s", pp.True, field.Long, pp.False, field.Long)
+			}
+			// Append negatable form
+			if field.Negatable {
+				optStr += fmt.Sprintf(", --no-%s", field.Long)
+			}
+
 			if field.Help != "" {
 				fmt.Fprintf(w, "%-30s %s", optStr, field.Help)
 			} else {
