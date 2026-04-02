@@ -20,6 +20,13 @@ type StructMetadata struct {
 	SubcommandFieldIdx map[string]int    // Maps subcommand name to struct field index
 }
 
+// PrefixPair represents a true/false prefix pair for a boolean field.
+// Duplicated from pflags to avoid cross-module dependency.
+type PrefixPair struct {
+	True  string // e.g. "enable"
+	False string // e.g. "disable"
+}
+
 // FieldMetadata represents a single struct field's CLI mapping
 type FieldMetadata struct {
 	Name       string
@@ -39,6 +46,10 @@ type FieldMetadata struct {
 	// Subcommand support
 	IsSubcommand   bool
 	SubcommandName string
+
+	// Prefix pairs and negatable support
+	Prefixes  []PrefixPair // boolean prefix pairs from `prefix` struct tag
+	Negatable bool         // non-boolean field supports --no-<name>
 
 	// Direct OptArgs Core mapping
 	CoreFlag *optargs.Flag
@@ -223,6 +234,28 @@ func (tp *TagParser) ParseField(field reflect.StructField, fieldIndex int) (*Fie
 	// Parse the 'env' tag — only if not already set from the arg tag
 	if metadata.Env == "" {
 		metadata.Env = field.Tag.Get("env")
+	}
+
+	// Parse the 'prefix' tag — boolean prefix pairs
+	if prefixTag := field.Tag.Get("prefix"); prefixTag != "" {
+		if field.Type.Kind() != reflect.Bool {
+			return nil, fmt.Errorf("prefix tag on non-boolean field %q", field.Name)
+		}
+		for _, pair := range strings.Split(prefixTag, ";") {
+			parts := strings.SplitN(pair, ",", 2)
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("invalid prefix pair: %q (expected \"true,false\")", pair)
+			}
+			metadata.Prefixes = append(metadata.Prefixes, PrefixPair{
+				True:  strings.TrimSpace(parts[0]),
+				False: strings.TrimSpace(parts[1]),
+			})
+		}
+	}
+
+	// Parse the 'negatable' tag — silently ignored on boolean fields
+	if _, exists := field.Tag.Lookup("negatable"); exists && field.Type.Kind() != reflect.Bool {
+		metadata.Negatable = true
 	}
 
 	// Validate field metadata
