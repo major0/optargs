@@ -29,3 +29,46 @@ type BoolValuer interface {
 type BoolArgValuer interface {
 	BoolTakesArg() bool
 }
+
+// Resetter is implemented by collection TypedValue types (slices, maps)
+// that support clearing to their zero value. Wrappers use this to
+// implement negatable flag zero-clearing for collection types where
+// Set(zeroString) would append rather than replace.
+type Resetter interface {
+	Reset()
+}
+
+// zeroStrings maps type names to their zero-value string representations.
+// Used by ZeroString and by pflags' isZeroValue for help text defaults.
+var zeroStrings = map[string]string{
+	"bool": "false", "duration": "0s", "float64": "0",
+	"float32": "0", "int": "0", "int8": "0", "int16": "0",
+	"int32": "0", "int64": "0", "string": "",
+	"uint": "0", "uint8": "0", "uint16": "0",
+	"uint32": "0", "uint64": "0",
+	"stringSlice": "[]", "intSlice": "[]", "boolSlice": "[]",
+	"int32Slice": "[]", "int64Slice": "[]", "uintSlice": "[]",
+	"float32Slice": "[]", "float64Slice": "[]", "durationSlice": "[]",
+	"stringArray": "[]", "count": "0",
+	"stringToString": "map[]", "stringToInt": "map[]", "stringToInt64": "map[]",
+}
+
+// ZeroString returns the zero-value string representation for a TypedValue
+// type name, and whether the type is known. Wrappers use this to validate
+// negatable flag types and to clear scalar values to zero.
+func ZeroString(typeName string) (string, bool) {
+	z, ok := zeroStrings[typeName]
+	return z, ok
+}
+
+// IsBool reports whether a TypedValue represents a boolean flag.
+// Checks both Type() == "bool" and the BoolValuer interface.
+func IsBool(tv TypedValue) bool {
+	if tv.Type() == "bool" {
+		return true
+	}
+	if bv, ok := tv.(BoolValuer); ok {
+		return bv.IsBoolFlag()
+	}
+	return false
+}

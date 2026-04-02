@@ -423,7 +423,9 @@ func (ci *CoreIntegration) makeBoolPrefixHandler(field *FieldMetadata, destValue
 }
 
 // makeNegatableHandler returns a handler for --no-<name> on a non-boolean field.
-// Clears the field to its type's zero value via reflect.Zero.
+// Clears the field to its type's zero value via reflect.Zero. Unlike pflags
+// which goes through the Value.Set interface (requiring Resetter for collections),
+// goarg operates on struct fields directly via reflection.
 func (ci *CoreIntegration) makeNegatableHandler(field *FieldMetadata, destValue reflect.Value) func(string, string) error {
 	return func(_, _ string) error {
 		fv := fieldByMeta(destValue, field)

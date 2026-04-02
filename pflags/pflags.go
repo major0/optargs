@@ -8,17 +8,11 @@ import (
 	"github.com/major0/optargs"
 )
 
-// isBoolFlag returns true if the value is a boolean flag — either by type
-// or by implementing the boolFlag interface (IsBoolFlag() bool).
+// isBoolFlag returns true if the value is a boolean flag.
+// Delegates to optargs.IsBool which checks both Type() == "bool"
+// and the BoolValuer interface.
 func isBoolFlag(v Value) bool {
-	if v.Type() == "bool" {
-		return true
-	}
-	type boolFlagger interface{ IsBoolFlag() bool }
-	if bf, ok := v.(boolFlagger); ok {
-		return bf.IsBoolFlag()
-	}
-	return false
+	return optargs.IsBool(v)
 }
 
 // shortOptArgType returns the core argument type for a short option.
@@ -100,10 +94,6 @@ func boolLongArgType(v Value) optargs.ArgType {
 	}
 	return optargs.OptionalArgument
 }
-
-// resetter is implemented by collection Value types (slices, maps) that
-// support clearing to their zero value. Used by the negatable handler.
-type resetter interface{ Reset() }
 
 // buildLongOpts constructs the long option map for optargs.NewParser
 // from the FlagSet's registered flags. Also registers --no-<name>
@@ -231,9 +221,9 @@ func (f *FlagSet) makeBoolPrefixHandler(flag *Flag, val string) func(string, str
 // makeNegatableHandler returns a handler for --no-<name> on a non-boolean flag.
 // Clears the value to its type's zero value: Reset() for collections, Set(zeroVal) for scalars.
 func (f *FlagSet) makeNegatableHandler(flag *Flag) func(string, string) error {
-	zeroVal := zeroStrings[flag.Value.Type()]
+	zeroVal, _ := optargs.ZeroString(flag.Value.Type())
 	return func(_, _ string) error {
-		if r, ok := flag.Value.(resetter); ok {
+		if r, ok := flag.Value.(optargs.Resetter); ok {
 			r.Reset()
 		} else if err := flag.Value.Set(zeroVal); err != nil {
 			return err

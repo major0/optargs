@@ -9,6 +9,8 @@ import (
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/major0/optargs"
 )
 
 // ErrorHandling defines how FlagSet.Parse behaves if the parse fails.
@@ -344,7 +346,7 @@ func (f *FlagSet) MarkNegatable(name string) error {
 	if isBoolFlag(flag.Value) {
 		return fmt.Errorf("flag %q is a boolean flag (use MarkBoolPrefix instead)", name)
 	}
-	if _, ok := zeroStrings[flag.Value.Type()]; !ok {
+	if _, ok := optargs.ZeroString(flag.Value.Type()); !ok {
 		return fmt.Errorf("flag %q type %q has no known zero value", name, flag.Value.Type())
 	}
 	flag.Negatable = true
@@ -564,25 +566,10 @@ func wrapLine(line string, cols int) string {
 // sortStrings sorts a slice of strings in place.
 func sortStrings(s []string) { sort.Strings(s) }
 
-// zeroStrings maps type names to their zero-value string representations.
-// Used by isZeroValue to avoid allocating a fresh Value on every call.
-var zeroStrings = map[string]string{
-	"bool": "false", "duration": "0s", "float64": "0",
-	"float32": "0", "int": "0", "int8": "0", "int16": "0",
-	"int32": "0", "int64": "0", "string": "",
-	"uint": "0", "uint8": "0", "uint16": "0",
-	"uint32": "0", "uint64": "0",
-	"stringSlice": "[]", "intSlice": "[]", "boolSlice": "[]",
-	"int32Slice": "[]", "int64Slice": "[]", "uintSlice": "[]",
-	"float32Slice": "[]", "float64Slice": "[]", "durationSlice": "[]",
-	"stringArray": "[]", "count": "0",
-	"stringToString": "map[]", "stringToInt": "map[]", "stringToInt64": "map[]",
-}
-
 // isZeroValue determines whether the string represents the zero
-// value for a flag. O(1) lookup, no allocations.
+// value for a flag. Delegates to optargs.ZeroString for O(1) lookup.
 func isZeroValue(flag *Flag, value string) bool {
-	if z, ok := zeroStrings[flag.Value.Type()]; ok {
+	if z, ok := optargs.ZeroString(flag.Value.Type()); ok {
 		return value == z
 	}
 	return false
