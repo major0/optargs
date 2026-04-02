@@ -33,21 +33,21 @@ func TestTypedValueForField(t *testing.T) {
 		F64 float64
 		D   time.Duration
 
-		SS  []string
-		SB  []bool
-		SI  []int
+		SS   []string
+		SB   []bool
+		SI   []int
 		SI32 []int32
 		SI64 []int64
-		SU  []uint
+		SU   []uint
 		SF32 []float32
 		SF64 []float64
-		SD  []time.Duration
+		SD   []time.Duration
 
-		MSS  map[string]string
-		MSI  map[string]int
+		MSS   map[string]string
+		MSI   map[string]int
 		MSI64 map[string]int64
 
-		TU  testTextType
+		TU testTextType
 	}
 
 	tests := []struct {

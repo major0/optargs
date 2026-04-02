@@ -56,7 +56,7 @@ func TestOptArgsSubcommandParentFlags(t *testing.T) {
 		Port int `arg:"--port" default:"8080"`
 	}
 	type Args struct {
-		Verbose bool     `arg:"-v,--verbose"`
+		Verbose bool      `arg:"-v,--verbose"`
 		Server  *ServeCmd `arg:"subcommand:server"`
 	}
 	var a Args
@@ -112,7 +112,7 @@ func TestOptArgsCaseInsensitiveSubcommand(t *testing.T) {
 // through the goarg layer.
 func TestOptArgsGNULongestMatch(t *testing.T) {
 	type Args struct {
-		EnableBob      string `arg:"--enable-bob"`
+		EnableBob       string `arg:"--enable-bob"`
 		EnableBobadufoo string `arg:"--enable-bobadufoo"`
 	}
 	var a Args

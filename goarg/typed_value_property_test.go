@@ -92,4 +92,3 @@ func TestPropertyDurationField(t *testing.T) {
 		t.Errorf("Timeout = %v, want 5s", dest.Timeout)
 	}
 }
-
