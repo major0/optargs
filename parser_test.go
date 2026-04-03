@@ -656,8 +656,8 @@ func TestOverlappingOptionNames(t *testing.T) {
 			expected: []Option{{Name: "foobar", Arg: "val", HasArg: true}},
 		},
 		{
-			name:     "three_level_prefix_chain",
-			args:     []string{"--output=file.txt"},
+			name: "three_level_prefix_chain",
+			args: []string{"--output=file.txt"},
 			longOpts: []Flag{
 				{Name: "o", HasArg: RequiredArgument},
 				{Name: "out", HasArg: RequiredArgument},
@@ -666,8 +666,8 @@ func TestOverlappingOptionNames(t *testing.T) {
 			expected: []Option{{Name: "output", Arg: "file.txt", HasArg: true}},
 		},
 		{
-			name:     "three_level_mid_match",
-			args:     []string{"--out=file.txt"},
+			name: "three_level_mid_match",
+			args: []string{"--out=file.txt"},
 			longOpts: []Flag{
 				{Name: "o", HasArg: RequiredArgument},
 				{Name: "out", HasArg: RequiredArgument},

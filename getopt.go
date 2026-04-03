@@ -172,6 +172,7 @@ func GetOptLongOnly(args []string, optstring string, longopts []Flag) (*Parser, 
 
 // Handle parsing the traditional GetOpt/GetOptLong inputs into the parser
 // rules and return a new Parser.
+//
 //nolint:gocognit,gocyclo,cyclop // optstring parsing is inherently sequential with many prefix/suffix rules
 func getOpt(args []string, optstring string, longopts []Flag, longOnly bool) (*Parser, error) {
 	config := ParserConfig{

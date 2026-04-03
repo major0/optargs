@@ -454,6 +454,7 @@ func (p *Parser) tryLongOnly(
 // Options returns an iterator over parsed options. Each iteration yields
 // an [Option] and an error. When a subcommand is encountered, the iterator
 // dispatches to the child parser automatically.
+//
 //nolint:gocognit,gocyclo,cyclop,funlen // main parser loop handles --, --long, -short, long-only, commands, and parse modes
 func (p *Parser) Options() iter.Seq2[Option, error] {
 	if debug {

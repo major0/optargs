@@ -78,7 +78,7 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Positional arguments:")
 		for i := range hg.metadata.Positionals {
-		field := &hg.metadata.Positionals[i]
+			field := &hg.metadata.Positionals[i]
 			name := strings.ToUpper(field.Name)
 			if field.Help != "" {
 				fmt.Fprintf(w, "  %-20s %s\n", name, field.Help)
@@ -216,7 +216,7 @@ func (hg *HelpGenerator) WriteUsage(w io.Writer) error {
 
 		// Add positional arguments
 		for i := range hg.metadata.Positionals {
-		field := &hg.metadata.Positionals[i]
+			field := &hg.metadata.Positionals[i]
 			if field.Required {
 				fmt.Fprintf(w, " %s", strings.ToUpper(field.Name))
 			} else {

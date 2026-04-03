@@ -237,7 +237,7 @@ func TestHandlerSuppressesYield(t *testing.T) {
 				"output": {Name: "output", HasArg: RequiredArgument},
 				"debug":  {Name: "debug", HasArg: NoArgument},
 			},
-			args:  []string{"-v", "--output=f", "-x", "--debug"},
+			args: []string{"-v", "--output=f", "-x", "--debug"},
 			// v, output handled; x, debug not
 			wantHandled: []string{"v", "output"},
 			wantYielded: []string{"x", "debug"},
@@ -307,7 +307,7 @@ func TestHandlerErrorPropagation(t *testing.T) {
 			sentinel := fmt.Errorf("handler error on %c", tt.errChar)
 			shortMap := map[byte]*Flag{
 				tt.errChar: {
-					Name: string(tt.errChar),
+					Name:   string(tt.errChar),
 					HasArg: NoArgument,
 					Handle: func(string, string) error { return sentinel },
 				},
