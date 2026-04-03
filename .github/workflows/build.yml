@@ -11,45 +11,7 @@ permissions:
 
 jobs:
   detect-changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      optargs-changed: ${{ steps.changes.outputs.optargs }}
-      goarg-changed: ${{ steps.changes.outputs.goarg }}
-      pflags-changed: ${{ steps.changes.outputs.pflags }}
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 2
-
-    - name: Detect changes
-      id: changes
-      run: |
-        {
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "optargs=true"
-            echo "goarg=true"
-            echo "pflags=true"
-          else
-            CHANGED=$(git diff --name-only HEAD~1 2>/dev/null || echo "")
-            if echo "$CHANGED" | grep -qE '^[^/]+\.(go|mod|sum)$'; then
-              echo "optargs=true"
-            else
-              echo "optargs=false"
-            fi
-            if echo "$CHANGED" | grep -qE '^(goarg/|[^/]+\.(go|mod|sum)$)'; then
-              echo "goarg=true"
-            else
-              echo "goarg=false"
-            fi
-            if echo "$CHANGED" | grep -qE '^(pflags/|[^/]+\.(go|mod|sum)$)'; then
-              echo "pflags=true"
-            else
-              echo "pflags=false"
-            fi
-          fi
-        } >> "$GITHUB_OUTPUT"
+    uses: ./.github/workflows/detect-changes.yml
 
   lint-optargs:
     name: Lint OptArgs Core
@@ -75,84 +37,25 @@ jobs:
 
   build-optargs:
     name: Build OptArgs Core
-    runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.optargs-changed == 'true'
-    strategy:
-      matrix:
-        go-version: ['1.23']
-        goos: [linux, darwin, windows, freebsd]
-        goarch: [amd64, arm64]
-        exclude:
-          - goos: freebsd
-            goarch: arm64
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-go@v5
-      with:
-        go-version: ${{ matrix.go-version }}
-    - run: go mod download
-    - run: go mod verify
-    - run: go build -v ./...
-      env:
-        GOOS: ${{ matrix.goos }}
-        GOARCH: ${{ matrix.goarch }}
+    uses: ./.github/workflows/build-module.yml
 
   build-goarg:
     name: Build GoArg Module
-    runs-on: ubuntu-latest
     needs: [detect-changes, build-optargs]
     if: always() && needs.detect-changes.outputs.goarg-changed == 'true'
-    strategy:
-      matrix:
-        go-version: ['1.23']
-        goos: [linux, darwin, windows, freebsd]
-        goarch: [amd64, arm64]
-        exclude:
-          - goos: freebsd
-            goarch: arm64
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-go@v5
-      with:
-        go-version: ${{ matrix.go-version }}
-    - run: go mod download
-      working-directory: goarg
-    - run: go mod verify
-      working-directory: goarg
-    - run: go build -v ./...
-      working-directory: goarg
-      env:
-        GOOS: ${{ matrix.goos }}
-        GOARCH: ${{ matrix.goarch }}
+    uses: ./.github/workflows/build-module.yml
+    with:
+      directory: goarg
 
   build-pflags:
     name: Build PFlags Module
-    runs-on: ubuntu-latest
     needs: [detect-changes, build-optargs]
     if: always() && needs.detect-changes.outputs.pflags-changed == 'true'
-    strategy:
-      matrix:
-        go-version: ['1.23']
-        goos: [linux, darwin, windows, freebsd]
-        goarch: [amd64, arm64]
-        exclude:
-          - goos: freebsd
-            goarch: arm64
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-go@v5
-      with:
-        go-version: ${{ matrix.go-version }}
-    - run: go mod download
-      working-directory: pflags
-    - run: go mod verify
-      working-directory: pflags
-    - run: go build -v ./...
-      working-directory: pflags
-      env:
-        GOOS: ${{ matrix.goos }}
-        GOARCH: ${{ matrix.goarch }}
+    uses: ./.github/workflows/build-module.yml
+    with:
+      directory: pflags
 
   compat-test:
     name: Compatibility Tests
@@ -173,8 +76,4 @@ jobs:
       working-directory: pflags
       run: make compat-test
     - name: Verify golden files present
-      run: |
-        echo "=== goarg golden files ==="
-        ls goarg/compat/testdata/*.golden.json | wc -l
-        echo "=== pflags golden files ==="
-        ls pflags/compat/testdata/*.golden.json | wc -l
+      run: .github/scripts/compat-golden-count.sh

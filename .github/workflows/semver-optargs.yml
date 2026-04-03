@@ -2,8 +2,6 @@ name: Semver OptArgs
 
 on:
   create:
-    branches:
-      - 'v[0-9]+.[0-9]+'
   push:
     branches:
       - 'v[0-9]+.[0-9]+'
@@ -12,28 +10,11 @@ on:
       - 'goarg/**'
       - 'pflags/**'
 
-permissions:
-  contents: write
-
 jobs:
   semver:
-    name: Auto-tag OptArgs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run Semantic Versioning
-        id: semver
-        uses: major0/semver-release-action@v1
-        with:
-          release-prefix: 'v'
-          tag-prefix: 'v'
-
-      - name: Summary
-        if: steps.semver.outputs.tag != ''
-        run: |
-          echo "### Semver Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Tag**: ${{ steps.semver.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Type**: ${{ steps.semver.outputs.tag-type }}" >> "$GITHUB_STEP_SUMMARY"
+    uses: ./.github/workflows/semver.yml
+    permissions:
+      contents: write
+    with:
+      prefix: 'v'
+      ref-pattern: 'refs/heads/v'

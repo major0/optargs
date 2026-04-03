@@ -1,0 +1,40 @@
+name: Build Module
+
+on:
+  workflow_call:
+    inputs:
+      directory:
+        description: 'Module directory relative to repo root (empty for root)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.23']
+        goos: [linux, darwin, windows, freebsd]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: freebsd
+            goarch: arm64
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+    - run: go mod download
+      working-directory: ${{ inputs.directory || '.' }}
+    - run: go mod verify
+      working-directory: ${{ inputs.directory || '.' }}
+    - run: go build -v ./...
+      working-directory: ${{ inputs.directory || '.' }}
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}

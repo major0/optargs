@@ -1,0 +1,30 @@
+name: Detect Changes
+
+on:
+  workflow_call:
+    outputs:
+      optargs-changed:
+        description: 'Whether optargs core module changed'
+        value: ${{ jobs.detect.outputs.optargs }}
+      goarg-changed:
+        description: 'Whether goarg module changed'
+        value: ${{ jobs.detect.outputs.goarg }}
+      pflags-changed:
+        description: 'Whether pflags module changed'
+        value: ${{ jobs.detect.outputs.pflags }}
+
+jobs:
+  detect:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      optargs: ${{ steps.changes.outputs.optargs }}
+      goarg: ${{ steps.changes.outputs.goarg }}
+      pflags: ${{ steps.changes.outputs.pflags }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+    - name: Detect changes
+      id: changes
+      run: .github/scripts/detect-changes.sh "${{ github.event_name }}" >> "$GITHUB_OUTPUT"

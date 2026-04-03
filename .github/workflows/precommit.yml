@@ -31,22 +31,9 @@ jobs:
           pre-commit-${{ runner.os }}-
     - run: go mod download
     - name: Install Go tools
-      run: |
-        go install golang.org/x/tools/cmd/goimports@latest
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" latest
-        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      run: .github/scripts/install-go-tools.sh
     - run: pip install pre-commit
     - run: pre-commit install --install-hooks
     - name: Set up Git context
-      run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git fetch origin main:main
+      run: git fetch origin main:main
     - run: pre-commit run --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
-    - name: Run pre-commit on all files
-      if: success()
-      run: |
-        pre-commit run --all-files || {
-          echo "Some pre-commit hooks failed on all files, but changed files passed"
-          exit 0
-        }

@@ -13,45 +13,7 @@ permissions:
 
 jobs:
   detect-changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      optargs-changed: ${{ steps.changes.outputs.optargs }}
-      goarg-changed: ${{ steps.changes.outputs.goarg }}
-      pflags-changed: ${{ steps.changes.outputs.pflags }}
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 2
-
-    - name: Detect changes
-      id: changes
-      run: |
-        {
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "optargs=true"
-            echo "goarg=true"
-            echo "pflags=true"
-          else
-            CHANGED=$(git diff --name-only HEAD~1 2>/dev/null || echo "")
-            if echo "$CHANGED" | grep -qE '^[^/]+\.(go|mod|sum)$'; then
-              echo "optargs=true"
-            else
-              echo "optargs=false"
-            fi
-            if echo "$CHANGED" | grep -qE '^(goarg/|[^/]+\.(go|mod|sum)$)'; then
-              echo "goarg=true"
-            else
-              echo "goarg=false"
-            fi
-            if echo "$CHANGED" | grep -qE '^(pflags/|[^/]+\.(go|mod|sum)$)'; then
-              echo "pflags=true"
-            else
-              echo "pflags=false"
-            fi
-          fi
-        } >> "$GITHUB_OUTPUT"
+    uses: ./.github/workflows/detect-changes.yml
 
   coverage-optargs:
     name: OptArgs Core Coverage
@@ -85,76 +47,23 @@ jobs:
 
   coverage-goarg:
     name: GoArg Module Coverage
-    runs-on: ubuntu-latest
     needs: [detect-changes, coverage-optargs]
     if: always() && needs.detect-changes.outputs.goarg-changed == 'true'
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-go@v5
-      with:
-        go-version: '1.23'
-    - run: sudo apt-get update && sudo apt-get install -y bc
-    - name: Run goarg tests with coverage
-      working-directory: goarg
-      run: |
-        go mod tidy
-        go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-        go tool cover -html=coverage.out -o coverage.html
-    - name: Validate coverage
-      working-directory: goarg
-      run: ../scripts/validate_coverage.sh coverage.out
-    - name: Compatibility tests
-      working-directory: goarg
-      run: make compat-test
-    - name: Lint
-      working-directory: goarg
-      run: |
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" latest
-        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-        golangci-lint run --config ../.golangci.yml ./...
-    - uses: codecov/codecov-action@v4
-      with:
-        file: ./goarg/coverage.out
-        flags: goarg-module
-        name: goarg-module-coverage
-        fail_ci_if_error: false
-    - uses: actions/upload-artifact@v4
-      with:
-        name: goarg-coverage-reports
-        path: |
-          goarg/coverage.out
-          goarg/coverage.html
-        retention-days: 30
+    uses: ./.github/workflows/module-coverage.yml
+    with:
+      directory: goarg
+      artifact-name: goarg-coverage-reports
+      codecov-flags: goarg-module
 
   coverage-pflags:
     name: PFlags Module Coverage
-    runs-on: ubuntu-latest
     needs: [detect-changes, coverage-optargs]
     if: always() && needs.detect-changes.outputs.pflags-changed == 'true'
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-go@v5
-      with:
-        go-version: '1.23'
-    - name: Run pflags tests with coverage
-      working-directory: pflags
-      run: |
-        go mod tidy
-        go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-        go tool cover -html=coverage.out -o coverage.html
-    - uses: codecov/codecov-action@v4
-      with:
-        file: ./pflags/coverage.out
-        flags: pflags-module
-        name: pflags-module-coverage
-        fail_ci_if_error: false
-    - uses: actions/upload-artifact@v4
-      with:
-        name: pflags-coverage-reports
-        path: |
-          pflags/coverage.out
-          pflags/coverage.html
-        retention-days: 30
+    uses: ./.github/workflows/module-coverage.yml
+    with:
+      directory: pflags
+      artifact-name: pflags-coverage-reports
+      codecov-flags: pflags-module
 
   coverage-summary:
     name: Combined Coverage Summary
@@ -170,27 +79,7 @@ jobs:
       with:
         path: coverage-artifacts
     - name: Generate combined coverage summary
-      run: |
-        {
-          echo "# Combined Coverage Summary"
-          echo ""
-          if [ -f "coverage-artifacts/optargs-coverage-reports/coverage_analysis.md" ]; then
-            echo "## OptArgs Core Module"
-            grep "Overall Coverage:" coverage-artifacts/optargs-coverage-reports/coverage_analysis.md || echo "Coverage data not available"
-            echo ""
-          fi
-          if [ -f "coverage-artifacts/goarg-coverage-reports/coverage.out" ]; then
-            echo "## GoArg Module"
-            go tool cover -func=coverage-artifacts/goarg-coverage-reports/coverage.out | grep "total:" || echo "Coverage data not available"
-            echo ""
-          fi
-          if [ -f "coverage-artifacts/pflags-coverage-reports/coverage.out" ]; then
-            echo "## PFlags Module"
-            go tool cover -func=coverage-artifacts/pflags-coverage-reports/coverage.out | grep "total:" || echo "Coverage data not available"
-            echo ""
-          fi
-        } > coverage-summary.md
-        cat coverage-summary.md
+      run: .github/scripts/coverage-summary.sh coverage-artifacts
     - name: Comment coverage summary on PR
       if: github.event_name == 'pull_request'
       uses: actions/github-script@v7
@@ -230,8 +119,7 @@ jobs:
     - name: Generate PR coverage
       run: |
         make coverage
-        PR_COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
-        echo "PR_COVERAGE=$PR_COVERAGE" >> "$GITHUB_ENV"
+        echo "PR_COVERAGE=$(.github/scripts/coverage-extract.sh coverage.out)" >> "$GITHUB_ENV"
     - name: Checkout main branch
       uses: actions/checkout@v4
       with:
@@ -239,22 +127,10 @@ jobs:
     - name: Generate main coverage
       run: |
         if make coverage 2>/dev/null; then
-          MAIN_COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
-          echo "MAIN_COVERAGE=$MAIN_COVERAGE" >> "$GITHUB_ENV"
+          echo "MAIN_COVERAGE=$(.github/scripts/coverage-extract.sh coverage.out)" >> "$GITHUB_ENV"
         else
           echo "MAIN_COVERAGE=0" >> "$GITHUB_ENV"
           echo "SKIP_REGRESSION=true" >> "$GITHUB_ENV"
         fi
     - name: Check for coverage regression
-      run: |
-        if [ "$SKIP_REGRESSION" = "true" ]; then
-          echo "Skipping regression check due to main branch build failures"
-          echo "PR branch coverage: ${PR_COVERAGE}%"
-          exit 0
-        fi
-        echo "Main: ${MAIN_COVERAGE}%, PR: ${PR_COVERAGE}%"
-        COVERAGE_DIFF=$(echo "$MAIN_COVERAGE - $PR_COVERAGE" | bc -l)
-        if (( $(echo "$COVERAGE_DIFF > 1.0" | bc -l) )); then
-          echo "Coverage regression: ${COVERAGE_DIFF}%"
-          exit 1
-        fi
+      run: .github/scripts/coverage-regression.sh

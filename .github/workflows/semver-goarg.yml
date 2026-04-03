@@ -2,36 +2,17 @@ name: Semver GoArg
 
 on:
   create:
-    branches:
-      - 'goarg/v[0-9]+.[0-9]+'
   push:
     branches:
       - 'goarg/v[0-9]+.[0-9]+'
     paths:
       - 'goarg/**'
 
-permissions:
-  contents: write
-
 jobs:
   semver:
-    name: Auto-tag GoArg
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run Semantic Versioning
-        id: semver
-        uses: major0/semver-release-action@v1
-        with:
-          release-prefix: 'goarg/v'
-          tag-prefix: 'goarg/v'
-
-      - name: Summary
-        if: steps.semver.outputs.tag != ''
-        run: |
-          echo "### Semver Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Tag**: ${{ steps.semver.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Type**: ${{ steps.semver.outputs.tag-type }}" >> "$GITHUB_STEP_SUMMARY"
+    uses: ./.github/workflows/semver.yml
+    permissions:
+      contents: write
+    with:
+      prefix: 'goarg/v'
+      ref-pattern: 'refs/heads/goarg/v'
