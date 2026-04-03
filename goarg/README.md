@@ -94,7 +94,7 @@ Known divergences are documented in `expected_diffs.go`.
 | Builtin help/version flags | ✅ | ✅ | — |
 | Subcommand()/SubcommandNames() | ✅ | ✅ | — |
 | POSIX short-option compaction (-abc) | ❌ | — | ✅ |
-| GNU longest-match prefix matching | ❌ | — | ✅ |
+| GNU longest-match option resolution | ❌ | — | ✅ |
 | Boolean negation (--no-flag) | ❌ | ❌ | — |
 | `--` termination | ❌ | — | ✅ |
 | Parent flag inheritance across subcommands (alexflint/go-arg#101) | ❌ | — | ✅ |
