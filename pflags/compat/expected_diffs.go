@@ -22,7 +22,7 @@ var ExpectedDiffs = []ExpectedDiff{
 	},
 	{
 		Scenario:  "Short-only flags (no long name)",
-		Upstream:  "Not supported; every flag must have a long name, shorthand is optional",
+		Upstream:  "Not supported; every flag must have a long name, shorthand is optional. See https://github.com/spf13/pflag/issues/139, https://github.com/spf13/pflag/pull/256",
 		Ours:      "Supported via ShortVar() API; a flag can exist only as a short option with no long equivalent",
 		Rationale: "Many POSIX utilities have short-only options (e.g., tar -x, ls -l with no --long equivalent in some implementations)",
 	},
@@ -34,7 +34,7 @@ var ExpectedDiffs = []ExpectedDiff{
 	},
 	{
 		Scenario:  "--no-<flag>=true and --no-<flag>=false (explicit values on negation)",
-		Upstream:  "Not supported; --no-verbose is not recognized at all",
+		Upstream:  "Not supported; --no-verbose is not recognized at all. See https://github.com/spf13/pflag/issues/214, https://github.com/spf13/cobra/issues/958",
 		Ours:      "--no-verbose sets false; --no-verbose=true sets false; --no-verbose=false sets true (double negation)",
 		Rationale: "GNU convention for boolean negation; explicit values allow scripted flag composition without conditional logic",
 	},
@@ -58,7 +58,7 @@ var ExpectedDiffs = []ExpectedDiff{
 	},
 	{
 		Scenario:  "BoolArgValuer interface (BoolTakesArg)",
-		Upstream:  "Not supported; all boolean flags accept optional =value argument",
+		Upstream:  "Not supported; all boolean flags accept optional =value argument. See https://github.com/spf13/pflag/issues/214",
 		Ours:      "Types implement BoolTakesArg() to declare NoArgument vs OptionalArgument; Count and BoolFunc are strictly no-argument",
 		Rationale: "Prevents Count/BoolFunc flags from consuming the next positional argument as a value",
 	},
