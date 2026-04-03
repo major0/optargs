@@ -97,7 +97,7 @@ Known divergences are documented in `expected_diffs.go`.
 | GNU longest-match prefix matching | ❌ | — | ✅ |
 | Boolean negation (--no-flag) | ❌ | ❌ | — |
 | `--` termination | ❌ | — | ✅ |
-| Parent flag inheritance across subcommands | ❌ | — | ✅ |
+| Parent flag inheritance across subcommands (alexflint/go-arg#101) | ❌ | — | ✅ |
 | Case-insensitive subcommand matching | ❌ | — | ✅ |
 | getopt_long_only mode | ❌ | ❌ | — |
 | Interspersed argument handling | ❌ | ❌ | — |

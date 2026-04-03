@@ -33,10 +33,10 @@ backed by OptArgs Core's POSIX/GNU getopt implementation.
 | POSIX short-option compaction (-abc) | ❌ | — | ✅ |
 | GNU longest-match prefix matching | ❌ | — | ✅ |
 | Arbitrary long option names (colons, =) | ❌ | — | ✅ |
-| Boolean negation (--no-flag) | ❌ | — | ✅ |
-| Short-only flags (no long name) | ❌ | — | ✅ |
+| Boolean negation (--no-flag) (spf13/pflag#214, spf13/cobra#958) | ❌ | — | ✅ |
+| Short-only flags (no long name) (spf13/pflag#139, spf13/pflag#256) | ❌ | — | ✅ |
 | Many-to-one flag mappings | ❌ | — | ✅ |
-| BoolArgValuer (NoArg vs OptionalArg) | ❌ | — | ✅ |
+| BoolArgValuer (NoArg vs OptionalArg) (spf13/pflag#214) | ❌ | — | ✅ |
 | getopt_long_only mode | ❌ | — | ✅ |
 | Error message format | ✅ | ⚠️¹ | — |
 
