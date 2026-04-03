@@ -20,7 +20,7 @@ func (f *FlagSet) getFlagValue(name, typeName string) (string, error) {
 	return flag.Value.String(), nil
 }
 
-// --- Scalar getters ---
+// --- Scalar getters ---.
 
 func (f *FlagSet) GetBool(name string) (bool, error) {
 	s, err := f.getFlagValue(name, "bool")
@@ -195,11 +195,11 @@ func (f *FlagSet) GetStringSlice(name string) ([]string, error) {
 }
 
 func (f *FlagSet) GetBoolSlice(name string) ([]bool, error) {
-	return getSlice(f, name, "boolSlice", func(s string) (bool, error) { return strconv.ParseBool(s) })
+	return getSlice(f, name, "boolSlice", strconv.ParseBool)
 }
 
 func (f *FlagSet) GetIntSlice(name string) ([]int, error) {
-	return getSlice(f, name, "intSlice", func(s string) (int, error) { return strconv.Atoi(s) })
+	return getSlice(f, name, "intSlice", strconv.Atoi)
 }
 
 func (f *FlagSet) GetInt32Slice(name string) ([]int32, error) {
@@ -232,10 +232,10 @@ func (f *FlagSet) GetFloat64Slice(name string) ([]float64, error) {
 }
 
 func (f *FlagSet) GetDurationSlice(name string) ([]time.Duration, error) {
-	return getSlice(f, name, "durationSlice", func(s string) (time.Duration, error) { return time.ParseDuration(s) })
+	return getSlice(f, name, "durationSlice", time.ParseDuration)
 }
 
-// --- Map getters ---
+// --- Map getters ---.
 
 func parseStringMap(s string) map[string]string {
 	s = strings.TrimPrefix(s, "map[")
@@ -245,8 +245,8 @@ func parseStringMap(s string) map[string]string {
 	}
 	result := make(map[string]string)
 	for _, pair := range strings.Split(s, ",") {
-		if idx := strings.Index(pair, "="); idx >= 0 {
-			result[pair[:idx]] = pair[idx+1:]
+		if before, after, ok := strings.Cut(pair, "="); ok {
+			result[before] = after
 		}
 	}
 	return result

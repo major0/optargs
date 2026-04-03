@@ -68,7 +68,7 @@ func newTextValue(val encoding.TextMarshaler, dest encoding.TextUnmarshaler) Val
 	return optargs.NewTextValue(val, dest)
 }
 
-// -- IP value (net.IP implements TextUnmarshaler)
+// -- IP value (net.IP implements TextUnmarshaler).
 
 func newIPValue(val net.IP, p *net.IP) Value {
 	if p == nil {
@@ -78,7 +78,7 @@ func newIPValue(val net.IP, p *net.IP) Value {
 	return optargs.NewTextValue(&val, p)
 }
 
-// -- IPMask value (custom: net.IPMask does not implement TextUnmarshaler)
+// -- IPMask value (custom: net.IPMask does not implement TextUnmarshaler).
 
 type ipMaskValue net.IPMask
 
@@ -107,7 +107,7 @@ func (v *ipMaskValue) Set(s string) error {
 func (v *ipMaskValue) String() string { return net.IPMask(*v).String() }
 func (v *ipMaskValue) Type() string   { return "ipMask" }
 
-// -- IPNet value (custom: net.IPNet does not implement TextUnmarshaler)
+// -- IPNet value (custom: net.IPNet does not implement TextUnmarshaler).
 
 type ipNetValue net.IPNet
 

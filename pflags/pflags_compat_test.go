@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -20,7 +21,7 @@ type goldenFile struct {
 func readJSONGolden(t *testing.T, name string) string {
 	t.Helper()
 	path := filepath.Join("compat", "testdata", name+".golden.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // test golden file path is constructed from constant prefix + test name
 	if err != nil {
 		t.Fatalf("golden file %s not found; run 'make compat-update' to generate", path)
 	}
@@ -33,6 +34,7 @@ func readJSONGolden(t *testing.T, name string) string {
 
 // readJSONGoldenValue reads a JSON golden file and trims trailing newline.
 func readJSONGoldenValue(t *testing.T, name string) string {
+	t.Helper()
 	return strings.TrimSuffix(readJSONGolden(t, name), "\n")
 }
 
@@ -116,9 +118,11 @@ func TestCompatDoubleHyphen(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := s + "\n"
+	var resultSb119 strings.Builder
 	for _, a := range fs.Args() {
-		result += a + "\n"
+		resultSb119.WriteString(a + "\n")
 	}
+	result += resultSb119.String()
 	want := readJSONGoldenValue(t, "double_hyphen")
 	if strings.TrimSuffix(result, "\n") != want {
 		t.Errorf("got:\n%s\nwant:\n%s", result, want)
@@ -134,9 +138,11 @@ func TestCompatSliceFlag(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := ""
+	var resultSb137 strings.Builder
 	for _, s := range ss {
-		result += s + "\n"
+		resultSb137.WriteString(s + "\n")
 	}
+	result += resultSb137.String()
 	want := readJSONGoldenValue(t, "slice_parse")
 	if strings.TrimSuffix(result, "\n") != want {
 		t.Errorf("got:\n%s\nwant:\n%s", result, want)
@@ -275,7 +281,7 @@ func TestCompatCountFlag(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := strings.TrimSuffix(readJSONGolden(t, "count_parse"), "\n")
-	if got := fmt.Sprintf("%d", c); got != want {
+	if got := strconv.Itoa(c); got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

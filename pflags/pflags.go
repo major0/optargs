@@ -1,6 +1,7 @@
 package pflags
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -158,11 +159,11 @@ func (f *FlagSet) buildLongOpts() map[string]*optargs.Flag {
 // calls Set("") for custom bool flags. For all other types, the handler
 // calls Value.Set(arg) directly.
 func (f *FlagSet) makeHandler(flag *Flag) func(string, string) error {
-	return func(name, arg string) error {
+	return func(_, arg string) error {
 		val := arg
 		if isBoolFlag(flag.Value) && val == "" {
 			if flag.Value.Type() == "bool" {
-				val = "true"
+				val = "true" //nolint:goconst // boolean literal, constant would hurt readability
 			}
 			// For custom IsBoolFlag types, call Set("") — the value
 			// implementation decides what no-arg means.
@@ -183,7 +184,7 @@ func (f *FlagSet) makeHandler(flag *Flag) func(string, string) error {
 // makeNegationHandler returns a handler for --no-<name> boolean negation flags.
 // no-arg or =true → Set("false"), =false → Set("true").
 func (f *FlagSet) makeNegationHandler(flag *Flag) func(string, string) error {
-	return func(name, arg string) error {
+	return func(_, arg string) error {
 		switch strings.ToLower(arg) {
 		case "", "true", "1", "t":
 			if err := flag.Value.Set("false"); err != nil {
@@ -249,8 +250,8 @@ func translateError(err error) error {
 	switch {
 	case strings.Contains(errMsg, "unknown option"):
 		name := ""
-		if idx := strings.Index(errMsg, ": "); idx >= 0 {
-			name = errMsg[idx+2:]
+		if _, after, ok := strings.Cut(errMsg, ": "); ok {
+			name = after
 		}
 		if len(name) == 1 {
 			return &NotExistError{specifiedName: name, specifiedShortnames: name}
@@ -259,8 +260,8 @@ func translateError(err error) error {
 
 	case strings.Contains(errMsg, "option requires an argument"):
 		name := ""
-		if idx := strings.Index(errMsg, ": "); idx >= 0 {
-			name = errMsg[idx+2:]
+		if _, after, ok := strings.Cut(errMsg, ": "); ok {
+			name = after
 		}
 		if len(name) == 1 {
 			return &ValueRequiredError{specifiedName: name, specifiedShortnames: name}
@@ -314,7 +315,8 @@ func (f *FlagSet) Parse(arguments []string) error {
 			translated := translateError(err)
 			// Skip unknown flag errors if allowlisted
 			if f.ParseErrorsAllowlist.UnknownFlags {
-				if _, ok := translated.(*NotExistError); ok {
+				notExistError := &NotExistError{}
+				if errors.As(translated, &notExistError) {
 					continue
 				}
 			}
@@ -329,10 +331,7 @@ func (f *FlagSet) Parse(arguments []string) error {
 	// args appeared before it. The args after -- are at the tail of f.args.
 	if dashPos >= 0 {
 		argsAfterDash := len(arguments) - dashPos - 1 // args after the -- token
-		f.argsLenAtDash = len(f.args) - argsAfterDash
-		if f.argsLenAtDash < 0 {
-			f.argsLenAtDash = 0
-		}
+		f.argsLenAtDash = max(len(f.args)-argsAfterDash, 0)
 	}
 
 	return nil
@@ -354,11 +353,11 @@ func (f *FlagSet) failf(err error) error {
 	case ContinueOnError:
 		return err
 	case ExitOnError:
-		fmt.Fprintln(f.out(), err) //nolint:errcheck // writing to output
+		fmt.Fprintln(f.out(), err)
 		f.Usage()
 		os.Exit(2)
 	case PanicOnError:
-		fmt.Fprintln(f.out(), err) //nolint:errcheck // writing to output
+		fmt.Fprintln(f.out(), err)
 		f.Usage()
 		panic(err)
 	}

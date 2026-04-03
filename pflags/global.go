@@ -14,7 +14,7 @@ var CommandLine = NewFlagSet(os.Args[0], ExitOnError)
 // Global wrappers for FlagSet methods that operate on CommandLine.
 // These provide the package-level API matching spf13/pflag.
 
-// --- Core types ---
+// --- Core types ---.
 
 func StringVar(p *string, name, value, usage string) { CommandLine.StringVar(p, name, value, usage) }
 func StringVarP(p *string, name, sh, value, usage string) {
@@ -101,7 +101,7 @@ func DurationP(name, sh string, value time.Duration, usage string) *time.Duratio
 	return CommandLine.DurationP(name, sh, value, usage)
 }
 
-// --- Narrow numeric types ---
+// --- Narrow numeric types ---.
 
 func Int8Var(p *int8, name string, value int8, usage string) {
 	CommandLine.Int8Var(p, name, value, usage)
@@ -186,7 +186,7 @@ func Float32P(name, sh string, value float32, usage string) *float32 {
 	return CommandLine.Float32P(name, sh, value, usage)
 }
 
-// --- Slice types ---
+// --- Slice types ---.
 
 func StringSliceVar(p *[]string, name string, value []string, usage string) {
 	CommandLine.StringSliceVar(p, name, value, usage)
@@ -297,7 +297,7 @@ func DurationSliceP(name, sh string, value []time.Duration, usage string) *[]tim
 	return CommandLine.DurationSliceP(name, sh, value, usage)
 }
 
-// --- String collections and maps ---
+// --- String collections and maps ---.
 
 func StringArrayVar(p *[]string, name string, value []string, usage string) {
 	CommandLine.StringArrayVar(p, name, value, usage)
@@ -348,7 +348,7 @@ func StringToInt64P(name, sh string, value map[string]int64, usage string) *map[
 	return CommandLine.StringToInt64P(name, sh, value, usage)
 }
 
-// --- Specialized types ---
+// --- Specialized types ---.
 
 func CountVar(p *int, name, usage string)      { CommandLine.CountVar(p, name, usage) }
 func CountVarP(p *int, name, sh, usage string) { CommandLine.CountVarP(p, name, sh, usage) }
@@ -395,7 +395,7 @@ func IPNetP(name, sh string, value net.IPNet, usage string) *net.IPNet {
 	return CommandLine.IPNetP(name, sh, value, usage)
 }
 
-// --- Callback flags ---
+// --- Callback flags ---.
 
 func Func(name, usage string, fn func(string) error)      { CommandLine.Func(name, usage, fn) }
 func FuncP(name, sh, usage string, fn func(string) error) { CommandLine.FuncP(name, sh, usage, fn) }
@@ -404,7 +404,7 @@ func BoolFuncP(name, sh, usage string, fn func(string) error) {
 	CommandLine.BoolFuncP(name, sh, usage, fn)
 }
 
-// --- Generic Value ---
+// --- Generic Value ---.
 
 func Var(value Value, name, usage string)      { CommandLine.Var(value, name, usage) }
 func VarP(value Value, name, sh, usage string) { CommandLine.VarP(value, name, sh, usage) }
@@ -412,9 +412,10 @@ func VarPF(value Value, name, sh, usage string) *Flag {
 	return CommandLine.VarPF(value, name, sh, usage)
 }
 
-// --- Parse and query ---
+// --- Parse and query ---.
 
-func Parse()                       { CommandLine.Parse(os.Args[1:]) } //nolint:errcheck
+//nolint:errcheck,gosec // matches pflag API: Parse panics or exits on error per ErrorHandling
+func Parse()                       { CommandLine.Parse(os.Args[1:]) }
 func Parsed() bool                 { return CommandLine.Parsed() }
 func Args() []string               { return CommandLine.Args() }
 func NArg() int                    { return CommandLine.NArg() }
@@ -425,19 +426,19 @@ func ParseAll(args []string, fn func(*Flag, string) error) error {
 	return CommandLine.ParseAll(args, fn)
 }
 
-// --- Output and help ---
+// --- Output and help ---.
 
 func PrintDefaults()                    { CommandLine.PrintDefaults() }
 func FlagUsages() string                { return CommandLine.FlagUsages() }
 func FlagUsagesWrapped(cols int) string { return CommandLine.FlagUsagesWrapped(cols) }
 func Usage()                            { CommandLine.Usage() }
 
-// --- Iteration ---
+// --- Iteration ---.
 
 func VisitAll(fn func(*Flag)) { CommandLine.VisitAll(fn) }
 func Visit(fn func(*Flag))    { CommandLine.Visit(fn) }
 
-// --- FlagSet management ---
+// --- FlagSet management ---.
 
 func Changed(name string) bool                                 { return CommandLine.Changed(name) }
 func NFlag() int                                               { return CommandLine.NFlag() }
@@ -464,7 +465,7 @@ func MarkNegatable(name string) error { return CommandLine.MarkNegatable(name) }
 func AddFlag(f *Flag)                 { CommandLine.AddFlag(f) }
 func AddFlagSet(newSet *FlagSet)      { CommandLine.AddFlagSet(newSet) }
 
-// --- Go flag interop ---
+// --- Go flag interop ---.
 
 func AddGoFlag(goflag *flag.Flag)        { CommandLine.AddGoFlag(goflag) }
 func AddGoFlagSet(goflags *flag.FlagSet) { CommandLine.AddGoFlagSet(goflags) }

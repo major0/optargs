@@ -501,7 +501,11 @@ func TestAdvancedGNULongestMatching(t *testing.T) {
 		flagDefs                          map[string]string
 		args                              []string
 	}{
-		{"longest_match", "enable-bobadufoo", "test-value", map[string]string{"enable-bob": "", "enable-bobadufoo": ""}, []string{"--enable-bobadufoo", "test-value"}},
+		{
+			"longest_match", "enable-bobadufoo", "test-value",
+			map[string]string{"enable-bob": "", "enable-bobadufoo": ""},
+			[]string{"--enable-bobadufoo", "test-value"},
+		},
 		{"shorter_exact", "enable-bob", "test-value", map[string]string{"enable-bob": "", "enable-bobadufoo": ""}, []string{"--enable-bob", "test-value"}},
 		{"equals_syntax", "system7-ex", "extended-value", map[string]string{"system": "", "system7": "", "system7-ex": ""}, []string{"--system7-ex=extended-value"}},
 		{"prefix_disambig", "verbose-mode", "detailed", map[string]string{"verbose": "", "verbose-mode": "", "verb": ""}, []string{"--verbose-mode", "detailed"}},
@@ -669,7 +673,7 @@ func TestErrorHandlingPanicOnError(t *testing.T) {
 			t.Errorf("panic = %v", r)
 		}
 	}()
-	fs.Parse([]string{"--unknown"}) //nolint:errcheck
+	_ = fs.Parse([]string{"--unknown"})
 }
 
 // TestErrorHandlingContinueOnError tests that ContinueOnError returns the error.
@@ -972,7 +976,7 @@ func TestArgsLenAtDash(t *testing.T) {
 // TestSetNormalizeFunc tests flag name normalization.
 func TestSetNormalizeFunc(t *testing.T) {
 	fs := NewFlagSet("test", ContinueOnError)
-	fs.SetNormalizeFunc(func(f *FlagSet, name string) NormalizedName {
+	fs.SetNormalizeFunc(func(_ *FlagSet, name string) NormalizedName {
 		return NormalizedName(strings.ReplaceAll(name, "_", "-"))
 	})
 	var s string
@@ -991,7 +995,7 @@ func TestSetNormalizeFunc(t *testing.T) {
 	}
 	// Equals syntax with underscore
 	fs2 := NewFlagSet("test2", ContinueOnError)
-	fs2.SetNormalizeFunc(func(f *FlagSet, name string) NormalizedName {
+	fs2.SetNormalizeFunc(func(_ *FlagSet, name string) NormalizedName {
 		return NormalizedName(strings.ReplaceAll(name, "_", "-"))
 	})
 	var s2 string
@@ -1211,7 +1215,7 @@ func TestParseAll(t *testing.T) {
 	// Callback error should propagate
 	fs2 := NewFlagSet("test2", ContinueOnError)
 	fs2.StringVar(new(string), "name", "", "")
-	err := fs2.ParseAll([]string{"--name", "val"}, func(*Flag, string) error { return fmt.Errorf("callback error") })
+	err := fs2.ParseAll([]string{"--name", "val"}, func(*Flag, string) error { return errors.New("callback error") })
 	if err == nil || !strings.Contains(err.Error(), "callback error") {
 		t.Errorf("expected callback error, got: %v", err)
 	}
@@ -1597,7 +1601,7 @@ func TestStructuredErrorAccessors(t *testing.T) {
 
 	t.Run("InvalidValueError", func(t *testing.T) {
 		// Constructed directly — not yet wired into translateError
-		inner := fmt.Errorf("bad number")
+		inner := errors.New("bad number")
 		e := &InvalidValueError{flag: &Flag{Name: "count"}, value: "abc", err: inner}
 		if e.GetFlag().Name != "count" {
 			t.Errorf("GetFlag().Name = %q", e.GetFlag().Name)
@@ -1605,7 +1609,7 @@ func TestStructuredErrorAccessors(t *testing.T) {
 		if e.GetValue() != "abc" {
 			t.Errorf("GetValue() = %q", e.GetValue())
 		}
-		if e.Unwrap() != inner {
+		if !errors.Is(e.Unwrap(), inner) {
 			t.Error("Unwrap() should return inner error")
 		}
 		if !strings.Contains(e.Error(), "count") {
@@ -1850,8 +1854,8 @@ func TestGlobalWrapperSmoke(t *testing.T) {
 	PrintDefaults()
 	_ = FlagUsages()
 	Usage()
-	MarkHidden("vpf")             //nolint:errcheck
-	MarkDeprecated("vpf", "gone") //nolint:errcheck
+	_ = MarkHidden("vpf")
+	_ = MarkDeprecated("vpf", "gone")
 }
 
 // TestGettersEmptySlice tests getters on empty/nil slice flags.
@@ -1888,7 +1892,7 @@ func TestSetNormalizeFuncReNormalize(t *testing.T) {
 	}
 
 	// Now set normalize func — existing flags should be re-keyed
-	fs.SetNormalizeFunc(func(f *FlagSet, name string) NormalizedName {
+	fs.SetNormalizeFunc(func(_ *FlagSet, name string) NormalizedName {
 		return NormalizedName(strings.ReplaceAll(name, "_", "-"))
 	})
 
@@ -2022,7 +2026,7 @@ func TestUnquoteUsageSingleBacktick(t *testing.T) {
 // after -- terminator.
 func TestNormalizeArgsTermination(t *testing.T) {
 	fs := NewFlagSet("test", ContinueOnError)
-	fs.SetNormalizeFunc(func(f *FlagSet, name string) NormalizedName {
+	fs.SetNormalizeFunc(func(_ *FlagSet, name string) NormalizedName {
 		return NormalizedName(strings.ReplaceAll(name, "_", "-"))
 	})
 	var s string
@@ -2109,10 +2113,10 @@ func TestParseAllCallbackError(t *testing.T) {
 	fs.BoolVar(new(bool), "verbose", false, "")
 
 	callCount := 0
-	err := fs.ParseAll([]string{"--name", "val", "--verbose"}, func(flag *Flag, value string) error {
+	err := fs.ParseAll([]string{"--name", "val", "--verbose"}, func(flag *Flag, _ string) error {
 		callCount++
 		if flag.Name == "verbose" {
-			return fmt.Errorf("callback rejected verbose")
+			return errors.New("callback rejected verbose")
 		}
 		return nil
 	})

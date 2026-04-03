@@ -80,7 +80,7 @@ func TestProperty11_OptArgsCoreIntegrationFidelity(t *testing.T) {
 			return true
 		}
 
-		return v1 == v2 && v1 == setValue
+		return v1 == setValue && v2 == setValue
 	}
 
 	if err := quick.Check(shorthandEquivalenceProperty, &quick.Config{MaxCount: 100}); err != nil {

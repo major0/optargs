@@ -17,11 +17,11 @@ import (
 type ErrorHandling int
 
 const (
-	// ContinueOnError will return an err from Parse() if an error is found
+	// ContinueOnError will return an err from Parse() if an error is found.
 	ContinueOnError ErrorHandling = iota
-	// ExitOnError will call os.Exit(2) if an error is found when parsing
+	// ExitOnError will call os.Exit(2) if an error is found when parsing.
 	ExitOnError
-	// PanicOnError will panic() if an error is found when parsing flags
+	// PanicOnError will panic() if an error is found when parsing flags.
 	PanicOnError
 )
 
@@ -423,9 +423,9 @@ func (f *FlagSet) Arg(i int) string {
 // defaultUsage is the default function to print a usage message.
 func (f *FlagSet) defaultUsage() {
 	if f.name == "" {
-		fmt.Fprintf(f.out(), "Usage:\n") //nolint:errcheck
+		fmt.Fprintf(f.out(), "Usage:\n")
 	} else {
-		fmt.Fprintf(f.out(), "Usage of %s:\n", f.name) //nolint:errcheck
+		fmt.Fprintf(f.out(), "Usage of %s:\n", f.name)
 	}
 	f.PrintDefaults()
 }
@@ -446,7 +446,7 @@ func (f *FlagSet) printDefaultsTo(w io.Writer) {
 		usage  string // unquoted usage text
 	}
 
-	var lines []flagLine
+	lines := make([]flagLine, 0, len(f.order))
 	maxLen := 0
 
 	names := make([]string, 0, len(f.order))
@@ -474,9 +474,11 @@ func (f *FlagSet) printDefaultsTo(w io.Writer) {
 		}
 
 		// Append prefix pair forms
+		var prefixSb477 strings.Builder
 		for _, pp := range fl.Prefixes {
-			prefix += ", --" + pp.True + "-" + fl.Name + ", --" + pp.False + "-" + fl.Name
+			prefixSb477.WriteString(", --" + pp.True + "-" + fl.Name + ", --" + pp.False + "-" + fl.Name)
 		}
+		prefix += prefixSb477.String()
 		// Append negatable form
 		if fl.Negatable {
 			prefix += ", --no-" + fl.Name
@@ -491,18 +493,18 @@ func (f *FlagSet) printDefaultsTo(w io.Writer) {
 	for _, line := range lines {
 		padding := strings.Repeat(" ", maxLen-len(line.prefix))
 		if len(line.usage) > 0 {
-			fmt.Fprintf(w, "%s%s   %s", line.prefix, padding, line.usage) //nolint:errcheck
+			fmt.Fprintf(w, "%s%s   %s", line.prefix, padding, line.usage)
 		} else {
-			fmt.Fprint(w, line.prefix) //nolint:errcheck
+			fmt.Fprint(w, line.prefix)
 		}
 		if !isZeroValue(line.flag, line.flag.DefValue) {
-			if line.flag.Value.Type() == "string" {
-				fmt.Fprintf(w, " (default %q)", line.flag.DefValue) //nolint:errcheck
+			if line.flag.Value.Type() == "string" { //nolint:goconst // type name literal, constant would hurt readability
+				fmt.Fprintf(w, " (default %q)", line.flag.DefValue)
 			} else {
-				fmt.Fprintf(w, " (default %s)", line.flag.DefValue) //nolint:errcheck
+				fmt.Fprintf(w, " (default %s)", line.flag.DefValue)
 			}
 		}
-		fmt.Fprint(w, "\n") //nolint:errcheck
+		fmt.Fprint(w, "\n")
 	}
 }
 
@@ -655,7 +657,7 @@ func (f *FlagSet) Visit(fn func(*Flag)) {
 	}
 }
 
-// addFlag will add the flag to the FlagSet
+// addFlag will add the flag to the FlagSet.
 func (f *FlagSet) addFlag(flag *Flag) {
 	normalName := f.normalizeFlagName(flag.Name)
 	if f.flags[normalName] != nil {
