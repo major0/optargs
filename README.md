@@ -20,6 +20,13 @@ OptArgs Core is the foundation for higher-level wrapper interfaces ([goarg](goar
 - Verbose and silent error modes, both working through subcommand chains
 - Zero dependencies
 
+### Wrapper Modules
+
+| Module | Description |
+|--------|-------------|
+| [goarg](goarg/) | Struct-tag based argument parsing (alexflint/go-arg compatible) |
+| [pflags](pflags/) | Flag-method based parsing (spf13/pflag compatible) |
+
 ## Install
 
 ```bash
@@ -133,13 +140,6 @@ optstring starts with `+`.
 
 - [`example/`](example/) — vanilla GetOpt, GetOptLong, GetOptLongOnly usage
 - [`posix/`](posix/) — obscure POSIX/GNU patterns: subcommand dispatch, silent error mode, POSIXLY_CORRECT
-
-## Wrapper Modules
-
-| Module | Description |
-|--------|-------------|
-| [goarg](goarg/) | Struct-tag based argument parsing (alexflint/go-arg compatible) |
-| [pflags](pflags/) | Flag-method based parsing (spf13/pflag compatible) |
 
 ## Contributing
 
