@@ -20,12 +20,12 @@ func TestTagParser_ParseField(t *testing.T) {
 			name: "basic_short_and_long_option",
 			field: reflect.StructField{
 				Name: "Verbose",
-				Type: reflect.TypeOf(false),
+				Type: reflect.TypeFor[bool](),
 				Tag:  `arg:"-v,--verbose" help:"enable verbose output"`,
 			},
 			expected: FieldMetadata{
 				Name:     "Verbose",
-				Type:     reflect.TypeOf(false),
+				Type:     reflect.TypeFor[bool](),
 				Tag:      `arg:"-v,--verbose" help:"enable verbose output"`,
 				Short:    "v",
 				Long:     "verbose",
@@ -38,12 +38,12 @@ func TestTagParser_ParseField(t *testing.T) {
 			name: "long_option_only",
 			field: reflect.StructField{
 				Name: "Count",
-				Type: reflect.TypeOf(0),
+				Type: reflect.TypeFor[int](),
 				Tag:  `arg:"--count" help:"number of items"`,
 			},
 			expected: FieldMetadata{
 				Name:     "Count",
-				Type:     reflect.TypeOf(0),
+				Type:     reflect.TypeFor[int](),
 				Tag:      `arg:"--count" help:"number of items"`,
 				Long:     "count",
 				Help:     "number of items",
@@ -55,12 +55,12 @@ func TestTagParser_ParseField(t *testing.T) {
 			name: "short_option_only",
 			field: reflect.StructField{
 				Name: "Debug",
-				Type: reflect.TypeOf(false),
+				Type: reflect.TypeFor[bool](),
 				Tag:  `arg:"-d"`,
 			},
 			expected: FieldMetadata{
 				Name:     "Debug",
-				Type:     reflect.TypeOf(false),
+				Type:     reflect.TypeFor[bool](),
 				Tag:      `arg:"-d"`,
 				Short:    "d",
 				ArgType:  optargs.NoArgument,
@@ -71,12 +71,12 @@ func TestTagParser_ParseField(t *testing.T) {
 			name: "required_option",
 			field: reflect.StructField{
 				Name: "Input",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"--input,required" help:"input file path"`,
 			},
 			expected: FieldMetadata{
 				Name:     "Input",
-				Type:     reflect.TypeOf(""),
+				Type:     reflect.TypeFor[string](),
 				Tag:      `arg:"--input,required" help:"input file path"`,
 				Long:     "input",
 				Help:     "input file path",
@@ -89,12 +89,12 @@ func TestTagParser_ParseField(t *testing.T) {
 			name: "positional_argument",
 			field: reflect.StructField{
 				Name: "Files",
-				Type: reflect.TypeOf([]string{}),
+				Type: reflect.TypeFor[[]string](),
 				Tag:  `arg:"positional" help:"files to process"`,
 			},
 			expected: FieldMetadata{
 				Name:       "Files",
-				Type:       reflect.TypeOf([]string{}),
+				Type:       reflect.TypeFor[[]string](),
 				Tag:        `arg:"positional" help:"files to process"`,
 				Help:       "files to process",
 				Positional: true,
@@ -105,12 +105,12 @@ func TestTagParser_ParseField(t *testing.T) {
 			name: "environment_variable",
 			field: reflect.StructField{
 				Name: "Token",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"--token,env:API_TOKEN" help:"API token"`,
 			},
 			expected: FieldMetadata{
 				Name:     "Token",
-				Type:     reflect.TypeOf(""),
+				Type:     reflect.TypeFor[string](),
 				Tag:      `arg:"--token,env:API_TOKEN" help:"API token"`,
 				Long:     "token",
 				Help:     "API token",
@@ -123,12 +123,12 @@ func TestTagParser_ParseField(t *testing.T) {
 			name: "default_value",
 			field: reflect.StructField{
 				Name: "Port",
-				Type: reflect.TypeOf(0),
+				Type: reflect.TypeFor[int](),
 				Tag:  `arg:"-p,--port" default:"8080" help:"server port"`,
 			},
 			expected: FieldMetadata{
 				Name:     "Port",
-				Type:     reflect.TypeOf(0),
+				Type:     reflect.TypeFor[int](),
 				Tag:      `arg:"-p,--port" default:"8080" help:"server port"`,
 				Short:    "p",
 				Long:     "port",
@@ -142,12 +142,12 @@ func TestTagParser_ParseField(t *testing.T) {
 			name: "no_arg_tag_generates_default",
 			field: reflect.StructField{
 				Name: "Output",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `help:"output file"`,
 			},
 			expected: FieldMetadata{
 				Name:     "Output",
-				Type:     reflect.TypeOf(""),
+				Type:     reflect.TypeFor[string](),
 				Tag:      `help:"output file"`,
 				Long:     "output", // Generated from field name
 				Help:     "output file",
@@ -205,7 +205,7 @@ func TestTagParser_ParseField(t *testing.T) {
 			}
 
 			// Compare CoreFlag if expected
-			if tt.expected.CoreFlag != nil {
+			if tt.expected.CoreFlag != nil { //nolint:nestif // CoreFlag comparison requires nil check then field-by-field validation
 				if result.CoreFlag == nil {
 					t.Errorf("CoreFlag is nil, expected %+v", tt.expected.CoreFlag)
 				} else {
@@ -306,12 +306,12 @@ func TestTagParser_SubcommandProcessing(t *testing.T) {
 			name: "explicit_subcommand_name",
 			field: reflect.StructField{
 				Name: "Server",
-				Type: reflect.TypeOf((*ServerCmd)(nil)),
+				Type: reflect.TypeFor[*ServerCmd](),
 				Tag:  `arg:"subcommand:server" help:"run server"`,
 			},
 			expected: FieldMetadata{
 				Name:           "Server",
-				Type:           reflect.TypeOf((*ServerCmd)(nil)),
+				Type:           reflect.TypeFor[*ServerCmd](),
 				Tag:            `arg:"subcommand:server" help:"run server"`,
 				Help:           "run server",
 				IsSubcommand:   true,
@@ -322,12 +322,12 @@ func TestTagParser_SubcommandProcessing(t *testing.T) {
 			name: "default_subcommand_name",
 			field: reflect.StructField{
 				Name: "Default",
-				Type: reflect.TypeOf((*ServerCmd)(nil)),
+				Type: reflect.TypeFor[*ServerCmd](),
 				Tag:  `arg:"subcommand" help:"default subcommand"`,
 			},
 			expected: FieldMetadata{
 				Name:           "Default",
-				Type:           reflect.TypeOf((*ServerCmd)(nil)),
+				Type:           reflect.TypeFor[*ServerCmd](),
 				Tag:            `arg:"subcommand" help:"default subcommand"`,
 				Help:           "default subcommand",
 				IsSubcommand:   true,
@@ -338,7 +338,7 @@ func TestTagParser_SubcommandProcessing(t *testing.T) {
 			name: "subcommand_non_pointer_struct_error",
 			field: reflect.StructField{
 				Name: "Invalid",
-				Type: reflect.TypeOf(ServerCmd{}), // Not a pointer
+				Type: reflect.TypeFor[ServerCmd](), // Not a pointer
 				Tag:  `arg:"subcommand:invalid"`,
 			},
 			wantErr: true,
@@ -418,12 +418,12 @@ func TestTagParser_PositionalArguments(t *testing.T) {
 			name: "string_slice_positional",
 			field: reflect.StructField{
 				Name: "Files",
-				Type: reflect.TypeOf([]string{}),
+				Type: reflect.TypeFor[[]string](),
 				Tag:  `arg:"positional" help:"files to process"`,
 			},
 			expected: FieldMetadata{
 				Name:       "Files",
-				Type:       reflect.TypeOf([]string{}),
+				Type:       reflect.TypeFor[[]string](),
 				Tag:        `arg:"positional" help:"files to process"`,
 				Help:       "files to process",
 				Positional: true,
@@ -433,12 +433,12 @@ func TestTagParser_PositionalArguments(t *testing.T) {
 			name: "int_slice_positional",
 			field: reflect.StructField{
 				Name: "Numbers",
-				Type: reflect.TypeOf([]int{}),
+				Type: reflect.TypeFor[[]int](),
 				Tag:  `arg:"positional" help:"list of numbers"`,
 			},
 			expected: FieldMetadata{
 				Name:       "Numbers",
-				Type:       reflect.TypeOf([]int{}),
+				Type:       reflect.TypeFor[[]int](),
 				Tag:        `arg:"positional" help:"list of numbers"`,
 				Help:       "list of numbers",
 				Positional: true,
@@ -448,12 +448,12 @@ func TestTagParser_PositionalArguments(t *testing.T) {
 			name: "required_positional",
 			field: reflect.StructField{
 				Name: "Input",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"positional,required" help:"input file"`,
 			},
 			expected: FieldMetadata{
 				Name:       "Input",
-				Type:       reflect.TypeOf(""),
+				Type:       reflect.TypeFor[string](),
 				Tag:        `arg:"positional,required" help:"input file"`,
 				Help:       "input file",
 				Positional: true,
@@ -464,12 +464,12 @@ func TestTagParser_PositionalArguments(t *testing.T) {
 			name: "positional_with_env",
 			field: reflect.StructField{
 				Name: "Config",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"positional,env:CONFIG_FILE" help:"config file"`,
 			},
 			expected: FieldMetadata{
 				Name:       "Config",
-				Type:       reflect.TypeOf(""),
+				Type:       reflect.TypeFor[string](),
 				Tag:        `arg:"positional,env:CONFIG_FILE" help:"config file"`,
 				Help:       "config file",
 				Positional: true,
@@ -519,7 +519,7 @@ func TestTagParser_EnvironmentVariables(t *testing.T) {
 			name: "env_with_long_option",
 			field: reflect.StructField{
 				Name: "Token",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"--token,env:API_TOKEN" help:"API token"`,
 			},
 			expected: FieldMetadata{
@@ -533,7 +533,7 @@ func TestTagParser_EnvironmentVariables(t *testing.T) {
 			name: "env_with_short_and_long",
 			field: reflect.StructField{
 				Name: "Password",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"-p,--password,env:PASSWORD" help:"password"`,
 			},
 			expected: FieldMetadata{
@@ -548,7 +548,7 @@ func TestTagParser_EnvironmentVariables(t *testing.T) {
 			name: "env_only",
 			field: reflect.StructField{
 				Name: "Secret",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"env:SECRET_KEY" help:"secret key"`,
 			},
 			expected: FieldMetadata{
@@ -562,7 +562,7 @@ func TestTagParser_EnvironmentVariables(t *testing.T) {
 			name: "env_with_required",
 			field: reflect.StructField{
 				Name: "Database",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"--db,env:DATABASE_URL,required" help:"database URL"`,
 			},
 			expected: FieldMetadata{
@@ -602,7 +602,7 @@ func TestTagParser_EnvironmentVariables(t *testing.T) {
 	t.Run("environment_variable_retrieval", func(t *testing.T) {
 		field := reflect.StructField{
 			Name: "TestEnv",
-			Type: reflect.TypeOf(""),
+			Type: reflect.TypeFor[string](),
 			Tag:  `arg:"--test,env:TEST_VAR"`,
 		}
 
@@ -623,14 +623,14 @@ func TestTagParser_DefaultValues(t *testing.T) {
 	tests := []struct {
 		name     string
 		field    reflect.StructField
-		expected interface{}
+		expected any
 		wantErr  bool
 	}{
 		{
 			name: "string_default",
 			field: reflect.StructField{
 				Name: "Name",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"--name" default:"test"`,
 			},
 			expected: "test",
@@ -639,7 +639,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 			name: "int_default",
 			field: reflect.StructField{
 				Name: "Count",
-				Type: reflect.TypeOf(0),
+				Type: reflect.TypeFor[int](),
 				Tag:  `arg:"--count" default:"42"`,
 			},
 			expected: 42,
@@ -648,7 +648,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 			name: "int64_default",
 			field: reflect.StructField{
 				Name: "Size",
-				Type: reflect.TypeOf(int64(0)),
+				Type: reflect.TypeFor[int64](),
 				Tag:  `arg:"--size" default:"1024"`,
 			},
 			expected: int64(1024),
@@ -657,7 +657,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 			name: "float64_default",
 			field: reflect.StructField{
 				Name: "Rate",
-				Type: reflect.TypeOf(float64(0)),
+				Type: reflect.TypeFor[float64](),
 				Tag:  `arg:"--rate" default:"3.14"`,
 			},
 			expected: float64(3.14),
@@ -666,7 +666,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 			name: "bool_default_true",
 			field: reflect.StructField{
 				Name: "Enabled",
-				Type: reflect.TypeOf(false),
+				Type: reflect.TypeFor[bool](),
 				Tag:  `arg:"--enabled" default:"true"`,
 			},
 			expected: true,
@@ -675,7 +675,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 			name: "bool_default_false",
 			field: reflect.StructField{
 				Name: "Disabled",
-				Type: reflect.TypeOf(false),
+				Type: reflect.TypeFor[bool](),
 				Tag:  `arg:"--disabled" default:"false"`,
 			},
 			expected: false,
@@ -684,7 +684,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 			name: "string_slice_default",
 			field: reflect.StructField{
 				Name: "Items",
-				Type: reflect.TypeOf([]string{}),
+				Type: reflect.TypeFor[[]string](),
 				Tag:  `arg:"--items" default:"a,b,c"`,
 			},
 			expected: []string{"a", "b", "c"},
@@ -693,7 +693,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 			name: "int_slice_default",
 			field: reflect.StructField{
 				Name: "Numbers",
-				Type: reflect.TypeOf([]int{}),
+				Type: reflect.TypeFor[[]int](),
 				Tag:  `arg:"--numbers" default:"1,2,3"`,
 			},
 			expected: []int{1, 2, 3},
@@ -702,7 +702,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 			name: "empty_slice_default",
 			field: reflect.StructField{
 				Name: "Empty",
-				Type: reflect.TypeOf([]string{}),
+				Type: reflect.TypeFor[[]string](),
 				Tag:  `arg:"--empty" default:""`,
 			},
 			expected: []string{},
@@ -711,7 +711,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 			name: "invalid_int_default",
 			field: reflect.StructField{
 				Name: "BadInt",
-				Type: reflect.TypeOf(0),
+				Type: reflect.TypeFor[int](),
 				Tag:  `arg:"--bad" default:"not_a_number"`,
 			},
 			wantErr: true,
@@ -720,7 +720,7 @@ func TestTagParser_DefaultValues(t *testing.T) {
 			name: "invalid_bool_default",
 			field: reflect.StructField{
 				Name: "BadBool",
-				Type: reflect.TypeOf(false),
+				Type: reflect.TypeFor[bool](),
 				Tag:  `arg:"--bad" default:"maybe"`,
 			},
 			wantErr: true,
@@ -764,7 +764,7 @@ func TestTagParser_ComplexTagFormats(t *testing.T) {
 			name: "all_options_combined",
 			field: reflect.StructField{
 				Name: "Config",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"-c,--config,env:CONFIG_FILE,required" default:"/etc/app.conf" help:"configuration file"`,
 			},
 			expected: FieldMetadata{
@@ -781,7 +781,7 @@ func TestTagParser_ComplexTagFormats(t *testing.T) {
 			name: "multiple_env_vars_invalid",
 			field: reflect.StructField{
 				Name: "Invalid",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"env:VAR1,env:VAR2"`, // Multiple env vars not supported
 			},
 			expected: FieldMetadata{
@@ -794,7 +794,7 @@ func TestTagParser_ComplexTagFormats(t *testing.T) {
 			name: "whitespace_in_tags",
 			field: reflect.StructField{
 				Name: "Spaced",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:" -s , --spaced , required " help:"  spaced tags  "`,
 			},
 			expected: FieldMetadata{
@@ -856,7 +856,7 @@ func TestTagParser_ErrorCases(t *testing.T) {
 			name: "invalid_short_option_too_long",
 			field: reflect.StructField{
 				Name: "Test",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"-verbose"`, // Invalid: short option with multiple chars
 			},
 		},
@@ -864,7 +864,7 @@ func TestTagParser_ErrorCases(t *testing.T) {
 			name: "positional_with_flags",
 			field: reflect.StructField{
 				Name: "Test",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"positional,-v"`, // Invalid: positional can't have flags
 			},
 		},
@@ -872,7 +872,7 @@ func TestTagParser_ErrorCases(t *testing.T) {
 			name: "subcommand_not_pointer_to_struct",
 			field: reflect.StructField{
 				Name: "BadSubcmd",
-				Type: reflect.TypeOf(""), // Should be pointer to struct
+				Type: reflect.TypeFor[string](), // Should be pointer to struct
 				Tag:  `arg:"subcommand:bad"`,
 			},
 		},
@@ -880,7 +880,7 @@ func TestTagParser_ErrorCases(t *testing.T) {
 			name: "unknown_tag_format",
 			field: reflect.StructField{
 				Name: "Unknown",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"unknown_format"`,
 			},
 		},
@@ -901,7 +901,7 @@ func TestTagParser_ParseStruct_ErrorCases(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		dest    interface{}
+		dest    any
 		wantErr bool
 	}{
 		{

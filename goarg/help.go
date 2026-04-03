@@ -1,6 +1,7 @@
 package goarg
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -8,13 +9,13 @@ import (
 	"strings"
 )
 
-// HelpGenerator generates help text identical to alexflint/go-arg
+// HelpGenerator generates help text identical to alexflint/go-arg.
 type HelpGenerator struct {
 	metadata *StructMetadata
 	config   Config
 }
 
-// NewHelpGenerator creates a new help generator
+// NewHelpGenerator creates a new help generator.
 func NewHelpGenerator(metadata *StructMetadata, config Config) *HelpGenerator {
 	return &HelpGenerator{
 		metadata: metadata,
@@ -30,9 +31,9 @@ func (hg *HelpGenerator) programName() string {
 	return os.Args[0]
 }
 
-// WriteHelp writes help text to the provided writer
+// WriteHelp writes help text to the provided writer.
 //
-//nolint:errcheck // fmt.Fprint* errors writing help text are intentionally ignored
+//nolint:gocognit,gocyclo,cyclop,funlen // help text generation requires conditional formatting for each field type
 func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 	if hg.metadata == nil {
 		fmt.Fprintln(w, "No help available")
@@ -55,7 +56,8 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 	}
 
 	// Add positional arguments
-	for _, field := range hg.metadata.Positionals {
+	for i := range hg.metadata.Positionals {
+		field := &hg.metadata.Positionals[i]
 		if field.Required {
 			fmt.Fprintf(w, " %s", strings.ToUpper(field.Name))
 		} else {
@@ -75,7 +77,8 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 	if len(hg.metadata.Positionals) > 0 {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Positional arguments:")
-		for _, field := range hg.metadata.Positionals {
+		for i := range hg.metadata.Positionals {
+		field := &hg.metadata.Positionals[i]
 			name := strings.ToUpper(field.Name)
 			if field.Help != "" {
 				fmt.Fprintf(w, "  %-20s %s\n", name, field.Help)
@@ -90,13 +93,15 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Options:")
 
-		for _, field := range hg.metadata.Options {
+		for i := range hg.metadata.Options {
+			field := &hg.metadata.Options[i]
 			var optStr string
-			if field.Short != "" && field.Long != "" {
+			switch {
+			case field.Short != "" && field.Long != "":
 				optStr = fmt.Sprintf("  -%s, --%s", field.Short, field.Long)
-			} else if field.Short != "" {
+			case field.Short != "":
 				optStr = fmt.Sprintf("  -%s", field.Short)
-			} else if field.Long != "" {
+			case field.Long != "":
 				optStr = fmt.Sprintf("      --%s", field.Long)
 			}
 
@@ -107,9 +112,11 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 			}
 
 			// Append prefix pair forms
+			var optStrSb110 strings.Builder
 			for _, pp := range field.Prefixes {
-				optStr += fmt.Sprintf(", --%s-%s, --%s-%s", pp.True, field.Long, pp.False, field.Long)
+				fmt.Fprintf(&optStrSb110, ", --%s-%s, --%s-%s", pp.True, field.Long, pp.False, field.Long)
 			}
+			optStr += optStrSb110.String()
 			// Append negatable form
 			if field.Negatable {
 				optStr += fmt.Sprintf(", --no-%s", field.Long)
@@ -161,7 +168,8 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 	if len(hg.metadata.EnvOnly) > 0 {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Environment variables:")
-		for _, field := range hg.metadata.EnvOnly {
+		for i := range hg.metadata.EnvOnly {
+			field := &hg.metadata.EnvOnly[i]
 			label := fmt.Sprintf("  %s", field.Env)
 			if field.Help != "" {
 				fmt.Fprintf(w, "%-30s %s", label, field.Help)
@@ -187,9 +195,9 @@ func (hg *HelpGenerator) WriteHelp(w io.Writer) error {
 	return nil
 }
 
-// WriteUsage writes usage text to the provided writer
+// WriteUsage writes usage text to the provided writer.
 //
-//nolint:errcheck // fmt.Fprint* errors writing usage text are intentionally ignored
+
 func (hg *HelpGenerator) WriteUsage(w io.Writer) error {
 	program := hg.programName()
 
@@ -207,7 +215,8 @@ func (hg *HelpGenerator) WriteUsage(w io.Writer) error {
 		}
 
 		// Add positional arguments
-		for _, field := range hg.metadata.Positionals {
+		for i := range hg.metadata.Positionals {
+		field := &hg.metadata.Positionals[i]
 			if field.Required {
 				fmt.Fprintf(w, " %s", strings.ToUpper(field.Name))
 			} else {
@@ -220,10 +229,12 @@ func (hg *HelpGenerator) WriteUsage(w io.Writer) error {
 	return nil
 }
 
-// ErrorTranslator translates OptArgs Core errors to go-arg format
+// ErrorTranslator translates OptArgs Core errors to go-arg format.
 type ErrorTranslator struct{}
 
-// TranslateError translates an error to go-arg compatible format
+// TranslateError translates an error to go-arg compatible format.
+//
+//nolint:gocyclo,cyclop // error translation maps many optargs error types to go-arg format
 func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error {
 	if err == nil {
 		return nil
@@ -274,7 +285,7 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 		if context.FieldName != "" {
 			return fmt.Errorf("invalid argument for --%s", context.FieldName)
 		}
-		return fmt.Errorf("invalid argument")
+		return errors.New("invalid argument")
 
 	case strings.Contains(errMsg, "missing required") || strings.Contains(errMsg, "is required"):
 		// Handle missing required arguments
@@ -292,13 +303,13 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 		if context.FieldName != "" {
 			return fmt.Errorf("required argument missing: %s", context.FieldName)
 		}
-		return fmt.Errorf("required argument missing")
+		return errors.New("required argument missing")
 
 	case strings.Contains(errMsg, "too many"):
-		return fmt.Errorf("too many positional arguments")
+		return errors.New("too many positional arguments")
 
 	case strings.Contains(errMsg, "not enough"):
-		return fmt.Errorf("not enough positional arguments")
+		return errors.New("not enough positional arguments")
 
 	case strings.HasPrefix(errMsg, "--") || strings.HasPrefix(errMsg, "-"):
 		// This looks like an option name that was returned as an error
@@ -321,7 +332,7 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 	}
 }
 
-// extractOptionFromError extracts the option name from an error message
+// extractOptionFromError extracts the option name from an error message.
 func extractOptionFromError(errMsg string) string {
 	errMsg = strings.TrimPrefix(errMsg, "parsing error: ")
 
@@ -372,7 +383,7 @@ func extractAfterPrefix(errMsg, prefix string) (string, bool) {
 	return "--" + optName, true
 }
 
-// ParseContext provides context for error translation
+// ParseContext provides context for error translation.
 type ParseContext struct {
 	StructType reflect.Type
 	FieldName  string

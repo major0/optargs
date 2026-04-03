@@ -18,7 +18,7 @@ var defaultOutput io.Writer = os.Stderr
 
 // registrations holds globally registered destination structs for MustParse
 // without explicit dest arguments.
-var registrations []interface{}
+var registrations []any
 
 // Register adds a destination struct to the global registration list.
 // When MustParse is called without arguments, registered structs are used.
@@ -26,10 +26,10 @@ func Register(dest any) {
 	registrations = append(registrations, dest)
 }
 
-// Parser provides the main parsing interface - identical to alexflint/go-arg
+// Parser provides the main parsing interface - identical to alexflint/go-arg.
 type Parser struct {
 	config   Config
-	dest     interface{}
+	dest     any
 	metadata *StructMetadata
 
 	// Direct OptArgs Core integration
@@ -40,10 +40,10 @@ type Parser struct {
 
 	// Active subcommand chain, populated during Parse
 	subcommandNames []string
-	subcommandDest  interface{}
+	subcommandDest  any
 }
 
-// Config matches alexflint/go-arg configuration options exactly
+// Config matches alexflint/go-arg configuration options exactly.
 type Config struct {
 	Program           string
 	Description       string
@@ -57,10 +57,10 @@ type Config struct {
 	Out               io.Writer
 }
 
-// Parse parses command line arguments into the destination struct(s)
-func Parse(dest ...interface{}) error {
+// Parse parses command line arguments into the destination struct(s).
+func Parse(dest ...any) error {
 	if len(dest) == 0 {
-		return fmt.Errorf("at least one destination required")
+		return errors.New("at least one destination required")
 	}
 	parser, err := NewParser(Config{}, dest[0])
 	if err != nil {
@@ -69,8 +69,8 @@ func Parse(dest ...interface{}) error {
 	return parser.Parse(os.Args[1:])
 }
 
-// ParseArgs parses the provided arguments into the destination struct
-func ParseArgs(dest interface{}, args []string) error {
+// ParseArgs parses the provided arguments into the destination struct.
+func ParseArgs(dest any, args []string) error {
 	parser, err := NewParser(Config{}, dest)
 	if err != nil {
 		return err
@@ -81,7 +81,7 @@ func ParseArgs(dest interface{}, args []string) error {
 // MustParse parses command line arguments, prints help/version on the
 // corresponding sentinel errors, and exits on any error. Returns the
 // parser on success so callers can inspect subcommand state.
-func MustParse(dest ...interface{}) *Parser {
+func MustParse(dest ...any) *Parser {
 	if len(dest) == 0 {
 		fmt.Fprintln(os.Stderr, "at least one destination required")
 		os.Exit(2)
@@ -98,10 +98,10 @@ func MustParse(dest ...interface{}) *Parser {
 	return p
 }
 
-// NewParser creates a new parser with the given configuration
-func NewParser(config Config, dest interface{}) (*Parser, error) {
+// NewParser creates a new parser with the given configuration.
+func NewParser(config Config, dest any) (*Parser, error) {
 	if dest == nil {
-		return nil, fmt.Errorf("destination cannot be nil")
+		return nil, errors.New("destination cannot be nil")
 	}
 
 	// Validate that dest is a pointer to a struct
@@ -146,7 +146,7 @@ func NewParser(config Config, dest interface{}) (*Parser, error) {
 	}, nil
 }
 
-// Parse parses the given arguments
+// Parse parses the given arguments.
 func (p *Parser) Parse(args []string) error {
 	if args == nil {
 		args = os.Args[1:]
@@ -185,7 +185,7 @@ func (p *Parser) Parse(args []string) error {
 	// Subcommand dispatch: use core's ActiveCommand() to detect which
 	// subcommand was dispatched, iterate its Options(), run PostParse,
 	// and walk recursively for nested subcommands.
-	if len(p.metadata.Subcommands) > 0 {
+	if len(p.metadata.Subcommands) > 0 { //nolint:nestif // subcommand dispatch requires conditional walk + recursive parse
 		invokedName, childParser := coreParser.ActiveCommand()
 
 		if invokedName != "" && childParser != nil {
@@ -215,21 +215,21 @@ func (p *Parser) Parse(args []string) error {
 	return p.translateError(ci.PostParse(coreParser, destValue), "")
 }
 
-// WriteHelp writes help text to the provided writer
+// WriteHelp writes help text to the provided writer.
 func (p *Parser) WriteHelp(w io.Writer) {
 	helpGenerator := NewHelpGenerator(p.metadata, p.config)
-	helpGenerator.WriteHelp(w) //nolint:errcheck // matches upstream go-arg API (no error return)
+	helpGenerator.WriteHelp(w) //nolint:errcheck,gosec // matches upstream go-arg API (no error return)
 }
 
-// WriteUsage writes usage text to the provided writer
+// WriteUsage writes usage text to the provided writer.
 func (p *Parser) WriteUsage(w io.Writer) {
 	helpGenerator := NewHelpGenerator(p.metadata, p.config)
-	helpGenerator.WriteUsage(w) //nolint:errcheck // matches upstream go-arg API (no error return)
+	helpGenerator.WriteUsage(w) //nolint:errcheck,gosec // matches upstream go-arg API (no error return)
 }
 
-// Fail prints an error message and exits
+// Fail prints an error message and exits.
 func (p *Parser) Fail(msg string) {
-	fmt.Fprintln(p.output(), msg) //nolint:errcheck // output-and-exit
+	fmt.Fprintln(p.output(), msg)
 	p.WriteUsage(p.output())
 	p.config.Exit(1)
 }
@@ -254,16 +254,16 @@ func (p *Parser) handleMustParseError(err error) {
 		p.WriteHelp(out)
 		p.config.Exit(0)
 	case errors.Is(err, ErrVersion):
-		fmt.Fprintln(out, p.config.Version) //nolint:errcheck // output-and-exit
+		fmt.Fprintln(out, p.config.Version)
 		p.config.Exit(0)
 	default:
-		fmt.Fprintln(out, err) //nolint:errcheck // output-and-exit
+		fmt.Fprintln(out, err)
 		p.WriteUsage(out)
 		p.config.Exit(1)
 	}
 }
 
-// translateError translates an error using the error translator with context
+// translateError translates an error using the error translator with context.
 func (p *Parser) translateError(err error, fieldName string) error {
 	if err == nil {
 		return nil

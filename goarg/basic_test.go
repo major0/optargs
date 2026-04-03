@@ -1,8 +1,8 @@
 package goarg
 
 import (
-	"fmt"
 	"reflect"
+	"strconv"
 	"testing"
 	"testing/quick"
 )
@@ -304,7 +304,7 @@ func TestPropertyParsingEquivalence(t *testing.T) {
 				Val int `arg:"--val"`
 			}
 			s := S{}
-			args := []string{"--val", fmt.Sprint(n)}
+			args := []string{"--val", strconv.Itoa(n)}
 			if err := ParseArgs(&s, args); err != nil {
 				return false
 			}
@@ -354,7 +354,7 @@ func TestPropertyParsingEquivalence(t *testing.T) {
 
 	// Sub-property D: Default values applied when no args given.
 	t.Run("defaults_applied", func(t *testing.T) {
-		f := func(n uint16) bool {
+		f := func(_ uint16) bool {
 			// Use a fixed default to verify it's applied
 			type S struct {
 				Port int `arg:"--port" default:"8080"`
@@ -377,7 +377,7 @@ func TestPropertyParsingEquivalence(t *testing.T) {
 				Vals []int `arg:"--val"`
 			}
 			s := S{}
-			args := []string{"--val", fmt.Sprint(a), "--val", fmt.Sprint(b), "--val", fmt.Sprint(c)}
+			args := []string{"--val", strconv.Itoa(a), "--val", strconv.Itoa(b), "--val", strconv.Itoa(c)}
 			if err := ParseArgs(&s, args); err != nil {
 				return false
 			}

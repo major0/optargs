@@ -13,6 +13,7 @@ type CommonOpts struct {
 
 type EmbeddedArgs struct {
 	CommonOpts
+
 	Output string `arg:"-o,--output" help:"output file"`
 }
 

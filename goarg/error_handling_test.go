@@ -1,7 +1,7 @@
 package goarg
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -9,7 +9,7 @@ import (
 func TestErrorHandlingIntegration(t *testing.T) {
 	testCases := []struct {
 		name          string
-		testStruct    interface{}
+		testStruct    any
 		args          []string
 		expectError   bool
 		errorContains string
@@ -72,10 +72,8 @@ func TestErrorHandlingIntegration(t *testing.T) {
 				}
 
 				t.Logf("Got expected error: %v", err)
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
+			} else if err != nil {
+				t.Errorf("Unexpected error: %v", err)
 			}
 		})
 	}
@@ -94,7 +92,7 @@ func TestErrorTranslationConsistency(t *testing.T) {
 
 	// Test the same error multiple times
 	var firstError string
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		err := parser.Parse([]string{})
 		if err == nil {
 			t.Errorf("Expected error on iteration %d", i)
@@ -165,10 +163,8 @@ func TestSubcommandErrorHandling(t *testing.T) {
 				}
 
 				t.Logf("Got expected error: %v", err)
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
+			} else if err != nil {
+				t.Errorf("Unexpected error: %v", err)
 			}
 		})
 	}
@@ -186,13 +182,13 @@ func TestErrorContextInformation(t *testing.T) {
 	}{
 		{
 			name:     "field context in error",
-			input:    fmt.Errorf("missing required field"),
+			input:    errors.New("missing required field"),
 			context:  ParseContext{FieldName: "input"},
 			expected: "required argument missing: input",
 		},
 		{
 			name:     "no field context",
-			input:    fmt.Errorf("missing required field"),
+			input:    errors.New("missing required field"),
 			context:  ParseContext{},
 			expected: "required argument missing",
 		},

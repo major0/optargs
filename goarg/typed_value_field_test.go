@@ -321,6 +321,7 @@ func TestCompatEmbeddedStructFields(t *testing.T) {
 	}
 	type Args struct {
 		CommonOpts
+
 		Name string `arg:"--name"`
 	}
 
@@ -342,10 +343,12 @@ func TestNestedEmbeddedStructFields(t *testing.T) {
 	}
 	type Level1 struct {
 		Level2
+
 		Mid string `arg:"--mid"`
 	}
 	type Args struct {
 		Level1
+
 		Top string `arg:"--top"`
 	}
 

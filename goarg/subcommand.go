@@ -10,7 +10,7 @@ import (
 // Subcommand returns the active subcommand destination struct, or nil
 // if no subcommand was invoked. For nested subcommands, returns the
 // leaf (deepest) subcommand struct.
-func (p *Parser) Subcommand() interface{} {
+func (p *Parser) Subcommand() any {
 	return p.subcommandDest
 }
 
@@ -33,9 +33,9 @@ func (p *Parser) FailSubcommand(msg string, subcommand ...string) error {
 		return err
 	}
 
-	fmt.Fprintln(p.output(), msg) //nolint:errcheck // output-and-exit
+	fmt.Fprintln(p.output(), msg)
 	hg := NewHelpGenerator(meta, p.config)
-	hg.WriteUsage(p.output()) //nolint:errcheck
+	hg.WriteUsage(p.output()) //nolint:errcheck,gosec // error handling not needed for usage output
 	p.config.Exit(1)
 	return nil
 }

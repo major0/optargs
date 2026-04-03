@@ -1,15 +1,17 @@
 package goarg
 
 import (
-	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/quick"
 )
 
 // TestProperty9_OptionInheritanceCorrectness tests Property 9 from the design document:
-// For any parent parser with options and child parser with subcommands, options defined in the parent should be accessible and functional when used with child subcommands
+// For any parent parser with options and child parser with subcommands, options
+// defined in the parent should be accessible and functional when used with child
+// subcommands.
 // **Validates: Requirements 2.1, 2.2**
 func TestProperty9_OptionInheritanceCorrectness(t *testing.T) {
 	// Property: Parent options should be accessible and functional when used with child subcommands
@@ -38,7 +40,7 @@ func TestProperty9_OptionInheritanceCorrectness(t *testing.T) {
 		}
 
 		// Test case 1: Parent options used with subcommand should be set on parent
-		args1 := []string{"server", "--port", fmt.Sprintf("%d", port), "--host", host}
+		args1 := []string{"server", "--port", strconv.Itoa(port), "--host", host}
 		if verbose {
 			args1 = append(args1, "--verbose")
 		}
@@ -87,7 +89,7 @@ func TestProperty9_OptionInheritanceCorrectness(t *testing.T) {
 		if debug {
 			args2 = append(args2, "--debug")
 		}
-		args2 = append(args2, "--port", fmt.Sprintf("%d", port))
+		args2 = append(args2, "--port", strconv.Itoa(port))
 
 		var cmd2 RootCmd
 		err2 := ParseArgs(&cmd2, args2)
@@ -137,7 +139,7 @@ func TestProperty9_OptionInheritanceCorrectness(t *testing.T) {
 		}
 
 		// Test case 4: Subcommand options should not interfere with parent options
-		args4 := []string{"server", "--port", fmt.Sprintf("%d", port)}
+		args4 := []string{"server", "--port", strconv.Itoa(port)}
 		if verbose {
 			args4 = append(args4, "--verbose")
 		}
@@ -210,7 +212,7 @@ func TestProperty10_CaseInsensitiveCommandMatching(t *testing.T) {
 		serverCase := commandCase % len(serverVariations)
 		serverCommand := serverVariations[serverCase]
 
-		args1 := []string{serverCommand, "--port", fmt.Sprintf("%d", port)}
+		args1 := []string{serverCommand, "--port", strconv.Itoa(port)}
 		var cmd1 RootCmd
 		err1 := ParseArgs(&cmd1, args1)
 		if err1 != nil {
@@ -255,14 +257,14 @@ func TestProperty10_CaseInsensitiveCommandMatching(t *testing.T) {
 		}
 
 		// Test that exact case and different case produce identical results
-		exactArgs := []string{"server", "--port", fmt.Sprintf("%d", port)}
+		exactArgs := []string{"server", "--port", strconv.Itoa(port)}
 		var exactCmd RootCmd
 		err3 := ParseArgs(&exactCmd, exactArgs)
 		if err3 != nil {
 			return false
 		}
 
-		upperArgs := []string{"SERVER", "--port", fmt.Sprintf("%d", port)}
+		upperArgs := []string{"SERVER", "--port", strconv.Itoa(port)}
 		var upperCmd RootCmd
 		err4 := ParseArgs(&upperCmd, upperArgs)
 		if err4 != nil {
@@ -281,7 +283,7 @@ func TestProperty10_CaseInsensitiveCommandMatching(t *testing.T) {
 		}
 
 		// Test mixed case with options
-		mixedArgs := []string{"SeRvEr", "--verbose", "--port", fmt.Sprintf("%d", port)}
+		mixedArgs := []string{"SeRvEr", "--verbose", "--port", strconv.Itoa(port)}
 		var mixedCmd RootCmd
 		err5 := ParseArgs(&mixedCmd, mixedArgs)
 		if err5 != nil {
@@ -298,7 +300,7 @@ func TestProperty10_CaseInsensitiveCommandMatching(t *testing.T) {
 
 		// Test that invalid case variations still fail appropriately
 		// Note: Invalid commands don't fail by themselves, but invalid options do
-		invalidArgs := []string{"invalidcommand", "--port", fmt.Sprintf("%d", port)}
+		invalidArgs := []string{"invalidcommand", "--port", strconv.Itoa(port)}
 		var invalidCmd RootCmd
 		err6 := ParseArgs(&invalidCmd, invalidArgs)
 		return err6 != nil

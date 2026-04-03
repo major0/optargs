@@ -11,7 +11,7 @@ func BenchmarkParseSimple(b *testing.B) {
 	}
 	args := []string{"--verbose", "--count", "42", "--output", "out.txt"}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		var a Args
 		_ = ParseArgs(&a, args)
 	}
@@ -29,7 +29,7 @@ func BenchmarkParseSubcommand(b *testing.B) {
 	}
 	args := []string{"server", "--port", "9090", "--verbose"}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		var a Args
 		_ = ParseArgs(&a, args)
 	}
@@ -44,7 +44,7 @@ func BenchmarkParseDefaults(b *testing.B) {
 		Workers  int    `arg:"--workers" default:"4"`
 	}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		var a Args
 		_ = ParseArgs(&a, []string{})
 	}
@@ -59,7 +59,7 @@ func BenchmarkParsePositional(b *testing.B) {
 	}
 	args := []string{"input.txt", "output.txt", "a.go", "b.go", "c.go"}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		var a Args
 		_ = ParseArgs(&a, args)
 	}
@@ -78,7 +78,7 @@ func BenchmarkNewParser(b *testing.B) {
 		Server  *ServerCmd `arg:"subcommand:server" help:"run server"`
 	}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		var a Args
 		_, _ = NewParser(Config{Program: "bench"}, &a)
 	}

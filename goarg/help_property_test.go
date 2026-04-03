@@ -88,11 +88,11 @@ type RequiredStruct struct {
 }
 
 // generateRandomTestStruct creates a random struct for testing help generation
-func generateRandomTestStruct(seed int) interface{} {
+func generateRandomTestStruct(seed int) any {
 	// For property testing, we'll use a variety of predefined struct types
 	// that cover different combinations of features
 
-	structs := []interface{}{
+	structs := []any{
 		&BasicStruct{},
 		&PositionalStruct{},
 		&SubcommandStruct{},
@@ -207,7 +207,7 @@ func validateHelpTextFormat(helpText, usageText string, config Config, metadata 
 func TestHelpGenerationEdgeCases(t *testing.T) {
 	testCases := []struct {
 		name       string
-		testStruct interface{}
+		testStruct any
 		config     Config
 	}{
 		{
@@ -286,7 +286,7 @@ func TestHelpTextConsistency(t *testing.T) {
 
 	// Generate help text multiple times and ensure consistency
 	var firstHelp string
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		var buf bytes.Buffer
 		parser.WriteHelp(&buf)
 		helpText := buf.String()

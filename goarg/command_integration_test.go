@@ -66,8 +66,7 @@ func TestCommandSystemIntegration(t *testing.T) {
 		}
 	})
 
-	// TODO: Add test for actual subcommand parsing with option inheritance
-	// This will require the full parsing flow to work correctly
+	// Subcommand parsing with option inheritance requires the full parsing flow.
 	t.Run("SubcommandParsingWithInheritance", func(t *testing.T) {
 		t.Skip("Subcommand parsing with inheritance - implementation in progress")
 
@@ -84,12 +83,12 @@ func TestCommandSystemIntegration(t *testing.T) {
 var subcommandDetectionTests = []struct {
 	name  string
 	args  []string
-	check func(t *testing.T, cmd interface{})
+	check func(t *testing.T, cmd any)
 }{
 	{
 		name: "single_subcommand_with_options",
 		args: []string{"server", "--port", "9090"},
-		check: func(t *testing.T, cmd interface{}) {
+		check: func(t *testing.T, cmd any) {
 			t.Helper()
 			r := cmd.(*struct {
 				Server *struct {
@@ -113,7 +112,7 @@ var subcommandDetectionTests = []struct {
 	{
 		name: "no_subcommand_invoked",
 		args: []string{},
-		check: func(t *testing.T, cmd interface{}) {
+		check: func(t *testing.T, cmd any) {
 			t.Helper()
 			r := cmd.(*struct {
 				Server *struct {
@@ -134,7 +133,7 @@ var subcommandDetectionTests = []struct {
 	{
 		name: "second_subcommand_invoked",
 		args: []string{"client", "--url", "http://example.com"},
-		check: func(t *testing.T, cmd interface{}) {
+		check: func(t *testing.T, cmd any) {
 			t.Helper()
 			r := cmd.(*struct {
 				Server *struct {
@@ -158,7 +157,7 @@ var subcommandDetectionTests = []struct {
 	{
 		name: "subcommand_with_defaults",
 		args: []string{"server"},
-		check: func(t *testing.T, cmd interface{}) {
+		check: func(t *testing.T, cmd any) {
 			t.Helper()
 			r := cmd.(*struct {
 				Server *struct {

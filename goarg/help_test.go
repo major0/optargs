@@ -2,7 +2,7 @@ package goarg
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -146,19 +146,19 @@ func TestErrorTranslation(t *testing.T) {
 	}{
 		{
 			name:     "unknown option",
-			input:    fmt.Errorf("unknown option --invalid"),
+			input:    errors.New("unknown option --invalid"),
 			context:  ParseContext{},
 			expected: "unrecognized argument: --invalid",
 		},
 		{
 			name:     "option requires argument",
-			input:    fmt.Errorf("option requires an argument --count"),
+			input:    errors.New("option requires an argument --count"),
 			context:  ParseContext{},
 			expected: "option requires an argument: --count",
 		},
 		{
 			name:     "missing required field",
-			input:    fmt.Errorf("missing required field"),
+			input:    errors.New("missing required field"),
 			context:  ParseContext{FieldName: "input"},
 			expected: "required argument missing: input",
 		},

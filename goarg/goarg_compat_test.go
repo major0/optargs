@@ -15,7 +15,7 @@ import (
 type compatScenario struct {
 	name       string
 	args       []string
-	newParser  func() (*Parser, interface{}, error)
+	newParser  func() (*Parser, any, error)
 	wantErr    bool
 	skipHelp   bool
 	skipValues bool
@@ -50,7 +50,7 @@ func compatBasicStringInt() compatScenario {
 	return compatScenario{
 		name: "basic_string_int",
 		args: []string{"--name", "alice", "--count", "3"},
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -65,7 +65,7 @@ func compatBoolFlag() compatScenario {
 	return compatScenario{
 		name: "bool_flag",
 		args: []string{"--verbose"},
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -81,7 +81,7 @@ func compatDefaultValues() compatScenario {
 	return compatScenario{
 		name: "default_values",
 		args: []string{},
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -99,7 +99,7 @@ func compatRequiredMissing() compatScenario {
 		wantErr:    true,
 		skipHelp:   true,
 		skipValues: true,
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -115,7 +115,7 @@ func compatPositionalArgs() compatScenario {
 	return compatScenario{
 		name: "positional_args",
 		args: []string{"input.txt", "output.txt"},
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -130,7 +130,7 @@ func compatSliceOption() compatScenario {
 	return compatScenario{
 		name: "slice_option",
 		args: []string{"--file", "a.txt", "--file", "b.txt"},
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -146,7 +146,7 @@ func compatEnvOption() compatScenario {
 		name:     "env_option",
 		args:     []string{},
 		skipHelp: true,
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -164,7 +164,7 @@ func compatUnknownOption() compatScenario {
 		wantErr:    true,
 		skipHelp:   true,
 		skipValues: true,
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -183,7 +183,7 @@ func compatSubcommandBasic() compatScenario {
 	return compatScenario{
 		name: "subcommand_basic",
 		args: []string{"server", "--port", "9090"},
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -201,7 +201,7 @@ func compatHelpOutput() compatScenario {
 		name:       "help_output",
 		args:       []string{},
 		skipValues: true,
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -216,7 +216,7 @@ func compatMapType() compatScenario {
 	return compatScenario{
 		name: "map_type",
 		args: []string{"--header", "Content-Type=application/json", "--header", "Accept=text/html"},
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -230,12 +230,13 @@ func compatEmbeddedStruct() compatScenario {
 	}
 	type Args struct {
 		Common
+
 		Name string `arg:"--name" help:"user name"`
 	}
 	return compatScenario{
 		name: "embedded_struct",
 		args: []string{"--verbose", "--name", "alice"},
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -255,7 +256,7 @@ func compatVersionedInterface() compatScenario {
 		name:       "versioned_interface",
 		args:       []string{},
 		skipValues: true,
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a compatVersionedArgs
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -273,7 +274,7 @@ func compatErrhelpSentinel() compatScenario {
 		wantErr:    true,
 		skipHelp:   true,
 		skipValues: true,
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -292,7 +293,7 @@ func compatCaseInsensitiveCmd() compatScenario {
 		name:     "case_insensitive_cmd",
 		args:     []string{"serve", "--port", "9090"},
 		skipHelp: true,
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -308,7 +309,7 @@ func compatEnvOnlyField() compatScenario {
 		name:     "env_only_field",
 		args:     []string{},
 		skipHelp: true,
-		newParser: func() (*Parser, interface{}, error) {
+		newParser: func() (*Parser, any, error) {
 			var a Args
 			p, err := NewParser(Config{Program: "test"}, &a)
 			return p, &a, err
@@ -441,7 +442,7 @@ func readCompatGolden(t *testing.T, scenario, kind string) string {
 	t.Helper()
 	name := scenario + "." + kind
 	path := filepath.Join("compat", "testdata", name+".golden.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // test golden file path from constant prefix + test name
 	if err != nil {
 		return ""
 	}

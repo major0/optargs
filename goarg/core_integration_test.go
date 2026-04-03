@@ -1,8 +1,8 @@
 package goarg
 
 import (
-	"fmt"
 	"reflect"
+	"strconv"
 	"testing"
 	"testing/quick"
 
@@ -19,12 +19,12 @@ func TestPropertyHandleCallbackCorrectness(t *testing.T) {
 				Count int `arg:"-c,--count"`
 			}
 			s := S{}
-			args := []string{"--count", fmt.Sprint(n)}
+			args := []string{"--count", strconv.Itoa(n)}
 			if err := ParseArgs(&s, args); err != nil {
 				return false
 			}
 
-			want, err := optargs.Convert(fmt.Sprint(n), reflect.TypeOf(0))
+			want, err := optargs.Convert(strconv.Itoa(n), reflect.TypeFor[int]())
 			if err != nil {
 				return false
 			}
@@ -84,7 +84,7 @@ func TestPropertyHandleCallbackCorrectness(t *testing.T) {
 				Nums []int `arg:"-n,--num"`
 			}
 			s := S{}
-			args := []string{"--num", fmt.Sprint(a), "--num", fmt.Sprint(b)}
+			args := []string{"--num", strconv.Itoa(a), "--num", strconv.Itoa(b)}
 			if err := ParseArgs(&s, args); err != nil {
 				return false
 			}
@@ -116,7 +116,7 @@ func TestPropertySubcommandNilOut(t *testing.T) {
 				Client *ClientCmd `arg:"subcommand:client"`
 			}
 			a := Args{}
-			args := []string{"server", "--port", fmt.Sprint(port)}
+			args := []string{"server", "--port", strconv.FormatUint(uint64(port), 10)}
 			if err := ParseArgs(&a, args); err != nil {
 				return false
 			}

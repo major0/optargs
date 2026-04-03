@@ -11,7 +11,7 @@ import (
 // result as optargs.Convert(s, type) for all scalar types.
 func TestPropertyTypedValueFieldRoundTrip(t *testing.T) {
 	t.Run("int", func(t *testing.T) {
-		f := func(n int) bool {
+		f := func(_ int) bool {
 			dest := &struct{ V int }{}
 			dv := reflect.ValueOf(dest).Elem()
 			fv := dv.FieldByName("V")

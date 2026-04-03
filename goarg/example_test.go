@@ -77,6 +77,7 @@ func Example_embedded() {
 	}
 	type Args struct {
 		CommonOpts
+
 		Output string `arg:"-o,--output" help:"output file"`
 	}
 	var args Args

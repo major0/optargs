@@ -1,7 +1,7 @@
 package goarg
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 	"testing"
 	"testing/quick"
@@ -43,7 +43,7 @@ func TestProperty7ErrorMessageCompatibility(t *testing.T) {
 // ErrorScenario represents a test scenario that should produce an error
 type ErrorScenario struct {
 	name         string
-	testStruct   interface{}
+	testStruct   any
 	args         []string
 	expectError  bool
 	errorPattern string // Pattern that should be in the error message
@@ -160,10 +160,9 @@ func validateErrorMessageFormat(err error, scenario ErrorScenario) bool {
 
 		// Validate error message format properties
 		return validateErrorMessageProperties(errMsg)
-	} else {
-		// Should not have error
-		return err == nil
 	}
+	// Should not have error
+	return err == nil
 }
 
 // validateErrorMessageProperties validates general properties of error messages
@@ -205,7 +204,7 @@ func validateErrorMessageProperties(errMsg string) bool {
 func TestErrorMessageConsistency(t *testing.T) {
 	testCases := []struct {
 		name        string
-		testStruct  interface{}
+		testStruct  any
 		args        []string
 		expectError bool
 	}{
@@ -244,7 +243,7 @@ func TestErrorMessageConsistency(t *testing.T) {
 
 			// Test the same error multiple times
 			var firstError string
-			for i := 0; i < 3; i++ {
+			for i := range 3 {
 				err := parser.Parse(tc.args)
 
 				if tc.expectError {
@@ -259,10 +258,8 @@ func TestErrorMessageConsistency(t *testing.T) {
 						t.Errorf("Error message inconsistent on iteration %d:\nFirst: %s\nCurrent: %s",
 							i, firstError, err.Error())
 					}
-				} else {
-					if err != nil {
-						t.Errorf("Unexpected error on iteration %d: %v", i, err)
-					}
+				} else if err != nil {
+					t.Errorf("Unexpected error on iteration %d: %v", i, err)
 				}
 			}
 		})
@@ -273,7 +270,7 @@ func TestErrorMessageConsistency(t *testing.T) {
 func TestErrorMessageFormats(t *testing.T) {
 	testCases := []struct {
 		name           string
-		testStruct     interface{}
+		testStruct     any
 		args           []string
 		expectedFormat string // Regex pattern or substring
 	}{
@@ -341,25 +338,25 @@ func TestErrorTranslatorDirectly(t *testing.T) {
 	}{
 		{
 			name:     "unknown option translation",
-			input:    fmt.Errorf("parsing error: unknown option: test"),
+			input:    errors.New("parsing error: unknown option: test"),
 			context:  ParseContext{},
 			expected: "unrecognized argument: --test",
 		},
 		{
 			name:     "option requires argument translation",
-			input:    fmt.Errorf("option requires an argument: count"),
+			input:    errors.New("option requires an argument: count"),
 			context:  ParseContext{},
 			expected: "option requires an argument: --count",
 		},
 		{
 			name:     "missing required with context",
-			input:    fmt.Errorf("missing required field"),
+			input:    errors.New("missing required field"),
 			context:  ParseContext{FieldName: "input"},
 			expected: "required argument missing: input",
 		},
 		{
 			name:     "type conversion error",
-			input:    fmt.Errorf("strconv.ParseInt: parsing \"invalid\": invalid syntax"),
+			input:    errors.New("strconv.ParseInt: parsing \"invalid\": invalid syntax"),
 			context:  ParseContext{FieldName: "count"},
 			expected: "invalid argument for --count",
 		},

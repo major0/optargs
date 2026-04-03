@@ -229,6 +229,7 @@ type DeployCmd struct {
 
 type AppArgs struct {
 	GlobalOpts
+
 	Deploy *DeployCmd `arg:"subcommand:deploy" help:"deploy application"`
 }
 

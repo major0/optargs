@@ -12,7 +12,7 @@ import (
 func TestHelpTextFormatting(t *testing.T) {
 	testCases := []struct {
 		name           string
-		testStruct     interface{}
+		testStruct     any
 		config         Config
 		expectedParts  []string // Parts that should be in the help text
 		forbiddenParts []string // Parts that should NOT be in the help text
@@ -163,7 +163,7 @@ func TestHelpTextFormatting(t *testing.T) {
 func TestUsageStringGeneration(t *testing.T) {
 	testCases := []struct {
 		name       string
-		testStruct interface{}
+		testStruct any
 		config     Config
 		expected   string
 	}{
@@ -236,7 +236,7 @@ func TestUsageStringGeneration(t *testing.T) {
 func TestErrorMessageFormatAndContent(t *testing.T) {
 	testCases := []struct {
 		name               string
-		testStruct         interface{}
+		testStruct         any
 		args               []string
 		expectedError      string
 		errorShouldContain []string
@@ -524,7 +524,7 @@ func TestHelpWithDefaults(t *testing.T) {
 func TestErrorHandlingEdgeCases(t *testing.T) {
 	testCases := []struct {
 		name        string
-		testStruct  interface{}
+		testStruct  any
 		args        []string
 		expectError bool
 	}{

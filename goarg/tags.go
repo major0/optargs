@@ -1,14 +1,16 @@
 package goarg
 
 import (
+	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 
 	"github.com/major0/optargs"
 )
 
-// StructMetadata represents parsed struct information
+// StructMetadata represents parsed struct information.
 type StructMetadata struct {
 	Fields             []FieldMetadata
 	Options            []FieldMetadata // non-positional, non-subcommand, has CLI flag
@@ -27,7 +29,7 @@ type PrefixPair struct {
 	False string // e.g. "disable"
 }
 
-// FieldMetadata represents a single struct field's CLI mapping
+// FieldMetadata represents a single struct field's CLI mapping.
 type FieldMetadata struct {
 	Name       string
 	FieldIndex int // struct field index for reflect.Value.Field(i) — avoids FieldByName
@@ -39,7 +41,7 @@ type FieldMetadata struct {
 	Required   bool
 	Positional bool
 	Env        string
-	Default    interface{}
+	Default    any
 	DefaultTag string // raw default tag string, pre-parsed
 	HasDefault bool   // true when a `default:` tag is present (even if empty)
 
@@ -56,13 +58,15 @@ type FieldMetadata struct {
 	ArgType  optargs.ArgType
 }
 
-// TagParser processes struct tags - identical behavior to alexflint/go-arg
+// TagParser processes struct tags - identical behavior to alexflint/go-arg.
 type TagParser struct{}
 
-// ParseStruct parses a struct and returns its metadata
-func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
+// ParseStruct parses a struct and returns its metadata.
+//
+//nolint:gocognit,gocyclo,cyclop // struct tag parsing handles many field types, tags, and validation rules
+func (tp *TagParser) ParseStruct(dest any) (*StructMetadata, error) {
 	if dest == nil {
-		return nil, fmt.Errorf("destination cannot be nil")
+		return nil, errors.New("destination cannot be nil")
 	}
 
 	destValue := reflect.ValueOf(dest)
@@ -87,7 +91,7 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 	}
 
 	// Parse each field in the struct
-	for i := 0; i < structType.NumField(); i++ {
+	for i := range structType.NumField() {
 		field := structType.Field(i)
 
 		// Skip unexported non-embedded fields. Embedded structs may
@@ -123,18 +127,10 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 			metadata.Options = append(metadata.Options, subMeta.Options...)
 			metadata.Positionals = append(metadata.Positionals, subMeta.Positionals...)
 			metadata.EnvOnly = append(metadata.EnvOnly, subMeta.EnvOnly...)
-			for k, v := range subMeta.Subcommands {
-				metadata.Subcommands[k] = v
-			}
-			for k, v := range subMeta.SubcommandHelp {
-				metadata.SubcommandHelp[k] = v
-			}
-			for k, v := range subMeta.SubcommandFields {
-				metadata.SubcommandFields[k] = v
-			}
-			for k, v := range subMeta.SubcommandFieldIdx {
-				metadata.SubcommandFieldIdx[k] = v
-			}
+			maps.Copy(metadata.Subcommands, subMeta.Subcommands)
+			maps.Copy(metadata.SubcommandHelp, subMeta.SubcommandHelp)
+			maps.Copy(metadata.SubcommandFields, subMeta.SubcommandFields)
+			maps.Copy(metadata.SubcommandFieldIdx, subMeta.SubcommandFieldIdx)
 			continue
 		}
 
@@ -149,7 +145,7 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 		}
 
 		// Handle subcommands
-		if fieldMetadata.IsSubcommand {
+		if fieldMetadata.IsSubcommand { //nolint:nestif // subcommand registration requires conditional name derivation + recursive parse
 			subcommandName := fieldMetadata.SubcommandName
 			if subcommandName == "" {
 				subcommandName = strings.ToLower(field.Name)
@@ -162,7 +158,7 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 			// Parse the subcommand struct for metadata only
 			fieldValue := destElem.Field(i)
 			if fieldValue.Kind() == reflect.Ptr {
-				var subInstance interface{}
+				var subInstance any
 				wasNil := fieldValue.IsNil()
 
 				if wasNil {
@@ -187,11 +183,12 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 			}
 		} else {
 			metadata.Fields = append(metadata.Fields, *fieldMetadata)
-			if fieldMetadata.Positional {
+			switch {
+			case fieldMetadata.Positional:
 				metadata.Positionals = append(metadata.Positionals, *fieldMetadata)
-			} else if fieldMetadata.Short == "" && fieldMetadata.Long == "" && fieldMetadata.Env != "" {
+			case fieldMetadata.Short == "" && fieldMetadata.Long == "" && fieldMetadata.Env != "":
 				metadata.EnvOnly = append(metadata.EnvOnly, *fieldMetadata)
-			} else {
+			default:
 				metadata.Options = append(metadata.Options, *fieldMetadata)
 			}
 		}
@@ -200,7 +197,7 @@ func (tp *TagParser) ParseStruct(dest interface{}) (*StructMetadata, error) {
 	return metadata, nil
 }
 
-// ParseField parses a single struct field and returns its metadata
+// ParseField parses a single struct field and returns its metadata.
 func (tp *TagParser) ParseField(field reflect.StructField, fieldIndex int) (*FieldMetadata, error) {
 	metadata := &FieldMetadata{
 		Name:       field.Name,
@@ -271,7 +268,7 @@ func (tp *TagParser) ParseField(field reflect.StructField, fieldIndex int) (*Fie
 	return metadata, nil
 }
 
-// parseArgTag parses the 'arg' struct tag and populates metadata
+// parseArgTag parses the 'arg' struct tag and populates metadata.
 func (tp *TagParser) parseArgTag(metadata *FieldMetadata, argTag string) error {
 	// Handle different arg tag formats:
 	// 1. "-v,--verbose" - short and long options
@@ -336,15 +333,15 @@ func (tp *TagParser) parseArgTag(metadata *FieldMetadata, argTag string) error {
 
 // parseDefaultValue parses a default value string into the appropriate type
 // using optargs.Convert and optargs.ConvertSlice.
-func (tp *TagParser) parseDefaultValue(defaultStr string, fieldType reflect.Type) (interface{}, error) {
+func (tp *TagParser) parseDefaultValue(defaultStr string, fieldType reflect.Type) (any, error) {
 	if fieldType.Kind() == reflect.Slice {
 		return optargs.ConvertSlice(defaultStr, fieldType)
 	}
 	return optargs.Convert(defaultStr, fieldType)
 }
 
-// mapToOptArgsCore maps field metadata to OptArgs Core structures
-func (tp *TagParser) mapToOptArgsCore(metadata *FieldMetadata) error {
+// mapToOptArgsCore maps field metadata to OptArgs Core structures.
+func (tp *TagParser) mapToOptArgsCore(metadata *FieldMetadata) error { //nolint:unparam // error return reserved for future validation
 	if metadata.Positional || metadata.IsSubcommand {
 		// Positional arguments and subcommands don't map to OptArgs Core flags
 		return nil
@@ -395,17 +392,17 @@ func (tp *TagParser) mapToOptArgsCore(metadata *FieldMetadata) error {
 	return nil
 }
 
-// ValidateFieldMetadata validates that field metadata is consistent and complete
+// ValidateFieldMetadata validates that field metadata is consistent and complete.
 func (tp *TagParser) ValidateFieldMetadata(metadata *FieldMetadata) error {
 	// Positional arguments cannot have short/long options
 	if metadata.Positional && (metadata.Short != "" || metadata.Long != "") {
-		return fmt.Errorf("positional argument cannot have option flags")
+		return errors.New("positional argument cannot have option flags")
 	}
 
 	// Subcommands must be pointer to struct
 	if metadata.IsSubcommand {
 		if metadata.Type.Kind() != reflect.Ptr || metadata.Type.Elem().Kind() != reflect.Struct {
-			return fmt.Errorf("subcommand field must be pointer to struct")
+			return errors.New("subcommand field must be pointer to struct")
 		}
 	}
 
@@ -445,7 +442,7 @@ func toScreamingSnake(name string) string {
 		if r >= 'a' && r <= 'z' {
 			result = append(result, byte(r-32)) // to uppercase
 		} else {
-			result = append(result, byte(r))
+			result = append(result, byte(r)) //nolint:gosec // ASCII-only conversion, rune is validated by context
 		}
 	}
 	return string(result)

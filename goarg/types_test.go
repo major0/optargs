@@ -9,9 +9,9 @@ import (
 // for all supported types.
 var migratedConversionTests = []struct {
 	name  string
-	dest  interface{}
+	dest  any
 	args  []string
-	check func(t *testing.T, dest interface{})
+	check func(t *testing.T, dest any)
 }{
 	{
 		name: "bool_flag",
@@ -19,7 +19,7 @@ var migratedConversionTests = []struct {
 			Verbose bool `arg:"-v,--verbose"`
 		}{},
 		args: []string{"--verbose"},
-		check: func(t *testing.T, dest interface{}) {
+		check: func(t *testing.T, dest any) {
 			t.Helper()
 			s := dest.(*struct {
 				Verbose bool `arg:"-v,--verbose"`
@@ -35,7 +35,7 @@ var migratedConversionTests = []struct {
 			Count int `arg:"-c,--count"`
 		}{},
 		args: []string{"--count", "42"},
-		check: func(t *testing.T, dest interface{}) {
+		check: func(t *testing.T, dest any) {
 			t.Helper()
 			s := dest.(*struct {
 				Count int `arg:"-c,--count"`
@@ -51,7 +51,7 @@ var migratedConversionTests = []struct {
 			Rate float64 `arg:"--rate"`
 		}{},
 		args: []string{"--rate", "3.14"},
-		check: func(t *testing.T, dest interface{}) {
+		check: func(t *testing.T, dest any) {
 			t.Helper()
 			s := dest.(*struct {
 				Rate float64 `arg:"--rate"`
@@ -67,7 +67,7 @@ var migratedConversionTests = []struct {
 			Name string `arg:"-n,--name"`
 		}{},
 		args: []string{"--name", "hello"},
-		check: func(t *testing.T, dest interface{}) {
+		check: func(t *testing.T, dest any) {
 			t.Helper()
 			s := dest.(*struct {
 				Name string `arg:"-n,--name"`
@@ -83,7 +83,7 @@ var migratedConversionTests = []struct {
 			Nums []int `arg:"-n,--num"`
 		}{},
 		args: []string{"--num", "1", "--num", "2", "--num", "3"},
-		check: func(t *testing.T, dest interface{}) {
+		check: func(t *testing.T, dest any) {
 			t.Helper()
 			s := dest.(*struct {
 				Nums []int `arg:"-n,--num"`
@@ -99,7 +99,7 @@ var migratedConversionTests = []struct {
 			Port int `arg:"--port" default:"8080"`
 		}{},
 		args: []string{},
-		check: func(t *testing.T, dest interface{}) {
+		check: func(t *testing.T, dest any) {
 			t.Helper()
 			s := dest.(*struct {
 				Port int `arg:"--port" default:"8080"`
@@ -115,7 +115,7 @@ var migratedConversionTests = []struct {
 			Host string `arg:"--host" default:"localhost"`
 		}{},
 		args: []string{},
-		check: func(t *testing.T, dest interface{}) {
+		check: func(t *testing.T, dest any) {
 			t.Helper()
 			s := dest.(*struct {
 				Host string `arg:"--host" default:"localhost"`
@@ -131,7 +131,7 @@ var migratedConversionTests = []struct {
 			File string `arg:"positional"`
 		}{},
 		args: []string{"input.txt"},
-		check: func(t *testing.T, dest interface{}) {
+		check: func(t *testing.T, dest any) {
 			t.Helper()
 			s := dest.(*struct {
 				File string `arg:"positional"`
@@ -147,7 +147,7 @@ var migratedConversionTests = []struct {
 			Verbose bool `arg:"-v"`
 		}{},
 		args: []string{"-v"},
-		check: func(t *testing.T, dest interface{}) {
+		check: func(t *testing.T, dest any) {
 			t.Helper()
 			s := dest.(*struct {
 				Verbose bool `arg:"-v"`
@@ -163,7 +163,7 @@ var migratedConversionTests = []struct {
 			Port int `arg:"--port" default:"8080"`
 		}{},
 		args: []string{"--port", "9090"},
-		check: func(t *testing.T, dest interface{}) {
+		check: func(t *testing.T, dest any) {
 			t.Helper()
 			s := dest.(*struct {
 				Port int `arg:"--port" default:"8080"`

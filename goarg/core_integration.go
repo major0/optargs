@@ -2,6 +2,7 @@ package goarg
 
 import (
 	"encoding"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -11,7 +12,7 @@ import (
 	"github.com/major0/optargs"
 )
 
-// CoreIntegration handles direct translation to OptArgs Core
+// CoreIntegration handles direct translation to OptArgs Core.
 type CoreIntegration struct {
 	metadata    *StructMetadata
 	config      Config
@@ -19,14 +20,14 @@ type CoreIntegration struct {
 	setFields   map[int]bool // tracks field indices explicitly set during parsing
 }
 
-// PositionalArg represents a positional argument
+// PositionalArg represents a positional argument.
 type PositionalArg struct {
 	Field    *FieldMetadata
 	Required bool
 	Multiple bool
 }
 
-// buildPositionalArgs builds the list of positional arguments
+// buildPositionalArgs builds the list of positional arguments.
 func (ci *CoreIntegration) buildPositionalArgs() {
 	ci.positionals = make([]PositionalArg, 0, len(ci.metadata.Positionals))
 
@@ -42,14 +43,16 @@ func (ci *CoreIntegration) buildPositionalArgs() {
 
 // Cached reflect.Type for time.Duration and TextUnmarshaler interface.
 var (
-	durationType         = reflect.TypeOf(time.Duration(0))
-	durationSliceType    = reflect.TypeOf([]time.Duration{})
-	textUnmarshalerIface = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+	durationType         = reflect.TypeFor[time.Duration]()
+	durationSliceType    = reflect.TypeFor[[]time.Duration]()
+	textUnmarshalerIface = reflect.TypeFor[encoding.TextUnmarshaler]()
 )
 
 // typedValueForField creates an optargs.TypedValue backed by a pointer to
 // the struct field's storage. Type dispatch happens once here at setup time;
 // the returned TypedValue handles all subsequent Set() calls.
+//
+//nolint:gocyclo,cyclop,funlen // type switch over all supported Go types is inherently branchy
 func typedValueForField(fieldValue reflect.Value, field *FieldMetadata) (optargs.TypedValue, error) {
 	ft := field.Type
 
@@ -63,7 +66,7 @@ func typedValueForField(fieldValue reflect.Value, field *FieldMetadata) (optargs
 	// slice/scalar switch below.
 	ptrType := reflect.PointerTo(ft)
 	if ptrType.Implements(textUnmarshalerIface) {
-		dest := fieldValue.Addr().Interface().(encoding.TextUnmarshaler)
+		dest := fieldValue.Addr().Interface().(encoding.TextUnmarshaler) //nolint:errcheck // type verified by Implements check above
 		var val encoding.TextMarshaler
 		if m, ok := dest.(encoding.TextMarshaler); ok {
 			val = m
@@ -73,53 +76,53 @@ func typedValueForField(fieldValue reflect.Value, field *FieldMetadata) (optargs
 
 	// time.Duration must be checked before int64 (same Kind).
 	if ft == durationType {
-		p := fieldValue.Addr().Interface().(*time.Duration)
+		p := fieldValue.Addr().Interface().(*time.Duration) //nolint:errcheck // type verified by ft == durationType check
 		return optargs.NewDurationValue(*p, p), nil
 	}
 
 	// Scalar types.
 	switch ft.Kind() {
 	case reflect.String:
-		p := fieldValue.Addr().Interface().(*string)
+		p := fieldValue.Addr().Interface().(*string) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewStringValue(*p, p), nil
 	case reflect.Bool:
-		p := fieldValue.Addr().Interface().(*bool)
+		p := fieldValue.Addr().Interface().(*bool) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewBoolValue(*p, p), nil
 	case reflect.Int:
-		p := fieldValue.Addr().Interface().(*int)
+		p := fieldValue.Addr().Interface().(*int) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewIntValue(*p, p), nil
 	case reflect.Int8:
-		p := fieldValue.Addr().Interface().(*int8)
+		p := fieldValue.Addr().Interface().(*int8) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewInt8Value(*p, p), nil
 	case reflect.Int16:
-		p := fieldValue.Addr().Interface().(*int16)
+		p := fieldValue.Addr().Interface().(*int16) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewInt16Value(*p, p), nil
 	case reflect.Int32:
-		p := fieldValue.Addr().Interface().(*int32)
+		p := fieldValue.Addr().Interface().(*int32) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewInt32Value(*p, p), nil
 	case reflect.Int64:
-		p := fieldValue.Addr().Interface().(*int64)
+		p := fieldValue.Addr().Interface().(*int64) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewInt64Value(*p, p), nil
 	case reflect.Uint:
-		p := fieldValue.Addr().Interface().(*uint)
+		p := fieldValue.Addr().Interface().(*uint) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewUintValue(*p, p), nil
 	case reflect.Uint8:
-		p := fieldValue.Addr().Interface().(*uint8)
+		p := fieldValue.Addr().Interface().(*uint8) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewUint8Value(*p, p), nil
 	case reflect.Uint16:
-		p := fieldValue.Addr().Interface().(*uint16)
+		p := fieldValue.Addr().Interface().(*uint16) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewUint16Value(*p, p), nil
 	case reflect.Uint32:
-		p := fieldValue.Addr().Interface().(*uint32)
+		p := fieldValue.Addr().Interface().(*uint32) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewUint32Value(*p, p), nil
 	case reflect.Uint64:
-		p := fieldValue.Addr().Interface().(*uint64)
+		p := fieldValue.Addr().Interface().(*uint64) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewUint64Value(*p, p), nil
 	case reflect.Float32:
-		p := fieldValue.Addr().Interface().(*float32)
+		p := fieldValue.Addr().Interface().(*float32) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewFloat32Value(*p, p), nil
 	case reflect.Float64:
-		p := fieldValue.Addr().Interface().(*float64)
+		p := fieldValue.Addr().Interface().(*float64) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewFloat64Value(*p, p), nil
 
 	case reflect.Slice:
@@ -136,34 +139,34 @@ func typedValueForField(fieldValue reflect.Value, field *FieldMetadata) (optargs
 func typedValueForSlice(fieldValue reflect.Value, ft reflect.Type) (optargs.TypedValue, error) {
 	// []time.Duration must be checked before []int64.
 	if ft == durationSliceType {
-		p := fieldValue.Addr().Interface().(*[]time.Duration)
+		p := fieldValue.Addr().Interface().(*[]time.Duration) //nolint:errcheck // type verified by ft.Kind()+ft.Elem() switch
 		return optargs.NewDurationSliceValue(*p, p), nil
 	}
 
 	switch ft.Elem().Kind() {
 	case reflect.String:
-		p := fieldValue.Addr().Interface().(*[]string)
+		p := fieldValue.Addr().Interface().(*[]string) //nolint:errcheck // type verified by ft.Kind()+ft.Elem() switch
 		return optargs.NewStringSliceValue(*p, p), nil
 	case reflect.Bool:
-		p := fieldValue.Addr().Interface().(*[]bool)
+		p := fieldValue.Addr().Interface().(*[]bool) //nolint:errcheck // type verified by ft.Kind()+ft.Elem() switch
 		return optargs.NewBoolSliceValue(*p, p), nil
 	case reflect.Int:
-		p := fieldValue.Addr().Interface().(*[]int)
+		p := fieldValue.Addr().Interface().(*[]int) //nolint:errcheck // type verified by ft.Kind()+ft.Elem() switch
 		return optargs.NewIntSliceValue(*p, p), nil
 	case reflect.Int32:
-		p := fieldValue.Addr().Interface().(*[]int32)
+		p := fieldValue.Addr().Interface().(*[]int32) //nolint:errcheck // type verified by ft.Kind()+ft.Elem() switch
 		return optargs.NewInt32SliceValue(*p, p), nil
 	case reflect.Int64:
-		p := fieldValue.Addr().Interface().(*[]int64)
+		p := fieldValue.Addr().Interface().(*[]int64) //nolint:errcheck // type verified by ft.Kind()+ft.Elem() switch
 		return optargs.NewInt64SliceValue(*p, p), nil
 	case reflect.Uint:
-		p := fieldValue.Addr().Interface().(*[]uint)
+		p := fieldValue.Addr().Interface().(*[]uint) //nolint:errcheck // type verified by ft.Kind()+ft.Elem() switch
 		return optargs.NewUintSliceValue(*p, p), nil
 	case reflect.Float32:
-		p := fieldValue.Addr().Interface().(*[]float32)
+		p := fieldValue.Addr().Interface().(*[]float32) //nolint:errcheck // type verified by ft.Kind()+ft.Elem() switch
 		return optargs.NewFloat32SliceValue(*p, p), nil
 	case reflect.Float64:
-		p := fieldValue.Addr().Interface().(*[]float64)
+		p := fieldValue.Addr().Interface().(*[]float64) //nolint:errcheck // type verified by ft.Kind()+ft.Elem() switch
 		return optargs.NewFloat64SliceValue(*p, p), nil
 	}
 
@@ -178,13 +181,13 @@ func typedValueForMap(fieldValue reflect.Value, ft reflect.Type) (optargs.TypedV
 
 	switch ft.Elem().Kind() {
 	case reflect.String:
-		p := fieldValue.Addr().Interface().(*map[string]string)
+		p := fieldValue.Addr().Interface().(*map[string]string) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewStringToStringValue(*p, p), nil
 	case reflect.Int:
-		p := fieldValue.Addr().Interface().(*map[string]int)
+		p := fieldValue.Addr().Interface().(*map[string]int) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewStringToIntValue(*p, p), nil
 	case reflect.Int64:
-		p := fieldValue.Addr().Interface().(*map[string]int64)
+		p := fieldValue.Addr().Interface().(*map[string]int64) //nolint:errcheck // type verified by ft.Kind() switch
 		return optargs.NewStringToInt64Value(*p, p), nil
 	}
 
@@ -236,7 +239,7 @@ func (v *ptrValue) IsBoolFlag() bool {
 	return v.elemType.Kind() == reflect.Bool
 }
 
-// processPositionalArgs processes positional arguments from remaining args
+// processPositionalArgs processes positional arguments from remaining args.
 func (ci *CoreIntegration) processPositionalArgs(parser *optargs.Parser, destValue reflect.Value) error {
 	remainingArgs := parser.Args
 	argIndex := 0
@@ -254,7 +257,7 @@ func (ci *CoreIntegration) processPositionalArgs(parser *optargs.Parser, destVal
 			return fmt.Errorf("positional field %s: %w", field.Name, err)
 		}
 
-		if positional.Multiple {
+		if positional.Multiple { //nolint:nestif // multiple-positional setup requires conditional slice init + flag registration
 			// Initialize to empty slice (not nil) for consistency with
 			// the old reflect.MakeSlice behavior.
 			if fieldValue.IsNil() {
@@ -284,14 +287,15 @@ func (ci *CoreIntegration) processPositionalArgs(parser *optargs.Parser, destVal
 	return nil
 }
 
-// processEnvironmentVariables processes environment variable fallbacks
+// processEnvironmentVariables processes environment variable fallbacks.
 func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) error {
-	for _, field := range ci.metadata.Fields {
+	for i := range ci.metadata.Fields {
+		field := &ci.metadata.Fields[i]
 		if field.Env == "" {
 			continue
 		}
 
-		fieldValue := fieldByMeta(destValue, &field)
+		fieldValue := fieldByMeta(destValue, field)
 		if !fieldValue.CanSet() {
 			continue
 		}
@@ -310,7 +314,7 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 			continue
 		}
 
-		tv, err := typedValueForField(fieldValue, &field)
+		tv, err := typedValueForField(fieldValue, field)
 		if err != nil {
 			return fmt.Errorf("env var %s for field %s: %w", field.Env, field.Name, err)
 		}
@@ -325,12 +329,13 @@ func (ci *CoreIntegration) processEnvironmentVariables(destValue reflect.Value) 
 // setDefaultValues sets default values for unset fields via TypedValue.Set().
 // Uses pre-parsed HasDefault and DefaultTag from struct metadata.
 func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
-	for _, field := range ci.metadata.Fields {
+	for i := range ci.metadata.Fields {
+		field := &ci.metadata.Fields[i]
 		if !field.HasDefault {
 			continue
 		}
 
-		fieldValue := fieldByMeta(destValue, &field)
+		fieldValue := fieldByMeta(destValue, field)
 		if !fieldValue.IsValid() || !fieldValue.CanSet() {
 			continue
 		}
@@ -344,7 +349,7 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 			continue
 		}
 
-		tv, err := typedValueForField(fieldValue, &field)
+		tv, err := typedValueForField(fieldValue, field)
 		if err != nil {
 			return fmt.Errorf("default for field %s: %w", field.Name, err)
 		}
@@ -356,7 +361,7 @@ func (ci *CoreIntegration) setDefaultValues(destValue reflect.Value) error {
 	return nil
 }
 
-// isFieldSet checks if a field has been set (not zero value)
+// isFieldSet checks if a field has been set (not zero value).
 func (ci *CoreIntegration) isFieldSet(fieldValue reflect.Value) bool {
 	return !isZeroValue(fieldValue)
 }
@@ -392,7 +397,7 @@ func (ci *CoreIntegration) makeHandler(field *FieldMetadata, destValue reflect.V
 		return nil, err
 	}
 	idx := field.FieldIndex
-	return func(name, arg string) error {
+	return func(_, arg string) error {
 		if arg == "" {
 			if _, ok := tv.(optargs.BoolValuer); ok {
 				if err := tv.Set("true"); err != nil {
@@ -457,7 +462,8 @@ func (ci *CoreIntegration) buildFlags(destValue reflect.Value) (map[byte]*optarg
 		hasShort := field.Short != ""
 		hasLong := field.Long != ""
 
-		if hasShort && hasLong {
+		switch {
+		case hasShort && hasLong:
 			// Both short and long — one shared Flag in both maps.
 			flag := &optargs.Flag{
 				Name:         field.Short,
@@ -469,7 +475,7 @@ func (ci *CoreIntegration) buildFlags(destValue reflect.Value) (map[byte]*optarg
 			}
 			shortOpts[field.Short[0]] = flag
 			longOpts[field.Long] = flag
-		} else if hasShort {
+		case hasShort:
 			shortOpts[field.Short[0]] = &optargs.Flag{
 				Name:         field.Short,
 				HasArg:       field.ArgType,
@@ -478,7 +484,7 @@ func (ci *CoreIntegration) buildFlags(destValue reflect.Value) (map[byte]*optarg
 				DefaultValue: defVal,
 				Handle:       handler,
 			}
-		} else if hasLong {
+		case hasLong:
 			longOpts[field.Long] = &optargs.Flag{
 				Name:         field.Long,
 				HasArg:       field.ArgType,
@@ -718,23 +724,24 @@ func (ci *CoreIntegration) PostParse(coreParser *optargs.Parser, destValue refle
 }
 
 // validateRequired validates that all required fields have been set.
-func validateRequired(dest interface{}, metadata *StructMetadata) error {
+func validateRequired(dest any, metadata *StructMetadata) error {
 	destValue := reflect.ValueOf(dest)
 	if destValue.Kind() != reflect.Ptr {
-		return fmt.Errorf("destination must be a pointer")
+		return errors.New("destination must be a pointer")
 	}
 
 	destElem := destValue.Elem()
 	if destElem.Kind() != reflect.Struct {
-		return fmt.Errorf("destination must be a pointer to a struct")
+		return errors.New("destination must be a pointer to a struct")
 	}
 
-	for _, field := range metadata.Fields {
+	for i := range metadata.Fields {
+		field := &metadata.Fields[i]
 		if !field.Required {
 			continue
 		}
 
-		fieldValue := fieldByMeta(destElem, &field)
+		fieldValue := fieldByMeta(destElem, field)
 		if !fieldValue.IsValid() {
 			continue
 		}
@@ -774,14 +781,14 @@ func isZeroValue(v reflect.Value) bool {
 	case reflect.Slice, reflect.Map, reflect.Chan:
 		return v.IsNil() || v.Len() == 0
 	case reflect.Array:
-		for i := 0; i < v.Len(); i++ {
+		for i := range v.Len() {
 			if !isZeroValue(v.Index(i)) {
 				return false
 			}
 		}
 		return true
 	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
+		for i := range v.NumField() {
 			if !isZeroValue(v.Field(i)) {
 				return false
 			}

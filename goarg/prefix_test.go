@@ -19,7 +19,7 @@ func TestPrefixTagParsing(t *testing.T) {
 			name: "single pair",
 			field: reflect.StructField{
 				Name: "Shared",
-				Type: reflect.TypeOf(false),
+				Type: reflect.TypeFor[bool](),
 				Tag:  `arg:"--shared" prefix:"enable,disable"`,
 			},
 			wantPairs: 1,
@@ -30,7 +30,7 @@ func TestPrefixTagParsing(t *testing.T) {
 			name: "multiple pairs",
 			field: reflect.StructField{
 				Name: "Shared",
-				Type: reflect.TypeOf(false),
+				Type: reflect.TypeFor[bool](),
 				Tag:  `arg:"--shared" prefix:"enable,disable;with,without"`,
 			},
 			wantPairs: 2,
@@ -41,7 +41,7 @@ func TestPrefixTagParsing(t *testing.T) {
 			name: "malformed tag no comma",
 			field: reflect.StructField{
 				Name: "Shared",
-				Type: reflect.TypeOf(false),
+				Type: reflect.TypeFor[bool](),
 				Tag:  `arg:"--shared" prefix:"enable"`,
 			},
 			wantErr: "invalid prefix pair",
@@ -50,7 +50,7 @@ func TestPrefixTagParsing(t *testing.T) {
 			name: "prefix on non-boolean field",
 			field: reflect.StructField{
 				Name: "Sysroot",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 				Tag:  `arg:"--sysroot" prefix:"enable,disable"`,
 			},
 			wantErr: "prefix tag on non-boolean field",
@@ -94,7 +94,7 @@ func TestNegatableTagParsing(t *testing.T) {
 	t.Run("negatable on non-bool sets field", func(t *testing.T) {
 		field := reflect.StructField{
 			Name: "Sysroot",
-			Type: reflect.TypeOf(""),
+			Type: reflect.TypeFor[string](),
 			Tag:  `arg:"--sysroot" negatable:""`,
 		}
 		meta, err := tp.ParseField(field, 0)
@@ -109,7 +109,7 @@ func TestNegatableTagParsing(t *testing.T) {
 	t.Run("negatable on bool silently ignored", func(t *testing.T) {
 		field := reflect.StructField{
 			Name: "Verbose",
-			Type: reflect.TypeOf(false),
+			Type: reflect.TypeFor[bool](),
 			Tag:  `arg:"--verbose" negatable:""`,
 		}
 		meta, err := tp.ParseField(field, 0)
