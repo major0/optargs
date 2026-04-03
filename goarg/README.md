@@ -77,30 +77,30 @@ Known divergences are documented in `expected_diffs.go`.
 
 ## Feature Comparison
 
-| Feature | Upstream go-arg | goarg/ (compat) | OptArgs-exclusive |
-|---------|:-:|:-:|:-:|
-| Struct tag parsing | ✅ | ✅ | — |
-| Short/long options | ✅ | ✅ | — |
-| Positional arguments | ✅ | ✅ | — |
-| Subcommands | ✅ | ✅ | — |
-| Environment variable fallback | ✅ | ✅ | — |
-| Env-only fields | ✅ | ✅ | — |
-| Default values | ✅ | ✅ | — |
-| Map types | ✅ | ⚠️¹ | — |
-| Slice types (repeated flags) | ✅ | ⚠️² | — |
-| Embedded struct inheritance | ✅ | ✅ | — |
-| Versioned/Described/Epilogued | ✅ | ✅ | — |
-| ErrHelp/ErrVersion sentinels | ✅ | ✅ | — |
-| Builtin help/version flags | ✅ | ✅ | — |
-| Subcommand()/SubcommandNames() | ✅ | ✅ | — |
-| POSIX short-option compaction (-abc) | ❌ | — | ✅ |
-| GNU longest-match option resolution | ❌ | — | ✅ |
-| Boolean negation (--no-flag) | ❌ | ❌ | — |
-| `--` termination | ❌ | — | ✅ |
-| Parent flag inheritance across subcommands (alexflint/go-arg#101) | ❌ | — | ✅ |
-| Case-insensitive subcommand matching | ❌ | — | ✅ |
-| getopt_long_only mode | ❌ | ❌ | — |
-| Interspersed argument handling | ❌ | ❌ | — |
+| Feature | Upstream go-arg | goarg/ (compat) |
+|---------|:-:|:-:|
+| Struct tag parsing | ✅ | ✅ |
+| Short/long options | ✅ | ✅ |
+| Positional arguments | ✅ | ✅ |
+| Subcommands | ✅ | ✅ |
+| Environment variable fallback | ✅ | ✅ |
+| Env-only fields | ✅ | ✅ |
+| Default values | ✅ | ✅ |
+| Map types | ✅ | ⚠️¹ |
+| Slice types (repeated flags) | ✅ | ⚠️² |
+| Embedded struct inheritance | ✅ | ✅ |
+| Versioned/Described/Epilogued | ✅ | ✅ |
+| ErrHelp/ErrVersion sentinels | ✅ | ✅ |
+| Builtin help/version flags | ✅ | ✅ |
+| Subcommand()/SubcommandNames() | ✅ | ✅ |
+| [POSIX short-option compaction (-abc)](../docs/short-option-compaction.md) | ❌ | ✅ |
+| [GNU longest-match option resolution](../docs/prefix-matching.md) | ❌ | ✅ |
+| [Boolean negation (--no-flag)](../docs/boolean-negation.md) | ❌ | ✅ |
+| `--` termination | ❌ | ✅ |
+| [Parent flag inheritance across subcommands](../docs/subcommand-inheritance.md) (alexflint/go-arg#101) | ❌ | ✅ |
+| Case-insensitive subcommand matching | ❌ | ✅ |
+| Interspersed argument handling | ❌ | ✅ |
+| getopt_long_only mode | ❌ | ❌ |
 
 ¹ Upstream resets map on each repeated flag; ours merges entries (POSIX semantics).
 ² Upstream resets slice on each repeated flag; ours appends (POSIX semantics).
