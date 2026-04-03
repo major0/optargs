@@ -784,6 +784,80 @@ func TestTripleEqualsOverlap(t *testing.T) {
 	}
 }
 
+// TestEqualsInNameLongestMatch verifies that when multiple registered option
+// names contain '=' and overlap as prefixes of each other, the parser always
+// resolves to the longest registered name at an '=' boundary. This is
+// longest-match, not prefix-abbreviation — "--foo" does NOT match "foobar".
+//
+// Registered options:
+//
+//	"foo"         RequiredArgument
+//	"foo=bar"     RequiredArgument
+//	"foo=bar=boo" RequiredArgument
+//
+// Each input must resolve to the longest registered name, with the remainder
+// after the next '=' treated as the argument value.
+func TestEqualsInNameLongestMatch(t *testing.T) {
+	longOpts := []Flag{
+		{Name: "foo", HasArg: RequiredArgument},
+		{Name: "foo=bar", HasArg: RequiredArgument},
+		{Name: "foo=bar=boo", HasArg: RequiredArgument},
+	}
+	tests := []struct {
+		name  string
+		input string
+		want  []Option
+	}{
+		{
+			name:  "foo gets value",
+			input: "--foo=value",
+			want:  []Option{{Name: "foo", Arg: "value", HasArg: true}},
+		},
+		{
+			name:  "foo=bar gets value",
+			input: "--foo=bar=value",
+			want:  []Option{{Name: "foo=bar", Arg: "value", HasArg: true}},
+		},
+		{
+			name:  "foo=bar=boo gets value",
+			input: "--foo=bar=boo=value",
+			want:  []Option{{Name: "foo=bar=boo", Arg: "value", HasArg: true}},
+		},
+		{
+			name:  "foo=bar exact with space arg",
+			input: "--foo=bar",
+			want:  []Option{{Name: "foo=bar", Arg: "", HasArg: false}},
+		},
+		{
+			name:  "foo=bar=boo exact with space arg",
+			input: "--foo=bar=boo",
+			want:  []Option{{Name: "foo=bar=boo", Arg: "", HasArg: false}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := []string{tt.input}
+			// For the "exact with space arg" cases, the flag has
+			// RequiredArgument but no value after '=' — this should
+			// consume the next argv element. Since we provide none,
+			// it will error. Adjust: provide a next arg for those.
+			if tt.want[0].Arg == "" && !tt.want[0].HasArg {
+				// These are exact-name matches where the registered
+				// name IS the full input (minus --). RequiredArgument
+				// means the next argv element is consumed.
+				args = append(args, "spacearg")
+				tt.want[0].Arg = "spacearg"
+				tt.want[0].HasArg = true
+			}
+			p, err := GetOptLong(args, "", longOpts)
+			if err != nil {
+				t.Fatalf("GetOptLong: %v", err)
+			}
+			assertOptions(t, requireParsedOptions(t, p), tt.want)
+		})
+	}
+}
+
 // TestObscureLongOptCharacters exercises long option names containing
 // characters that are valid isgraph() but unusual: brackets, braces,
 // dots, colons, tildes, etc. Per POSIX/GNU convention, any isgraph()

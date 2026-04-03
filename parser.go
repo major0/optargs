@@ -201,7 +201,7 @@ func (p *Parser) optErrorf(msg string, args ...any) error {
 	return p.optError(fmt.Sprintf(msg, args...))
 }
 
-//nolint:gocognit,gocyclo,cyclop // prefix matching with ancestor walk and ambiguity detection is inherently complex
+//nolint:gocognit,gocyclo,cyclop // longest-match resolution with ancestor walk and fallback search is inherently complex
 func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Option, error) {
 	// Fast path: exact match via direct map lookup (covers 95%+ of real usage).
 	// Walk self + ancestors for the exact key.
@@ -217,12 +217,13 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Optio
 		}
 	}
 
-	// Slow path: prefix matching. Find the longest matching prefix in a
-	// single pass — no slice allocation, no sort. Option names may contain
-	// '=' (e.g., "foo=bar"), so we cannot simply split on the first '='.
-	// Instead, for each registered option that is a prefix of the input,
-	// we check that the character immediately after the prefix is '=' (the
-	// name/value separator) or that the lengths match exactly.
+	// Slow path: longest-match resolution. Find the longest registered
+	// option name that matches the input at an '=' boundary. Option names
+	// may contain '=' (e.g., "foo=bar"), so we cannot simply split on the
+	// first '='. Instead, for each registered option that is a prefix of
+	// the input, we check that the character immediately after the option
+	// name is '=' (the name/value separator) or that the lengths match
+	// exactly. The longest such match wins.
 	var bestName string
 	var bestFlag *Flag
 	ambiguous := false
