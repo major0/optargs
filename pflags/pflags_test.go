@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"flag"
-	"fmt"
 	"net"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/major0/optargs"
 )
 
 // TestFlagSetCreation tests basic FlagSet creation and initialization.
@@ -467,26 +468,50 @@ func TestIsZeroValue(t *testing.T) {
 // TestTranslateError tests error translation from OptArgs Core to pflag format.
 func TestTranslateError(t *testing.T) {
 	tests := []struct {
-		name, input, want string
+		name string
+		err  error
+		want string
 	}{
-		{"nil", "", ""},
-		{"unknown long", "unknown option: verbose", "unknown flag: --verbose"},
-		{"unknown short", "unknown option: v", "unknown shorthand flag: 'v' in -v"},
-		{"unknown bare", "unknown option", "unknown flag: --"},
-		{"requires arg long", "option requires an argument: output", "flag needs an argument: --output"},
-		{"requires arg short", "option requires an argument: o", "flag needs an argument: 'o' in -o"},
-		{"requires arg bare", "option requires an argument", "flag needs an argument: --"},
-		{"passthrough", "some other error", "some other error"},
+		{
+			name: "nil",
+			err:  nil,
+			want: "",
+		},
+		{
+			name: "unknown long",
+			err:  &optargs.UnknownOptionError{Name: "verbose", IsShort: false},
+			want: "unknown flag: --verbose",
+		},
+		{
+			name: "unknown short",
+			err:  &optargs.UnknownOptionError{Name: "v", IsShort: true},
+			want: "unknown shorthand flag: 'v' in -v",
+		},
+		{
+			name: "requires arg long",
+			err:  &optargs.MissingArgumentError{Name: "output", IsShort: false},
+			want: "flag needs an argument: --output",
+		},
+		{
+			name: "requires arg short",
+			err:  &optargs.MissingArgumentError{Name: "o", IsShort: true},
+			want: "flag needs an argument: 'o' in -o",
+		},
+		{
+			name: "passthrough",
+			err:  errors.New("some other error"),
+			want: "some other error",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.input == "" {
+			if tt.err == nil {
 				if translateError(nil) != nil {
 					t.Error("translateError(nil) should return nil")
 				}
 				return
 			}
-			got := translateError(fmt.Errorf("%s", tt.input))
+			got := translateError(tt.err)
 			if got == nil || got.Error() != tt.want {
 				t.Errorf("got %v, want %q", got, tt.want)
 			}

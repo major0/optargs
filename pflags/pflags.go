@@ -240,37 +240,37 @@ func (f *FlagSet) makeNegatableHandler(flag *Flag) func(string, string) error {
 }
 
 // translateError converts OptArgs Core errors to pflag-compatible structured errors.
+// translateError converts OptArgs Core typed errors to pflag-compatible
+// structured errors. Uses errors.As() for reliable, refactor-safe
+// classification instead of string matching.
 func translateError(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	errMsg := err.Error()
-
-	switch {
-	case strings.Contains(errMsg, "unknown option"):
-		name := ""
-		if _, after, ok := strings.Cut(errMsg, ": "); ok {
-			name = after
+	var unknownErr *optargs.UnknownOptionError
+	if errors.As(err, &unknownErr) {
+		if unknownErr.IsShort {
+			return &NotExistError{
+				specifiedName:       unknownErr.Name,
+				specifiedShortnames: unknownErr.Name,
+			}
 		}
-		if len(name) == 1 {
-			return &NotExistError{specifiedName: name, specifiedShortnames: name}
-		}
-		return &NotExistError{specifiedName: name}
-
-	case strings.Contains(errMsg, "option requires an argument"):
-		name := ""
-		if _, after, ok := strings.Cut(errMsg, ": "); ok {
-			name = after
-		}
-		if len(name) == 1 {
-			return &ValueRequiredError{specifiedName: name, specifiedShortnames: name}
-		}
-		return &ValueRequiredError{specifiedName: name}
-
-	default:
-		return err
+		return &NotExistError{specifiedName: unknownErr.Name}
 	}
+
+	var missingErr *optargs.MissingArgumentError
+	if errors.As(err, &missingErr) {
+		if missingErr.IsShort {
+			return &ValueRequiredError{
+				specifiedName:       missingErr.Name,
+				specifiedShortnames: missingErr.Name,
+			}
+		}
+		return &ValueRequiredError{specifiedName: missingErr.Name}
+	}
+
+	return err
 }
 
 // Parse parses flag definitions from the argument list, which should not
