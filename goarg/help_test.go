@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/major0/optargs"
 )
 
 func TestHelpGeneration(t *testing.T) {
@@ -146,13 +148,13 @@ func TestErrorTranslation(t *testing.T) {
 	}{
 		{
 			name:     "unknown option",
-			input:    errors.New("unknown option --invalid"),
+			input:    &optargs.UnknownOptionError{Name: "invalid", IsShort: false},
 			context:  ParseContext{},
 			expected: "unrecognized argument: --invalid",
 		},
 		{
 			name:     "option requires argument",
-			input:    errors.New("option requires an argument --count"),
+			input:    &optargs.MissingArgumentError{Name: "count", IsShort: false},
 			context:  ParseContext{},
 			expected: "option requires an argument: --count",
 		},

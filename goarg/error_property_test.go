@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"testing/quick"
+
+	"github.com/major0/optargs"
 )
 
 // TestProperty7ErrorMessageCompatibility tests Property 7: Error Message Compatibility
@@ -338,13 +340,13 @@ func TestErrorTranslatorDirectly(t *testing.T) {
 	}{
 		{
 			name:     "unknown option translation",
-			input:    errors.New("parsing error: unknown option: test"),
+			input:    &optargs.UnknownOptionError{Name: "test", IsShort: false},
 			context:  ParseContext{},
 			expected: "unrecognized argument: --test",
 		},
 		{
 			name:     "option requires argument translation",
-			input:    errors.New("option requires an argument: count"),
+			input:    &optargs.MissingArgumentError{Name: "count", IsShort: false},
 			context:  ParseContext{},
 			expected: "option requires an argument: --count",
 		},

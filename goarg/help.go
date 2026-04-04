@@ -7,6 +7,8 @@ import (
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/major0/optargs"
 )
 
 // HelpGenerator generates help text identical to alexflint/go-arg.
@@ -240,8 +242,30 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 		return nil
 	}
 
+	// Typed error classification — use errors.As() for core parser errors.
+	var unknownErr *optargs.UnknownOptionError
+	if errors.As(err, &unknownErr) {
+		option := unknownErr.Name
+		if unknownErr.IsShort {
+			option = "-" + option
+		} else {
+			option = "--" + option
+		}
+		return fmt.Errorf("unrecognized argument: %s", option)
+	}
+
+	var missingErr *optargs.MissingArgumentError
+	if errors.As(err, &missingErr) {
+		option := missingErr.Name
+		if missingErr.IsShort {
+			option = "-" + option
+		} else {
+			option = "--" + option
+		}
+		return fmt.Errorf("option requires an argument: %s", option)
+	}
+
 	errMsg := err.Error()
-	originalMsg := errMsg
 
 	// Remove common prefixes that are internal implementation details
 	errMsg = strings.TrimPrefix(errMsg, "parsing error: ")
@@ -268,33 +292,19 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 		}
 	}
 
-	// Translate common OptArgs Core errors to alexflint/go-arg format
+	// Translate remaining errors (goarg-internal, not core parser errors)
 	switch {
-	case strings.Contains(originalMsg, "unknown option") || strings.Contains(errMsg, "unknown option"):
-		// Extract option name from error
-		option := extractOptionFromError(originalMsg)
-		return fmt.Errorf("unrecognized argument: %s", option)
-
-	case strings.Contains(originalMsg, "option requires an argument") || strings.Contains(errMsg, "option requires an argument"):
-		// Extract option name from error
-		option := extractOptionFromError(originalMsg)
-		return fmt.Errorf("option requires an argument: %s", option)
-
 	case strings.Contains(errMsg, "invalid argument") || strings.Contains(errMsg, "invalid syntax") || strings.Contains(errMsg, "invalid value"):
-		// Handle type conversion errors from optargs.Convert
 		if context.FieldName != "" {
 			return fmt.Errorf("invalid argument for --%s", context.FieldName)
 		}
 		return errors.New("invalid argument")
 
-	case strings.Contains(errMsg, "missing required") || strings.Contains(errMsg, "is required"):
-		// Handle missing required arguments
+	case strings.Contains(errMsg, "missing required") || strings.Contains(errMsg, " is required"):
 		if strings.Contains(errMsg, " is required") {
-			// Extract field name and convert to alexflint/go-arg format
 			parts := strings.Split(errMsg, " is required")
 			if len(parts) > 0 {
 				fieldName := strings.TrimSpace(parts[0])
-				// Remove leading dashes if present
 				fieldName = strings.TrimPrefix(fieldName, "--")
 				fieldName = strings.TrimPrefix(fieldName, "-")
 				return fmt.Errorf("required argument missing: %s", fieldName)
@@ -312,75 +322,18 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 		return errors.New("not enough positional arguments")
 
 	case strings.HasPrefix(errMsg, "--") || strings.HasPrefix(errMsg, "-"):
-		// This looks like an option name that was returned as an error
-		// This can happen when OptArgs Core returns just the option name
 		return fmt.Errorf("unrecognized argument: %s", errMsg)
 
 	default:
-		// For unrecognized errors, clean up and return
-		// Remove internal implementation details
 		cleanMsg := errMsg
 		if strings.Contains(cleanMsg, ": ") {
-			// Try to extract the most relevant part of the error
 			parts := strings.Split(cleanMsg, ": ")
 			if len(parts) > 1 {
-				// Take the last part which is usually the most specific error
 				cleanMsg = parts[len(parts)-1]
 			}
 		}
-		return fmt.Errorf("%s", cleanMsg)
+		return errors.New(cleanMsg)
 	}
-}
-
-// extractOptionFromError extracts the option name from an error message.
-func extractOptionFromError(errMsg string) string {
-	errMsg = strings.TrimPrefix(errMsg, "parsing error: ")
-
-	// Look for patterns like "--option" or "-o"
-	if idx := strings.Index(errMsg, "--"); idx != -1 {
-		return extractWord(errMsg, idx)
-	}
-	if idx := strings.Index(errMsg, "-"); idx != -1 {
-		return extractWord(errMsg, idx)
-	}
-
-	// Try known "prefix: optname" patterns
-	for _, prefix := range []string{"unknown option: ", "option requires an argument: "} {
-		if name, ok := extractAfterPrefix(errMsg, prefix); ok {
-			return name
-		}
-	}
-
-	return errMsg
-}
-
-// extractWord returns the contiguous non-whitespace, non-colon token starting at idx.
-func extractWord(s string, idx int) string {
-	end := idx + 1
-	for end < len(s) && s[end] != ' ' && s[end] != '\t' && s[end] != '\n' && s[end] != ':' {
-		end++
-	}
-	return s[idx:end]
-}
-
-// extractAfterPrefix extracts an option name after a known error prefix,
-// adding dash prefixes if needed.
-func extractAfterPrefix(errMsg, prefix string) (string, bool) {
-	if !strings.Contains(errMsg, prefix) {
-		return "", false
-	}
-	parts := strings.Split(errMsg, prefix)
-	if len(parts) < 2 {
-		return "", false
-	}
-	optName := strings.TrimSpace(parts[1])
-	if strings.HasPrefix(optName, "-") {
-		return optName, true
-	}
-	if len(optName) == 1 {
-		return "-" + optName, true
-	}
-	return "--" + optName, true
 }
 
 // ParseContext provides context for error translation.
