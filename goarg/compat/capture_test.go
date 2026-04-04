@@ -194,3 +194,76 @@ func TestUpstreamNoBooleanNegation(t *testing.T) {
 	}
 	// Expected: error (unknown argument --no-verbose)
 }
+
+// --- Upstream feature presence tests ---
+// These prove ✅ claims in the README comparison table by demonstrating
+// that upstream go-arg DOES support these features.
+
+// TestUpstreamDoubleHyphenTermination proves upstream supports -- termination.
+func TestUpstreamDoubleHyphenTermination(t *testing.T) {
+	type Args struct {
+		Name string   `arg:"--name"`
+		Rest []string `arg:"positional"`
+	}
+	var a Args
+	p, err := arg.NewParser(arg.Config{Program: "test"}, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Parse([]string{"--name", "val", "--", "--other", "pos"}); err != nil {
+		t.Fatalf("upstream should support -- termination: %v", err)
+	}
+	if a.Name != "val" {
+		t.Errorf("name = %q, want val", a.Name)
+	}
+	if len(a.Rest) != 2 || a.Rest[0] != "--other" || a.Rest[1] != "pos" {
+		t.Errorf("rest = %v, want [--other pos]", a.Rest)
+	}
+}
+
+// TestUpstreamParentFlagInheritance proves upstream supports parent flags in subcommands.
+func TestUpstreamParentFlagInheritance(t *testing.T) {
+	type ServeCmd struct {
+		Port int `arg:"--port" default:"8080"`
+	}
+	type Args struct {
+		Verbose bool      `arg:"-v,--verbose"`
+		Server  *ServeCmd `arg:"subcommand:server"`
+	}
+	var a Args
+	p, err := arg.NewParser(arg.Config{Program: "test"}, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Parse([]string{"server", "--verbose", "--port", "9090"}); err != nil {
+		t.Fatalf("upstream should support parent flag inheritance: %v", err)
+	}
+	if !a.Verbose {
+		t.Error("verbose should be true")
+	}
+	if a.Server == nil || a.Server.Port != 9090 {
+		t.Errorf("server = %v", a.Server)
+	}
+}
+
+// TestUpstreamInterspersedArgs proves upstream supports interspersed arguments.
+func TestUpstreamInterspersedArgs(t *testing.T) {
+	type Args struct {
+		Name string   `arg:"--name"`
+		Rest []string `arg:"positional"`
+	}
+	var a Args
+	p, err := arg.NewParser(arg.Config{Program: "test"}, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Parse([]string{"pos1", "--name", "val", "pos2"}); err != nil {
+		t.Fatalf("upstream should support interspersed args: %v", err)
+	}
+	if a.Name != "val" {
+		t.Errorf("name = %q, want val", a.Name)
+	}
+	if len(a.Rest) != 2 || a.Rest[0] != "pos1" || a.Rest[1] != "pos2" {
+		t.Errorf("rest = %v, want [pos1 pos2]", a.Rest)
+	}
+}

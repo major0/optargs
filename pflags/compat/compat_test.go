@@ -374,3 +374,44 @@ func TestUpstreamNoGetoptLongOnly(t *testing.T) {
 	// Upstream pflag has no SetLongOnly() API.
 	golden(t, "no_getopt_long_only", "upstream has no SetLongOnly API")
 }
+
+// TestUpstreamNoArbitraryOptionNames proves upstream pflag can't handle '=' in flag names.
+func TestUpstreamNoArbitraryOptionNames(t *testing.T) {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	var buf bytes.Buffer
+	fs.SetOutput(&buf)
+	fs.String("foo", "", "")
+	fs.String("foo=bar", "", "")
+	// Upstream splits on first '=', so --foo=bar=value gives foo="bar=value"
+	// instead of recognizing "foo=bar" as the flag name.
+	err := fs.Parse([]string{"--foo=bar=value"})
+	f := fs.Lookup("foo")
+	foobar := fs.Lookup("foo=bar")
+	golden(t, "no_arbitrary_option_names", fmt.Sprintf(
+		"err=%v foo=%q foo=bar=%q",
+		err, f.Value.String(), foobar.Value.String(),
+	))
+}
+
+// TestUpstreamNoManyToOneMapping proves upstream pflag has no alias/many-to-one API.
+func TestUpstreamNoManyToOneMapping(t *testing.T) {
+	// Upstream pflag has no AliasVar() or equivalent API to map multiple
+	// flag names to a single variable without registering separate flags.
+	golden(t, "no_many_to_one_mapping", "upstream has no AliasVar API")
+}
+
+// TestUpstreamNoBoolArgValuer proves upstream pflag treats all bools as OptionalArgument.
+func TestUpstreamNoBoolArgValuer(t *testing.T) {
+	// Upstream pflag has no BoolTakesArg() interface. All boolean flags
+	// are treated as OptionalArgument, which means Count flags can
+	// incorrectly consume the next positional argument.
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	var buf bytes.Buffer
+	fs.SetOutput(&buf)
+	var count int
+	fs.CountVarP(&count, "verbose", "v", "")
+	// With upstream, --verbose followed by a positional may misbehave
+	// because Count is treated like OptionalArgument.
+	err := fs.Parse([]string{"--verbose", "--verbose"})
+	golden(t, "no_bool_arg_valuer", fmt.Sprintf("err=%v count=%d", err, count))
+}

@@ -159,3 +159,43 @@ func TestOptArgsSubcommandQuery(t *testing.T) {
 		t.Errorf("SubcommandNames()[0] = %q, want serve", names[0])
 	}
 }
+
+// TestOptArgsBooleanNegation tests --no-<flag> negation through the goarg layer.
+func TestOptArgsBooleanNegation(t *testing.T) {
+	type Args struct {
+		Sysroot string `arg:"--sysroot" default:"/usr" negatable:""`
+	}
+	var a Args
+	p, err := NewParser(Config{Program: "test"}, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Parse([]string{"--no-sysroot"}); err != nil {
+		t.Fatal(err)
+	}
+	if a.Sysroot != "" {
+		t.Errorf("sysroot = %q, want empty (negated)", a.Sysroot)
+	}
+}
+
+// TestOptArgsInterspersedArgs tests that options and positionals can be interspersed.
+func TestOptArgsInterspersedArgs(t *testing.T) {
+	type Args struct {
+		Name string   `arg:"--name"`
+		Rest []string `arg:"positional"`
+	}
+	var a Args
+	p, err := NewParser(Config{Program: "test"}, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Parse([]string{"pos1", "--name", "val", "pos2"}); err != nil {
+		t.Fatal(err)
+	}
+	if a.Name != "val" {
+		t.Errorf("name = %q, want val", a.Name)
+	}
+	if len(a.Rest) != 2 || a.Rest[0] != "pos1" || a.Rest[1] != "pos2" {
+		t.Errorf("rest = %v, want [pos1 pos2]", a.Rest)
+	}
+}
