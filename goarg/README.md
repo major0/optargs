@@ -96,6 +96,7 @@ Known divergences are documented in `expected_diffs.go`.
 | [POSIX short-option compaction (-abc)](../docs/short-option-compaction.md) | ❌ | ✅ |
 | [GNU longest-match option resolution](../docs/prefix-matching.md) | ❌ | ✅ |
 | [Boolean negation (--no-flag)](../docs/boolean-negation.md) | ❌ | ✅ |
+| [Boolean prefix pairs (--enable/--disable)](../docs/boolean-prefix-pairs.md) | ❌ | ✅ |
 | `--` termination | ✅ | ✅ |
 | [Parent flag inheritance across subcommands](../docs/subcommand-inheritance.md) (alexflint/go-arg#101) | ✅ | ✅ |
 | Case-insensitive subcommand matching | ❌ | ✅ |

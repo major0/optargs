@@ -34,6 +34,7 @@ backed by OptArgs Core's POSIX/GNU getopt implementation.
 | [GNU longest-match option resolution](../docs/prefix-matching.md) | ❌ | ✅ |
 | [Arbitrary long option names (colons, =)](../docs/prefix-matching.md) | ❌ | ✅ |
 | [Boolean negation (--no-flag)](../docs/boolean-negation.md) (spf13/pflag#214, spf13/cobra#958) | ❌ | ✅ |
+| [Boolean prefix pairs (--enable/--disable)](../docs/boolean-prefix-pairs.md) | ❌ | ✅ |
 | [Short-only flags (no long name)](../docs/short-only-flags.md) (spf13/pflag#139, spf13/pflag#256) | ❌ | ✅ |
 | [Many-to-one flag mappings](../docs/many-to-one-mappings.md) | ❌ | ✅ |
 | [BoolArgValuer (NoArg vs OptionalArg)](../docs/bool-arg-valuer.md) (spf13/pflag#214) | ❌ | ✅ |
