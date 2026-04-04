@@ -201,6 +201,34 @@ func (p *Parser) optErrorf(msg string, args ...any) error {
 	return p.optError(fmt.Sprintf(msg, args...))
 }
 
+// Typed error helpers — construct typed errors with optional slog logging.
+// These replace optError/optErrorf for parse-time errors that compat layers
+// need to classify via errors.As().
+
+func (p *Parser) unknownOptionError(name string, isShort bool) error {
+	err := &UnknownOptionError{Name: name, IsShort: isShort}
+	if p.config.enableErrors {
+		slog.Error(err.Error())
+	}
+	return err
+}
+
+func (p *Parser) missingArgumentError(name string, isShort bool) error {
+	err := &MissingArgumentError{Name: name, IsShort: isShort}
+	if p.config.enableErrors {
+		slog.Error(err.Error())
+	}
+	return err
+}
+
+func (p *Parser) ambiguousOptionError(name string) error {
+	err := &AmbiguousOptionError{Name: name}
+	if p.config.enableErrors {
+		slog.Error(err.Error())
+	}
+	return err
+}
+
 //nolint:gocognit,gocyclo,cyclop // longest-match resolution with ancestor walk and fallback search is inherently complex
 func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Option, error) {
 	// Fast path: exact match via direct map lookup (covers 95%+ of real usage).
@@ -252,10 +280,10 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Optio
 	}
 
 	if bestFlag == nil {
-		return args, nil, Option{}, p.optError("unknown option: " + name)
+		return args, nil, Option{}, p.unknownOptionError(name, false)
 	}
 	if ambiguous {
-		return args, nil, Option{}, p.optError("ambiguous option: " + name)
+		return args, nil, Option{}, p.ambiguousOptionError(name)
 	}
 
 	if len(bestName) == len(name) {
@@ -291,7 +319,7 @@ func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Optio
 		if fallbackFlag != nil {
 			return args, fallbackFlag, Option{Name: fallbackName, HasArg: true, Arg: name[len(fallbackName)+1:]}, nil
 		}
-		return args, nil, Option{}, p.optError("unknown option: " + name)
+		return args, nil, Option{}, p.unknownOptionError(name, false)
 	}
 	return args, bestFlag, Option{Name: bestName, HasArg: true, Arg: name[len(bestName)+1:]}, nil
 }
@@ -322,7 +350,7 @@ func (p *Parser) resolveLongOpt(name string, flag *Flag, args []string) ([]strin
 	}
 
 	if flag.HasArg == RequiredArgument {
-		return args, nil, option, p.optError("option requires an argument: " + name)
+		return args, nil, option, p.missingArgumentError(name, false)
 	}
 
 	// OptionalArgument with no remaining args
@@ -363,7 +391,7 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 				option.Arg = word
 				word = ""
 			case len(args) == 0:
-				return args, word, nil, option, p.optError("option requires an argument: " + byteString(c))
+				return args, word, nil, option, p.missingArgumentError(byteString(c), true)
 			default:
 				option.Arg = args[0]
 				args = args[1:]
@@ -394,7 +422,7 @@ func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, str
 		return args, word, flag, option, nil
 	}
 
-	return args, word, nil, Option{}, p.optError("unknown option: " + byteString(c))
+	return args, word, nil, Option{}, p.unknownOptionError(byteString(c), true)
 }
 
 // lookupShortOpt finds a short option in this parser's shortOpts array,
@@ -443,7 +471,10 @@ func (p *Parser) tryLongOnly(
 
 	// Long match failed — fall back to short options per getopt_long_only(3).
 	if p.shortOptN == 0 {
-		err = p.optError(err.Error())
+		// Re-log the error that was suppressed during the probe.
+		if savedErrors {
+			slog.Error(err.Error())
+		}
 		return true, remaining, nil, option, err
 	}
 
