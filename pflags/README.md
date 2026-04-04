@@ -30,7 +30,7 @@ backed by OptArgs Core's POSIX/GNU getopt implementation.
 | IP/IPMask/IPNet | ✅ | ✅ |
 | TextVar | ✅ | ✅ |
 | Typed getters (GetBool, GetInt, etc.) | ✅ | ✅ |
-| [POSIX short-option compaction (-abc)](../docs/short-option-compaction.md) | ❌ | ✅ |
+| [POSIX short-option compaction (-abc)](../docs/short-option-compaction.md) | ✅ | ✅ |
 | [GNU longest-match option resolution](../docs/prefix-matching.md) | ❌ | ✅ |
 | [Arbitrary long option names (colons, =)](../docs/prefix-matching.md) | ❌ | ✅ |
 | [Boolean negation (--no-flag)](../docs/boolean-negation.md) (spf13/pflag#214, spf13/cobra#958) | ❌ | ✅ |

@@ -80,7 +80,7 @@ Known divergences are documented in `expected_diffs.go`.
 | Feature | Upstream go-arg | goarg/ (compat) |
 |---------|:-:|:-:|
 | Struct tag parsing | ✅ | ✅ |
-| Short/long options | ✅ | ✅ |
+| Short/long options | ⚠️³ | ✅ |
 | Positional arguments | ✅ | ✅ |
 | Subcommands | ✅ | ✅ |
 | Environment variable fallback | ✅ | ✅ |
@@ -96,16 +96,22 @@ Known divergences are documented in `expected_diffs.go`.
 | [POSIX short-option compaction (-abc)](../docs/short-option-compaction.md) | ❌ | ✅ |
 | [GNU longest-match option resolution](../docs/prefix-matching.md) | ❌ | ✅ |
 | [Boolean negation (--no-flag)](../docs/boolean-negation.md) | ❌ | ✅ |
-| `--` termination | ❌ | ✅ |
-| [Parent flag inheritance across subcommands](../docs/subcommand-inheritance.md) (alexflint/go-arg#101) | ❌ | ✅ |
+| `--` termination | ✅ | ✅ |
+| [Parent flag inheritance across subcommands](../docs/subcommand-inheritance.md) (alexflint/go-arg#101) | ✅ | ✅ |
 | Case-insensitive subcommand matching | ❌ | ✅ |
-| Interspersed argument handling | ❌ | ✅ |
-| getopt_long_only mode | ❌ | ❌ |
+| Interspersed argument handling | ✅ | ✅ |
+| [getopt_long_only mode](../docs/long-only-mode.md) | ⚠️⁴ | ❌ |
 
 ¹ Upstream resets map on each repeated flag; ours merges entries (POSIX semantics).
 ² Upstream resets slice on each repeated flag; ours appends (POSIX semantics).
+³ Upstream go-arg operates exclusively in `getopt_long_only(3)` mode — all options
+  (including `-v`) are parsed as long options. True POSIX short options and
+  compaction (`-abc`) are not supported. See footnote ⁴.
+⁴ Upstream go-arg is always in `getopt_long_only(3)` mode and cannot leave it.
+  Single-dash arguments like `-verbose` and `-v=true` are parsed as long options.
+  There is no way to enable true POSIX short-option behavior.
   See `expected_diffs.go` for all documented divergences.
-  Every ✅ and ❌ is backed by a test — see `compat/compat_test.go` and `goarg_optargs_test.go`.
+  Every ✅ and ❌ is backed by a test — see `compat/table_validation_test.go` and `table_validation_test.go`.
 
 ## Config
 
