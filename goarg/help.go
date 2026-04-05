@@ -236,7 +236,7 @@ type ErrorTranslator struct{}
 
 // TranslateError translates an error to go-arg compatible format.
 //
-//nolint:gocyclo,cyclop,gocognit // error translation maps many optargs error types to go-arg format
+//nolint:gocyclo,cyclop,gocognit,funlen // error translation maps many optargs error types to go-arg format
 func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error {
 	if err == nil {
 		return nil
@@ -263,6 +263,11 @@ func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error
 			option = "--" + option
 		}
 		return fmt.Errorf("option requires an argument: %s", option)
+	}
+
+	var unexpectedErr *optargs.UnexpectedArgumentError
+	if errors.As(err, &unexpectedErr) {
+		return fmt.Errorf("option does not take an argument: --%s", unexpectedErr.Name)
 	}
 
 	errMsg := err.Error()

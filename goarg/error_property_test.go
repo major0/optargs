@@ -122,7 +122,7 @@ func generateRandomErrorScenario(seed int) ErrorScenario {
 			}{},
 			args:         []string{"--flag=maybe"},
 			expectError:  true,
-			errorPattern: "unrecognized argument",
+			errorPattern: "does not take an argument",
 		},
 
 		// Valid scenarios (should not error)

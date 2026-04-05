@@ -1,6 +1,7 @@
 package optargs
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"testing/quick"
@@ -1462,4 +1463,299 @@ func TestAddCmdNilParser(t *testing.T) {
 	if !exists {
 		t.Error("nil command should still be registered")
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Feature: longonly-abbreviation — Example-based tests (Task 6)
+// ---------------------------------------------------------------------------
+
+// TestAbbreviationMatching exercises the prefix/abbreviation matching
+// algorithm in findLongOpt via the Options() iterator.
+// Requirements: 2.2, 2.3, 3.1, 4.2, 4.3
+func TestAbbreviationMatching(t *testing.T) {
+	tests := []struct {
+		name      string
+		longOpts  map[string]*Flag
+		args      []string
+		wantOpts  []Option // expected parsed options (nil when expecting error)
+		wantAmbig bool     // true if AmbiguousOptionError expected
+	}{
+		{
+			name: "unambiguous abbreviation resolves",
+			longOpts: map[string]*Flag{
+				"enable-foo": {Name: "enable-foo", HasArg: NoArgument},
+				"enable-bar": {Name: "enable-bar", HasArg: NoArgument},
+			},
+			args:     []string{"--enable-f"},
+			wantOpts: []Option{{Name: "enable-foo"}},
+		},
+		{
+			name: "ambiguous abbreviation returns error",
+			longOpts: map[string]*Flag{
+				"enable-foo": {Name: "enable-foo", HasArg: NoArgument},
+				"enable-bar": {Name: "enable-bar", HasArg: NoArgument},
+			},
+			args:      []string{"--enable"},
+			wantAmbig: true,
+		},
+		{
+			name: "three-way ambiguity returns error",
+			longOpts: map[string]*Flag{
+				"enable-foo": {Name: "enable-foo", HasArg: NoArgument},
+				"enable-bar": {Name: "enable-bar", HasArg: NoArgument},
+				"encrypt":    {Name: "encrypt", HasArg: NoArgument},
+			},
+			args:      []string{"--en"},
+			wantAmbig: true,
+		},
+		{
+			name: "unique prefix among multiple resolves",
+			longOpts: map[string]*Flag{
+				"enable-foo": {Name: "enable-foo", HasArg: NoArgument},
+				"enable-bar": {Name: "enable-bar", HasArg: NoArgument},
+				"encrypt":    {Name: "encrypt", HasArg: NoArgument},
+			},
+			args:     []string{"--enc"},
+			wantOpts: []Option{{Name: "encrypt"}},
+		},
+		{
+			name: "exact match priority over prefix matches",
+			longOpts: map[string]*Flag{
+				"enable":     {Name: "enable", HasArg: NoArgument},
+				"enable-foo": {Name: "enable-foo", HasArg: NoArgument},
+				"enable-bar": {Name: "enable-bar", HasArg: NoArgument},
+			},
+			args:     []string{"--enable"},
+			wantOpts: []Option{{Name: "enable"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, err := NewParser(ParserConfig{}, nil, tt.longOpts, tt.args)
+			if err != nil {
+				t.Fatalf("NewParser: %v", err)
+			}
+
+			if tt.wantAmbig {
+				var gotErr error
+				for _, err := range p.Options() {
+					if err != nil {
+						gotErr = err
+						break
+					}
+				}
+				if gotErr == nil {
+					t.Fatal("expected AmbiguousOptionError, got none")
+				}
+				var ambErr *AmbiguousOptionError
+				if !errors.As(gotErr, &ambErr) {
+					t.Errorf("error type = %T, want *AmbiguousOptionError; error = %v", gotErr, gotErr)
+				}
+			} else {
+				assertOptions(t, requireParsedOptions(t, p), tt.wantOpts)
+			}
+		})
+	}
+}
+
+// TestEqualsInNameInteractions exercises the rsplit-based matching when
+// registered option names contain '=' characters.
+// Requirements: 6.2, 6.3, 6.4, 6.5
+func TestEqualsInNameInteractions(t *testing.T) {
+	tests := []struct {
+		name     string
+		longOpts map[string]*Flag
+		args     []string
+		wantOpts []Option
+	}{
+		{
+			name: "exact match on name containing equals",
+			longOpts: map[string]*Flag{
+				"foo=bar": {Name: "foo=bar", HasArg: NoArgument},
+			},
+			args:     []string{"--foo=bar"},
+			wantOpts: []Option{{Name: "foo=bar"}},
+		},
+		{
+			name: "name containing equals with inline arg",
+			longOpts: map[string]*Flag{
+				"foo=bar": {Name: "foo=bar", HasArg: RequiredArgument},
+			},
+			args:     []string{"--foo=bar=value"},
+			wantOpts: []Option{{Name: "foo=bar", Arg: "value", HasArg: true}},
+		},
+		{
+			name: "both foo and foo=bar registered input foo=bar prefers exact",
+			longOpts: map[string]*Flag{
+				"foo":     {Name: "foo", HasArg: RequiredArgument},
+				"foo=bar": {Name: "foo=bar", HasArg: NoArgument},
+			},
+			args:     []string{"--foo=bar"},
+			wantOpts: []Option{{Name: "foo=bar"}},
+		},
+		{
+			name: "both foo and foo=bar registered input foo=baz matches foo",
+			longOpts: map[string]*Flag{
+				"foo":     {Name: "foo", HasArg: RequiredArgument},
+				"foo=bar": {Name: "foo=bar", HasArg: NoArgument},
+			},
+			args:     []string{"--foo=baz"},
+			wantOpts: []Option{{Name: "foo", Arg: "baz", HasArg: true}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, err := NewParser(ParserConfig{}, nil, tt.longOpts, tt.args)
+			if err != nil {
+				t.Fatalf("NewParser: %v", err)
+			}
+			assertOptions(t, requireParsedOptions(t, p), tt.wantOpts)
+		})
+	}
+}
+
+// TestLongOnlyMode exercises getopt_long_only(3) behavior: abbreviation
+// matching via single-dash, ambiguity blocking short fallback, zero-match
+// short fallback, required-arg consumption, single-char short preference,
+// and exact match over compaction.
+// Requirements: 2.4, 3.2, 4.4, 7.3, 7.4, 8.2
+func TestLongOnlyMode(t *testing.T) {
+	t.Run("long-only abbreviation resolves", func(t *testing.T) {
+		longOpts := map[string]*Flag{
+			"enable-foo": {Name: "enable-foo", HasArg: NoArgument},
+			"enable-bar": {Name: "enable-bar", HasArg: NoArgument},
+		}
+		cfg := ParserConfig{}
+		cfg.SetLongOnly(true)
+		p, err := NewParser(cfg, nil, longOpts, []string{"-enable-f"})
+		if err != nil {
+			t.Fatalf("NewParser: %v", err)
+		}
+		assertOptions(t, requireParsedOptions(t, p), []Option{{Name: "enable-foo"}})
+	})
+
+	t.Run("long-only ambiguity blocks short fallback", func(t *testing.T) {
+		shortOpts := map[byte]*Flag{
+			'e': {Name: "e", HasArg: NoArgument},
+		}
+		longOpts := map[string]*Flag{
+			"enable-foo": {Name: "enable-foo", HasArg: NoArgument},
+			"enable-bar": {Name: "enable-bar", HasArg: NoArgument},
+		}
+		cfg := ParserConfig{}
+		cfg.SetLongOnly(true)
+		p, err := NewParser(cfg, shortOpts, longOpts, []string{"-enable"})
+		if err != nil {
+			t.Fatalf("NewParser: %v", err)
+		}
+		var gotErr error
+		for _, err := range p.Options() {
+			if err != nil {
+				gotErr = err
+				break
+			}
+		}
+		if gotErr == nil {
+			t.Fatal("expected AmbiguousOptionError, got none")
+		}
+		var ambErr *AmbiguousOptionError
+		if !errors.As(gotErr, &ambErr) {
+			t.Errorf("error type = %T, want *AmbiguousOptionError; error = %v", gotErr, gotErr)
+		}
+	})
+
+	t.Run("long-only zero-match falls back to compacted shorts", func(t *testing.T) {
+		shortOpts := map[byte]*Flag{
+			'a': {Name: "a", HasArg: NoArgument},
+			'b': {Name: "b", HasArg: NoArgument},
+			'c': {Name: "c", HasArg: NoArgument},
+		}
+		cfg := ParserConfig{}
+		cfg.SetLongOnly(true)
+		p, err := NewParser(cfg, shortOpts, nil, []string{"-abc"})
+		if err != nil {
+			t.Fatalf("NewParser: %v", err)
+		}
+		opts := requireParsedOptions(t, p)
+		if len(opts) != 3 {
+			t.Fatalf("got %d options, want 3", len(opts))
+		}
+		for i, want := range []string{"a", "b", "c"} {
+			if opts[i].Name != want {
+				t.Errorf("option %d: Name = %q, want %q", i, opts[i].Name, want)
+			}
+		}
+	})
+
+	t.Run("long-only short with required arg consumes remainder", func(t *testing.T) {
+		shortOpts := map[byte]*Flag{
+			'a': {Name: "a", HasArg: RequiredArgument},
+			'b': {Name: "b", HasArg: NoArgument},
+			'c': {Name: "c", HasArg: NoArgument},
+		}
+		cfg := ParserConfig{}
+		cfg.SetLongOnly(true)
+		p, err := NewParser(cfg, shortOpts, nil, []string{"-abc"})
+		if err != nil {
+			t.Fatalf("NewParser: %v", err)
+		}
+		opts := requireParsedOptions(t, p)
+		if len(opts) != 1 {
+			t.Fatalf("got %d options, want 1", len(opts))
+		}
+		if opts[0].Name != "a" {
+			t.Errorf("Name = %q, want %q", opts[0].Name, "a")
+		}
+		if opts[0].Arg != "bc" {
+			t.Errorf("Arg = %q, want %q", opts[0].Arg, "bc")
+		}
+	})
+
+	t.Run("single-char prefers short over long prefix", func(t *testing.T) {
+		shortOpts := map[byte]*Flag{
+			'a': {Name: "a", HasArg: NoArgument},
+		}
+		longOpts := map[string]*Flag{
+			"able": {Name: "able", HasArg: NoArgument},
+		}
+		cfg := ParserConfig{}
+		cfg.SetLongOnly(true)
+		p, err := NewParser(cfg, shortOpts, longOpts, []string{"-a"})
+		if err != nil {
+			t.Fatalf("NewParser: %v", err)
+		}
+		opts := requireParsedOptions(t, p)
+		if len(opts) != 1 {
+			t.Fatalf("got %d options, want 1", len(opts))
+		}
+		if opts[0].Name != "a" {
+			t.Errorf("Name = %q, want %q (short should win)", opts[0].Name, "a")
+		}
+	})
+
+	t.Run("long-only exact match over compaction", func(t *testing.T) {
+		shortOpts := map[byte]*Flag{
+			'a': {Name: "a", HasArg: NoArgument},
+			'b': {Name: "b", HasArg: NoArgument},
+			'c': {Name: "c", HasArg: NoArgument},
+		}
+		longOpts := map[string]*Flag{
+			"abc": {Name: "abc", HasArg: NoArgument},
+		}
+		cfg := ParserConfig{}
+		cfg.SetLongOnly(true)
+		p, err := NewParser(cfg, shortOpts, longOpts, []string{"-abc"})
+		if err != nil {
+			t.Fatalf("NewParser: %v", err)
+		}
+		opts := requireParsedOptions(t, p)
+		if len(opts) != 1 {
+			t.Fatalf("got %d options, want 1", len(opts))
+		}
+		if opts[0].Name != "abc" {
+			t.Errorf("Name = %q, want %q (long exact match should win)", opts[0].Name, "abc")
+		}
+	})
 }

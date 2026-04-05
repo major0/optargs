@@ -11,6 +11,9 @@ import (
 // Cached reflect.Type for TextUnmarshaler interface check.
 var textUnmarshalerType = reflect.TypeFor[encoding.TextUnmarshaler]()
 
+// boolTrueStr is the canonical string representation of a true boolean.
+const boolTrueStr = "true"
+
 // intBitSize maps signed integer kinds to their strconv bit-size parameter.
 var intBitSize = [...]int{
 	reflect.Int:   0,
@@ -112,7 +115,7 @@ func Convert(value string, targetType reflect.Type) (any, error) {
 // Accepts: true/t/1/yes/y/on and false/f/0/no/n/off (case-insensitive).
 func convertBool(value string) (bool, error) {
 	switch strings.ToLower(value) {
-	case "true", "t", "1", "yes", "y", "on":
+	case boolTrueStr, "t", "1", "yes", "y", "on":
 		return true, nil
 	case "false", "f", "0", "no", "n", "off", "":
 		return false, nil

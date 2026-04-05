@@ -226,140 +226,152 @@ func (p *Parser) missingArgumentError(name string, isShort bool) error {
 	return err
 }
 
-func (p *Parser) ambiguousOptionError(name string) error {
-	err := &AmbiguousOptionError{Name: name}
-	if p.config.enableErrors {
-		slog.Error(err.Error())
-	}
-	return err
-}
-
-//nolint:gocognit,gocyclo,cyclop // longest-match resolution with ancestor walk and fallback search is inherently complex
 func (p *Parser) findLongOpt(name string, args []string) ([]string, *Flag, Option, error) {
-	// Fast path: exact match via direct map lookup (covers 95%+ of real usage).
-	// Walk self + ancestors for the exact key.
-	for current := p; current != nil; current = current.parent {
-		if flag, ok := current.longOpts[name]; ok {
-			return p.resolveLongOpt(name, flag, args)
-		}
-		// Case-insensitive O(1) lookup via the lowercased shadow map.
-		if current.longOptsLower != nil {
-			if flag, ok := current.longOptsLower[strings.ToLower(name)]; ok {
-				return p.resolveLongOpt(flag.Name, flag, args)
-			}
-		}
-	}
+	input := name
+	splitCount := 0
+	var inlineArg string
 
-	// Slow path: longest-match resolution. Find the longest registered
-	// option name that matches the input at an '=' boundary. Option names
-	// may contain '=' (e.g., "foo=bar"), so we cannot simply split on the
-	// first '='. Instead, for each registered option that is a prefix of
-	// the input, we check that the character immediately after the option
-	// name is '=' (the name/value separator) or that the lengths match
-	// exactly. The longest such match wins.
-	var bestName string
-	var bestFlag *Flag
-	ambiguous := false
-
-	for current := p; current != nil; current = current.parent {
-		for opt, flag := range current.longOpts {
-			if len(opt) > len(name) {
-				continue
-			}
-			if !hasPrefix(name, opt, current.config.longCaseIgnore) {
-				continue
-			}
-			// Candidate must sit at a valid boundary: either exact
-			// length match, or the next character is '='.
-			if len(opt) < len(name) && name[len(opt)] != '=' {
-				continue
-			}
-			if len(opt) > len(bestName) {
-				bestName = opt
-				bestFlag = flag
-				ambiguous = false
-			} else if len(opt) == len(bestName) && opt != bestName {
-				ambiguous = true
-			}
+	for {
+		// Phase 1: exact match (walk self + ancestors).
+		if m := p.exactMatch(input); m.flag != nil {
+			return p.resolveMatch(m, splitCount > 0, inlineArg, args)
 		}
-	}
 
-	if bestFlag == nil {
-		return args, nil, Option{}, p.unknownOptionError(name, false)
-	}
-	if ambiguous {
-		return args, nil, Option{}, p.ambiguousOptionError(name)
-	}
-
-	if len(bestName) == len(name) {
-		return p.resolveLongOpt(bestName, bestFlag, args)
-	}
-
-	// Prefix match with '=' boundary.
-	if bestFlag.HasArg == NoArgument { //nolint:nestif // NoArgument fallback search walks ancestors with multiple filter conditions
-		// NoArgument option can't accept the '=value' portion.
-		// Look for a shorter candidate that can.
-		var fallbackName string
-		var fallbackFlag *Flag
-		for current := p; current != nil; current = current.parent {
-			for opt, flag := range current.longOpts {
-				if len(opt) >= len(bestName) || len(opt) > len(name) {
-					continue
-				}
-				if !hasPrefix(name, opt, current.config.longCaseIgnore) {
-					continue
-				}
-				if len(opt) < len(name) && name[len(opt)] != '=' {
-					continue
-				}
-				if flag.HasArg == NoArgument {
-					continue
-				}
-				if len(opt) > len(fallbackName) {
-					fallbackName = opt
-					fallbackFlag = flag
-				}
+		// Phase 2: prefix match (walk self + ancestors).
+		matches := p.prefixMatches(input)
+		switch len(matches) {
+		case 1:
+			return p.resolveMatch(matches[0], splitCount > 0, inlineArg, args)
+		case 0:
+			// fall through to rsplit
+		default: // >1
+			names := make([]string, len(matches))
+			for i, m := range matches {
+				names[i] = m.name
 			}
+			err := &AmbiguousOptionError{Name: name, Matches: names}
+			if p.config.enableErrors {
+				slog.Error(err.Error())
+			}
+			return args, nil, Option{}, err
 		}
-		if fallbackFlag != nil {
-			return args, fallbackFlag, Option{Name: fallbackName, HasArg: true, Arg: name[len(fallbackName)+1:]}, nil
+
+		// Phase 3: rsplit on next rightmost '='.
+		splitCount++
+		left, right, ok := rsplitNth(name, '=', splitCount)
+		if !ok {
+			return args, nil, Option{}, p.unknownOptionError(name, false)
 		}
-		return args, nil, Option{}, p.unknownOptionError(name, false)
+		input = left
+		inlineArg = right
 	}
-	return args, bestFlag, Option{Name: bestName, HasArg: true, Arg: name[len(bestName)+1:]}, nil
 }
 
-// resolveLongOpt handles argument consumption for an exact long-option match.
-func (p *Parser) resolveLongOpt(name string, flag *Flag, args []string) ([]string, *Flag, Option, error) {
-	option := Option{Name: name}
+// Helpers for the two-phase matching algorithm used by findLongOpt.
 
-	if flag.HasArg == NoArgument {
-		return args, flag, option, nil
+// matchResult pairs a registered option name with its Flag for prefix match collection.
+type matchResult struct {
+	name string
+	flag *Flag
+}
+
+// rsplitNth finds the nth occurrence of sep from the right in s and splits there.
+// Returns (before, after, true) on success, or ("", "", false) when fewer than n
+// occurrences of sep exist.
+func rsplitNth(s string, sep byte, n int) (left, right string, ok bool) {
+	count := 0
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == sep {
+			count++
+			if count == n {
+				return s[:i], s[i+1:], true
+			}
+		}
+	}
+	return "", "", false
+}
+
+// exactMatch walks self → parent checking for an exact long option match.
+// Returns the matched result or an empty matchResult with nil flag.
+func (p *Parser) exactMatch(opt string) matchResult {
+	for current := p; current != nil; current = current.parent {
+		if flag, ok := current.longOpts[opt]; ok {
+			return matchResult{name: opt, flag: flag}
+		}
+		if current.longOptsLower != nil {
+			if flag, ok := current.longOptsLower[strings.ToLower(opt)]; ok {
+				return matchResult{name: flag.Name, flag: flag}
+			}
+		}
+	}
+	return matchResult{}
+}
+
+// prefixMatches walks self → parent collecting all registered long option names
+// that are proper prefix matches for opt (i.e., the registered name starts with
+// opt and is strictly longer). Deduplicates by flag pointer so the same flag
+// registered in both parent and child counts once.
+func (p *Parser) prefixMatches(opt string) []matchResult {
+	var results []matchResult
+	seen := make(map[*Flag]struct{})
+
+	for current := p; current != nil; current = current.parent {
+		for registeredName, flag := range current.longOpts {
+			if _, dup := seen[flag]; dup {
+				continue
+			}
+			if len(registeredName) > len(opt) && hasPrefix(registeredName, opt, current.config.longCaseIgnore) {
+				results = append(results, matchResult{name: registeredName, flag: flag})
+				seen[flag] = struct{}{}
+			}
+		}
+	}
+	return results
+}
+
+// resolveMatch handles argument consumption after a match is found.
+// hasInlineArg indicates whether an inline argument was extracted via rsplit.
+// inlineArg is the inline argument value (may be empty string for --opt=).
+func (p *Parser) resolveMatch(
+	m matchResult, hasInlineArg bool, inlineArg string, args []string,
+) ([]string, *Flag, Option, error) {
+	option := Option{Name: m.name}
+
+	if hasInlineArg {
+		// Inline arg present (from =value split).
+		switch m.flag.HasArg {
+		case NoArgument:
+			return args, nil, Option{}, &UnexpectedArgumentError{Name: m.name}
+		default: // RequiredArgument, OptionalArgument
+			option.Arg = inlineArg
+			option.HasArg = true
+			return args, m.flag, option, nil
+		}
 	}
 
-	// For RequiredArgument: consume the next arg unconditionally.
-	// For OptionalArgument: consume only if all three conditions hold:
-	//   1. No = delimited arg was present (guaranteed — findLongOpt
-	//      handles = splitting before calling resolveLongOpt)
-	//   2. Another argument exists after the current option
-	//   3. That argument does NOT start with '-' (avoids consuming
-	//      short options, long options, or the -- terminator)
-	if len(args) > 0 {
-		if flag.HasArg == RequiredArgument || args[0][0] != '-' {
+	// No inline arg.
+	switch m.flag.HasArg {
+	case NoArgument:
+		return args, m.flag, option, nil
+
+	case RequiredArgument:
+		if len(args) == 0 {
+			return args, nil, option, p.missingArgumentError(m.name, false)
+		}
+		option.Arg = args[0]
+		option.HasArg = true
+		return args[1:], m.flag, option, nil
+
+	default: // OptionalArgument
+		// OptionalArgument without inline = does not consume next arg
+		// unless it exists and doesn't start with '-'.
+		if len(args) > 0 && args[0][0] != '-' {
 			option.Arg = args[0]
 			option.HasArg = true
-			return args[1:], flag, option, nil
+			return args[1:], m.flag, option, nil
 		}
-		// OptionalArgument with a '-' prefixed next arg — don't consume
-		return args, flag, option, nil
+		return args, m.flag, option, nil
 	}
-
-	if flag.HasArg == RequiredArgument {
-		return args, nil, option, p.missingArgumentError(name, false)
-	}
-
-	// OptionalArgument with no remaining args
-	return args, flag, option, nil
 }
 
 func (p *Parser) findShortOpt(c byte, word string, args []string) ([]string, string, *Flag, Option, error) {
@@ -470,6 +482,15 @@ func (p *Parser) lookupShortOpt(c byte) (byte, *Flag) {
 func (p *Parser) tryLongOnly(
 	word string, remaining []string,
 ) (matched bool, args []string, flag *Flag, option Option, err error) {
+	// Single-character input prefers the short option when one is
+	// registered, even if the character is a prefix of a long option.
+	if len(word) == 1 {
+		if _, f := p.lookupShortOpt(word[0]); f != nil {
+			restored := append([]string{"-" + word}, remaining...)
+			return false, restored, nil, Option{}, nil
+		}
+	}
+
 	// Suppress error logging during the long option probe —
 	// we may fall back to short options.
 	savedErrors := p.config.enableErrors
@@ -481,7 +502,20 @@ func (p *Parser) tryLongOnly(
 		return true, args, flag, option, nil
 	}
 
-	// Long match failed — fall back to short options per getopt_long_only(3).
+	// Only fall back to short options on UnknownOptionError.
+	// AmbiguousOptionError and UnexpectedArgumentError mean the input
+	// entered long-option territory — return them directly.
+	var unkErr *UnknownOptionError
+	if !errors.As(err, &unkErr) {
+		// Non-unknown error (ambiguous, unexpected argument, etc.)
+		// — always return directly regardless of short opts.
+		if savedErrors {
+			slog.Error(err.Error())
+		}
+		return true, remaining, nil, option, err
+	}
+
+	// UnknownOptionError — fall back to short options if available.
 	if p.shortOptN == 0 {
 		// No short options registered — re-log and return the error.
 		if savedErrors {
