@@ -6,6 +6,12 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+*'
       - 'goarg/v[0-9]+.[0-9]+.[0-9]+*'
       - 'pflags/v[0-9]+.[0-9]+.[0-9]+*'
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. "v0.4.0-rc1", "goarg/v0.3.0")'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -14,19 +20,26 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
+    env:
+      # Resolve the tag: workflow_call passes it as input, tag-push has it in GITHUB_REF.
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: Ensure annotated tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: .github/scripts/release-ensure-annotated.sh "${GITHUB_REF#refs/tags/}"
+        run: .github/scripts/release-ensure-annotated.sh "$RELEASE_TAG"
 
       - name: Determine tag series
         id: series
+        env:
+          # Override GITHUB_REF so the script works for both trigger types.
+          GITHUB_REF: "refs/tags/${{ env.RELEASE_TAG }}"
         run: .github/scripts/release-detect-series.sh
 
       - name: Find previous tag in series

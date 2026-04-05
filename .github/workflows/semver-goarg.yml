@@ -16,3 +16,12 @@ jobs:
     with:
       prefix: 'goarg/v'
       ref-pattern: 'refs/heads/goarg/v'
+
+  release:
+    needs: semver
+    if: needs.semver.outputs.tag != ''
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write
+    with:
+      tag: ${{ needs.semver.outputs.tag }}
