@@ -342,22 +342,32 @@ func TestTable_InterspersedArguments(t *testing.T) {
 	}
 }
 
-// --- ❌ row: feature goarg does NOT yet expose ---
-// goarg does not currently wire getopt_long_only mode through its Config.
-// The core supports it, but goarg always uses standard getopt_long mode
-// with true POSIX short options and compaction.
+// --- ✅ row: goarg now supports getopt_long_only via Config.LongOnly ---
 
-func TestTable_NoGetoptLongOnly(t *testing.T) {
-	// goarg defaults to getopt_long mode (not long_only).
-	// -verbose should NOT match --verbose — it should be parsed as
-	// short options -v -e -r -b -o -s -e.
+func TestTable_GetoptLongOnly(t *testing.T) {
 	type Args struct {
 		Verbose bool `arg:"--verbose"`
 	}
-	var a Args
-	p, _ := NewParser(Config{Program: "test"}, &a)
-	err := p.Parse([]string{"-verbose"})
-	if err == nil && a.Verbose {
-		t.Fatal("goarg should not be in long-only mode by default")
-	}
+
+	// Default: long-only is off, -verbose should NOT match --verbose
+	t.Run("default off", func(t *testing.T) {
+		var a Args
+		p, _ := NewParser(Config{Program: "test"}, &a)
+		err := p.Parse([]string{"-verbose"})
+		if err == nil && a.Verbose {
+			t.Fatal("goarg should not be in long-only mode by default")
+		}
+	})
+
+	// Opt-in: long-only enabled, -verbose should match --verbose
+	t.Run("enabled", func(t *testing.T) {
+		var a Args
+		p, _ := NewParser(Config{Program: "test", LongOnly: true}, &a)
+		if err := p.Parse([]string{"-verbose"}); err != nil {
+			t.Fatalf("-verbose should match --verbose in long-only mode: %v", err)
+		}
+		if !a.Verbose {
+			t.Error("verbose should be true")
+		}
+	})
 }

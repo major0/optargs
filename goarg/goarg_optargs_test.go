@@ -199,3 +199,58 @@ func TestOptArgsInterspersedArgs(t *testing.T) {
 		t.Errorf("rest = %v, want [pos1 pos2]", a.Rest)
 	}
 }
+
+// TestOptArgsLongOnlyMode tests that Config.LongOnly enables getopt_long_only(3)
+// behavior: single-dash arguments are parsed as long options, compaction is disabled.
+func TestOptArgsLongOnlyMode(t *testing.T) {
+	type Args struct {
+		Verbose bool `arg:"--verbose"`
+	}
+
+	t.Run("long-only enabled", func(t *testing.T) {
+		var a Args
+		p, err := NewParser(Config{Program: "test", LongOnly: true}, &a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := p.Parse([]string{"-verbose"}); err != nil {
+			t.Fatalf("-verbose should match --verbose in long-only mode: %v", err)
+		}
+		if !a.Verbose {
+			t.Error("verbose should be true")
+		}
+	})
+
+	t.Run("long-only disabled", func(t *testing.T) {
+		var a Args
+		p, err := NewParser(Config{Program: "test", LongOnly: false}, &a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = p.Parse([]string{"-verbose"})
+		if err == nil && a.Verbose {
+			t.Error("-verbose should NOT match --verbose when long-only is disabled")
+		}
+	})
+
+	t.Run("short fallback when no long match", func(t *testing.T) {
+		// Per getopt_long_only(3): if -X doesn't match a long option but
+		// does match a short option, it is parsed as a short option.
+		// -ab has no long match → falls back to short compaction.
+		type CompactArgs struct {
+			A bool `arg:"-a"`
+			B bool `arg:"-b"`
+		}
+		var a CompactArgs
+		p, err := NewParser(Config{Program: "test", LongOnly: true}, &a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := p.Parse([]string{"-ab"}); err != nil {
+			t.Fatalf("-ab should fall back to short compaction: %v", err)
+		}
+		if !a.A || !a.B {
+			t.Errorf("a=%t b=%t, want both true (short fallback)", a.A, a.B)
+		}
+	})
+}

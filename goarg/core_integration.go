@@ -79,7 +79,11 @@ func (ci *CoreIntegration) CreateParserWithHandlers(args []string, destValue ref
 		}
 	}
 
-	parser, err := optargs.NewParserWithCaseInsensitiveCommands(shortOpts, longOpts, args)
+	config := optargs.ParserConfig{}
+	config.SetLongOnly(ci.config.LongOnly)
+	config.SetCommandCaseIgnore(!ci.config.CaseSensitiveCommands)
+
+	parser, err := optargs.NewParser(config, shortOpts, longOpts, args)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OptArgs parser: %w", err)
 	}

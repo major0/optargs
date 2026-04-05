@@ -1,8 +1,17 @@
 # getopt_long_only Mode
 
-GNU `getopt_long_only(3)` treats single-dash arguments as long options
-first, falling back to short option parsing only on failure. This allows
-`-verbose` to match `--verbose` without requiring the double dash.
+From the `getopt_long_only(3)` man page:
+
+> getopt_long_only() is like getopt_long(), but '-' as well as "--" can
+> indicate a long option. If an option that starts with '-' (not "--")
+> doesn't match a long option, but does match a short option, it is
+> parsed as a short option instead.
+
+This means single-dash arguments are tried as long options first. If no
+long option matches, the parser falls back to short option parsing. This
+allows `-verbose` to match `--verbose` without requiring the double dash,
+while still supporting `-v` as a short option when no long option named
+"v" is registered.
 
 Upstream pflag does not implement this mode. Single-dash arguments are
 always parsed as short options (or compacted short option groups).
@@ -32,7 +41,9 @@ myapp -vx             # falls back to short compaction: -v -x
 ```
 
 Single-dash arguments are tried as long options first. If no long option
-matches, the parser falls back to short option parsing via the optstring.
+matches and short options are registered, the parser falls back to short
+option parsing (including compaction). If no short options are registered
+either, the parser returns an error.
 
 ## OptArgs implementation
 

@@ -73,6 +73,11 @@ func (c *ParserConfig) Interspersed() bool {
 	return c.parseMode == ParseDefault
 }
 
+// SetCommandCaseIgnore enables or disables case-insensitive command matching.
+func (c *ParserConfig) SetCommandCaseIgnore(enabled bool) {
+	c.commandCaseIgnore = enabled
+}
+
 // Parser is the core argument parser. It processes command-line arguments
 // according to POSIX getopt(3) and GNU getopt_long(3) conventions.
 //
@@ -452,9 +457,16 @@ func (p *Parser) lookupShortOpt(c byte) (byte, *Flag) {
 }
 
 // tryLongOnly attempts to match a single-dash argument as a long option
-// per getopt_long_only(3). Returns (true, option, err) on match or when
-// no short-option fallback is possible. Returns (false, ...) when the
-// caller should fall through to short option parsing.
+// per getopt_long_only(3):
+//
+//	getopt_long_only() is like getopt_long(), but '-' as well as "--" can
+//	indicate a long option. If an option that starts with '-' (not "--")
+//	doesn't match a long option, but does match a short option, it is
+//	parsed as a short option instead.
+//
+// Returns (true, option, err) on long match or when no short-option
+// fallback is possible. Returns (false, ...) when the caller should
+// fall through to short option parsing.
 func (p *Parser) tryLongOnly(
 	word string, remaining []string,
 ) (matched bool, args []string, flag *Flag, option Option, err error) {
@@ -471,7 +483,7 @@ func (p *Parser) tryLongOnly(
 
 	// Long match failed — fall back to short options per getopt_long_only(3).
 	if p.shortOptN == 0 {
-		// Re-log the error that was suppressed during the probe.
+		// No short options registered — re-log and return the error.
 		if savedErrors {
 			slog.Error(err.Error())
 		}

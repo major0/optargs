@@ -101,7 +101,7 @@ Known divergences are documented in `expected_diffs.go`.
 | [Parent flag inheritance across subcommands](../docs/subcommand-inheritance.md) (alexflint/go-arg#101) | ✅ | ✅ |
 | Case-insensitive subcommand matching | ❌ | ✅ |
 | Interspersed argument handling | ✅ | ✅ |
-| [getopt_long_only mode](../docs/long-only-mode.md) | ⚠️⁴ | ❌ |
+| [getopt_long_only mode](../docs/long-only-mode.md) | ⚠️⁴ | ✅ |
 
 ¹ Upstream resets map on each repeated flag; ours merges entries (POSIX semantics).
 ² Upstream resets slice on each repeated flag; ours appends (POSIX semantics).
@@ -118,14 +118,16 @@ Known divergences are documented in `expected_diffs.go`.
 
 ```go
 goarg.Config{
-    Program:           "myapp",
-    Description:       "My application",
-    Version:           "1.0.0",
-    StrictSubcommands: true,   // disable parent option inheritance
-    IgnoreEnv:         false,  // skip env var processing
-    IgnoreDefault:     false,  // skip default value application
-    EnvPrefix:         "APP",  // prefix for env var names
-    Exit:              os.Exit,
-    Out:               os.Stderr,
+    Program:               "myapp",
+    Description:           "My application",
+    Version:               "1.0.0",
+    StrictSubcommands:     true,   // disable parent option inheritance
+    LongOnly:              false,  // enable getopt_long_only(3) mode
+    CaseSensitiveCommands: false,  // require exact-case subcommand matching
+    IgnoreEnv:             false,  // skip env var processing
+    IgnoreDefault:         false,  // skip default value application
+    EnvPrefix:             "APP",  // prefix for env var names
+    Exit:                  os.Exit,
+    Out:                   os.Stderr,
 }
 ```

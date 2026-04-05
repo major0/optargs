@@ -45,16 +45,18 @@ type Parser struct {
 
 // Config matches alexflint/go-arg configuration options exactly.
 type Config struct {
-	Program           string
-	Description       string
-	Version           string
-	Epilogue          string
-	IgnoreEnv         bool
-	IgnoreDefault     bool
-	StrictSubcommands bool
-	EnvPrefix         string
-	Exit              func(int)
-	Out               io.Writer
+	Program               string
+	Description           string
+	Version               string
+	Epilogue              string
+	IgnoreEnv             bool
+	IgnoreDefault         bool
+	StrictSubcommands     bool
+	LongOnly              bool // enable getopt_long_only(3) mode: single-dash args parsed as long options
+	CaseSensitiveCommands bool // require exact-case subcommand matching (default: case-insensitive)
+	EnvPrefix             string
+	Exit                  func(int)
+	Out                   io.Writer
 }
 
 // Parse parses command line arguments into the destination struct(s).
