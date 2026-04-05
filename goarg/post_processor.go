@@ -220,37 +220,5 @@ func isZeroValue(v reflect.Value) bool {
 	if !v.IsValid() {
 		return true
 	}
-
-	switch v.Kind() {
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return v.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return v.Float() == 0
-	case reflect.String:
-		return v.String() == ""
-	case reflect.Ptr, reflect.Interface:
-		return v.IsNil()
-	case reflect.Slice, reflect.Map, reflect.Chan:
-		return v.IsNil() || v.Len() == 0
-	case reflect.Array:
-		for i := range v.Len() {
-			if !isZeroValue(v.Index(i)) {
-				return false
-			}
-		}
-		return true
-	case reflect.Struct:
-		for i := range v.NumField() {
-			if !isZeroValue(v.Field(i)) {
-				return false
-			}
-		}
-		return true
-	default:
-		return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
-	}
+	return v.IsZero()
 }

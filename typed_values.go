@@ -61,6 +61,13 @@ func ZeroString(typeName string) (string, bool) {
 	return z, ok
 }
 
+// PrefixPair represents a true/false prefix pair for boolean flags.
+// Used by wrapper modules to register --enable-X/--disable-X style options.
+type PrefixPair struct {
+	True  string // e.g. "enable"
+	False string // e.g. "disable"
+}
+
 // IsBool reports whether a TypedValue represents a boolean flag.
 // Checks both Type() == "bool" and the BoolValuer interface.
 func IsBool(tv TypedValue) bool {

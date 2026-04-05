@@ -34,27 +34,20 @@ type Value interface {
 	Type() string
 }
 
-// PrefixPair represents a true/false prefix pair for a boolean flag.
-// Each pair generates --<True>-<name> and --<False>-<name> long options.
-type PrefixPair struct {
-	True  string // e.g. "enable"
-	False string // e.g. "disable"
-}
-
 // Flag represents the state of a flag.
 type Flag struct {
-	Name                string              // name as it appears on command line
-	Shorthand           string              // one-letter abbreviated flag
-	Usage               string              // help message
-	Value               Value               // value as set
-	DefValue            string              // default value (as text); for usage message
-	Changed             bool                // If the user set the value (or if left to default)
-	Hidden              bool                // used by cobra.Command to allow flags to be hidden from help/usage text
-	Deprecated          string              // If this flag is deprecated, this string is the new or now thing to use
-	ShorthandDeprecated string              // If the shorthand of this flag is deprecated, this string is the message
-	Annotations         map[string][]string // used by cobra.Command bash autocomple code
-	Prefixes            []PrefixPair        // registered boolean prefix pairs; nil when none
-	Negatable           bool                // non-boolean flag supports --no-<name> zero-clear
+	Name                string               // name as it appears on command line
+	Shorthand           string               // one-letter abbreviated flag
+	Usage               string               // help message
+	Value               Value                // value as set
+	DefValue            string               // default value (as text); for usage message
+	Changed             bool                 // If the user set the value (or if left to default)
+	Hidden              bool                 // used by cobra.Command to allow flags to be hidden from help/usage text
+	Deprecated          string               // If this flag is deprecated, this string is the new or now thing to use
+	ShorthandDeprecated string               // If the shorthand of this flag is deprecated, this string is the message
+	Annotations         map[string][]string  // used by cobra.Command bash autocomple code
+	Prefixes            []optargs.PrefixPair // registered boolean prefix pairs; nil when none
+	Negatable           bool                 // non-boolean flag supports --no-<name> zero-clear
 }
 
 // FlagSet represents a set of defined flags.
@@ -331,7 +324,7 @@ func (f *FlagSet) MarkBoolPrefix(name, truePrefix, falsePrefix string) error {
 	if !isBoolFlag(flag.Value) {
 		return fmt.Errorf("flag %q is not a boolean flag", name)
 	}
-	flag.Prefixes = append(flag.Prefixes, PrefixPair{True: truePrefix, False: falsePrefix})
+	flag.Prefixes = append(flag.Prefixes, optargs.PrefixPair{True: truePrefix, False: falsePrefix})
 	return nil
 }
 
