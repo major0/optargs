@@ -22,13 +22,6 @@ type StructMetadata struct {
 	SubcommandFieldIdx map[string]int    // Maps subcommand name to struct field index
 }
 
-// PrefixPair represents a true/false prefix pair for a boolean field.
-// Duplicated from pflags to avoid cross-module dependency.
-type PrefixPair struct {
-	True  string // e.g. "enable"
-	False string // e.g. "disable"
-}
-
 // FieldMetadata represents a single struct field's CLI mapping.
 type FieldMetadata struct {
 	Name       string
@@ -50,8 +43,8 @@ type FieldMetadata struct {
 	SubcommandName string
 
 	// Prefix pairs and negatable support
-	Prefixes  []PrefixPair // boolean prefix pairs from `prefix` struct tag
-	Negatable bool         // non-boolean field supports --no-<name>
+	Prefixes  []optargs.PrefixPair // boolean prefix pairs from `prefix` struct tag
+	Negatable bool                 // non-boolean field supports --no-<name>
 
 	// Direct OptArgs Core mapping
 	CoreFlag *optargs.Flag
@@ -243,7 +236,7 @@ func (tp *TagParser) ParseField(field reflect.StructField, fieldIndex int) (*Fie
 			if len(parts) != 2 {
 				return nil, fmt.Errorf("invalid prefix pair: %q (expected \"true,false\")", pair)
 			}
-			metadata.Prefixes = append(metadata.Prefixes, PrefixPair{
+			metadata.Prefixes = append(metadata.Prefixes, optargs.PrefixPair{
 				True:  strings.TrimSpace(parts[0]),
 				False: strings.TrimSpace(parts[1]),
 			})

@@ -273,6 +273,16 @@ func translateError(err error) error {
 		return &ValueRequiredError{specifiedName: missingErr.Name}
 	}
 
+	var ambigErr *optargs.AmbiguousOptionError
+	if errors.As(err, &ambigErr) {
+		return fmt.Errorf("ambiguous flag: --%s", ambigErr.Name)
+	}
+
+	var unexpErr *optargs.UnexpectedArgumentError
+	if errors.As(err, &unexpErr) {
+		return fmt.Errorf("flag --%s does not take a value", unexpErr.Name)
+	}
+
 	return err
 }
 

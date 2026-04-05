@@ -94,7 +94,7 @@ Known divergences are documented in `expected_diffs.go`.
 | Builtin help/version flags | ✅ | ✅ |
 | Subcommand()/SubcommandNames() | ✅ | ✅ |
 | [POSIX short-option compaction (-abc)](../docs/short-option-compaction.md) | ❌ | ✅ |
-| [Abbreviation matching (--verb → --verbose)](../docs/prefix-matching.md) | ❌ | ✅ |
+| [Abbreviation matching (--verb → --verbose, ambiguity detection)](../docs/prefix-matching.md) | ❌ | ✅ |
 | [Arbitrary option names (=, :, [] in names)](../docs/prefix-matching.md) | ❌ | ✅ |
 | [Boolean negation (--no-flag)](../docs/boolean-negation.md) | ❌ | ✅ |
 | [Boolean prefix pairs (--enable/--disable)](../docs/boolean-prefix-pairs.md) | ❌ | ✅ |
