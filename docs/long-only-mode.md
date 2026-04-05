@@ -45,15 +45,70 @@ matches and short options are registered, the parser falls back to short
 option parsing (including compaction). If no short options are registered
 either, the parser returns an error.
 
+## Abbreviation matching in long-only mode
+
+[Abbreviation matching](prefix-matching.md) works in long-only mode
+too. Single-dash arguments are matched against long options using the
+same two-phase algorithm (exact match, then prefix match):
+
+```text
+-verbose        # exact long match → "verbose"
+-verb           # abbreviation → "verbose" (if unambiguous)
+-enable-f       # abbreviation → "enable-foo" (if unambiguous)
+```
+
+### Ambiguous abbreviations do NOT fall back to short options
+
+When an abbreviation matches two or more long options, the parser
+returns `AmbiguousOptionError` — it does **not** fall back to short
+option parsing. Ambiguity means the input entered long-option territory:
+
+```text
+# Registered long: --enable-foo, --enable-bar
+# Registered short: -e
+
+-enable         # ambiguous → AmbiguousOptionError (no fallback to -e)
+```
+
+Short fallback only happens when **zero** long options match (not on
+ambiguity).
+
+### Single-character input prefers short options
+
+When the input is a single `-` followed by exactly one character and
+that character matches a registered short option, the parser resolves it
+as the short option — even if the character is a prefix of a long option:
+
+```text
+# Registered long: --verbose
+# Registered short: -v
+
+-v              # short option 'v' (not abbreviation of --verbose)
+```
+
+### Short fallback rules
+
+- Short fallback only applies to **single-dash** input (`-foo`), never
+  double-dash (`--foo`)
+- Short fallback only triggers on **zero** long option matches — not on
+  ambiguity or other errors
+- When fallback occurs, the input is re-parsed as compacted short
+  options (`-abc` → `-a -b -c`)
+
 ## OptArgs implementation
 
 ```go
 p, _ := optargs.GetOptLongOnly(os.Args[1:], "vx", []optargs.Flag{
-    {Name: "verbose", HasArg: optargs.NoArgument},
-    {Name: "output",  HasArg: optargs.RequiredArgument},
+    {Name: "verbose",    HasArg: optargs.NoArgument},
+    {Name: "output",     HasArg: optargs.RequiredArgument},
+    {Name: "enable-foo", HasArg: optargs.NoArgument},
+    {Name: "enable-bar", HasArg: optargs.NoArgument},
 })
-// -verbose       → Name:"verbose"  (long match)
+// -verbose       → Name:"verbose"  (exact long match)
+// -verb          → Name:"verbose"  (abbreviation match)
 // -output=file   → Name:"output", Arg:"file"
-// -v             → Name:"v"        (short fallback)
+// -v             → Name:"v"        (short fallback — single char prefers short)
 // -vx            → Name:"v", Name:"x" (short compaction fallback)
+// -enable-f      → Name:"enable-foo" (unambiguous abbreviation)
+// -enable        → AmbiguousOptionError (matches enable-foo and enable-bar)
 ```

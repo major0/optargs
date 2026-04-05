@@ -9,10 +9,14 @@ A Go implementation of POSIX [getopt(3)](https://pubs.opengroup.org/onlinepubs/9
 
 OptArgs Core is the foundation for higher-level wrapper interfaces ([goarg](goarg/), [pflags](pflags/)).
 
+## Design
+
+OptArgs is a general-purpose, unopinionated parser that faithfully implements GNU/POSIX `getopt(3)`, `getopt_long(3)`, and `getopt_long_only(3)` behavior. It exposes the full API surface needed to construct opinionated parsers on top — [goarg](goarg/) and [pflags](pflags/) are two such layers, each matching the conventions of their upstream counterparts while gaining the correctness and features of the core engine.
+
 ## Features
 
 - Full POSIX getopt(3) compliance: short options, compaction, `--` termination, `POSIXLY_CORRECT`
-- GNU getopt_long(3): `--option=value`, `--option value`, partial matching, case-insensitive
+- GNU getopt_long(3): `--option=value`, `--option value`, abbreviation matching, case-insensitive
 - GNU getopt_long_only(3): single-dash long options with short option fallback
 - Advanced handling: `-W` extension, option redefinition, negative arguments
 - Native subcommand dispatch via `AddCmd()` with option inheritance through the parent chain

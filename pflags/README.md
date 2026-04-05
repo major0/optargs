@@ -31,7 +31,8 @@ backed by OptArgs Core's POSIX/GNU getopt implementation.
 | TextVar | ✅ | ✅ |
 | Typed getters (GetBool, GetInt, etc.) | ✅ | ✅ |
 | [POSIX short-option compaction (-abc)](../docs/short-option-compaction.md) | ✅ | ✅ |
-| [Longest-match resolution and arbitrary option names](../docs/prefix-matching.md) | ❌ | ✅ |
+| [Abbreviation matching (--verb → --verbose)](../docs/prefix-matching.md) | ❌ | ✅ |
+| [Arbitrary option names (=, :, [] in names)](../docs/prefix-matching.md) | ❌ | ✅ |
 | [Boolean negation (--no-flag)](../docs/boolean-negation.md) (spf13/pflag#214, spf13/cobra#958) | ❌ | ✅ |
 | [Boolean prefix pairs (--enable/--disable)](../docs/boolean-prefix-pairs.md) | ❌ | ✅ |
 | [Short-only flags (no long name)](../docs/short-only-flags.md) (spf13/pflag#139, spf13/pflag#256) | ❌ | ✅ |
