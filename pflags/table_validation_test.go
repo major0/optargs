@@ -4,6 +4,7 @@
 // Each test is named after the table row it validates. All ✅ rows must pass.
 //
 // To reproduce: go test -run TestTable -v
+
 package pflags
 
 import (

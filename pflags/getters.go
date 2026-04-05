@@ -31,7 +31,7 @@ func (f *FlagSet) GetBool(name string) (bool, error) {
 }
 
 func (f *FlagSet) GetString(name string) (string, error) {
-	return f.getFlagValue(name, "string")
+	return f.getFlagValue(name, typeNameString)
 }
 
 func (f *FlagSet) GetInt(name string) (int, error) {

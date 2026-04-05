@@ -39,10 +39,10 @@ func (pp *PostProcessor) buildPositionalArgs() {
 }
 
 // Process runs all post-parse steps in order:
-// 1. Assign positional arguments
-// 2. Apply environment variable fallbacks
-// 3. Apply default values
-// 4. Validate required fields
+// 1. Assign positional arguments.
+// 2. Apply environment variable fallbacks.
+// 3. Apply default values.
+// 4. Validate required fields.
 func (pp *PostProcessor) Process(parser *optargs.Parser, destValue reflect.Value) error {
 	if err := pp.processPositionalArgs(parser, destValue); err != nil {
 		return err

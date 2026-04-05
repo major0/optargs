@@ -19,7 +19,7 @@ func PFlagFromGoFlag(goflag *flag.Flag) *Flag {
 	return &Flag{
 		Name:     goflag.Name,
 		Usage:    goflag.Usage,
-		Value:    &goFlagValue{inner: goflag.Value, typeName: "string"},
+		Value:    &goFlagValue{inner: goflag.Value, typeName: typeNameString},
 		DefValue: goflag.DefValue,
 	}
 }

@@ -9,6 +9,9 @@ import (
 	"github.com/major0/optargs"
 )
 
+// boolTrue is the string representation of a true boolean value.
+const boolTrue = "true"
+
 // isBoolFlag returns true if the value is a boolean flag.
 // Delegates to optargs.IsBool which checks both Type() == "bool"
 // and the BoolValuer interface.
@@ -132,7 +135,7 @@ func (f *FlagSet) buildLongOpts() map[string]*optargs.Flag {
 			longOpts[trueName] = &optargs.Flag{
 				Name:   trueName,
 				HasArg: optargs.NoArgument,
-				Handle: f.makeBoolPrefixHandler(flag, "true"),
+				Handle: f.makeBoolPrefixHandler(flag, boolTrue),
 			}
 			longOpts[falseName] = &optargs.Flag{
 				Name:   falseName,
@@ -163,7 +166,7 @@ func (f *FlagSet) makeHandler(flag *Flag) func(string, string) error {
 		val := arg
 		if isBoolFlag(flag.Value) && val == "" {
 			if flag.Value.Type() == "bool" {
-				val = "true" //nolint:goconst // boolean literal, constant would hurt readability
+				val = boolTrue
 			}
 			// For custom IsBoolFlag types, call Set("") — the value
 			// implementation decides what no-arg means.
@@ -186,12 +189,12 @@ func (f *FlagSet) makeHandler(flag *Flag) func(string, string) error {
 func (f *FlagSet) makeNegationHandler(flag *Flag) func(string, string) error {
 	return func(_, arg string) error {
 		switch strings.ToLower(arg) {
-		case "", "true", "1", "t":
+		case "", boolTrue, "1", "t":
 			if err := flag.Value.Set("false"); err != nil {
 				return err
 			}
 		case "false", "0", "f":
-			if err := flag.Value.Set("true"); err != nil {
+			if err := flag.Value.Set(boolTrue); err != nil {
 				return err
 			}
 		default:

@@ -5,6 +5,7 @@
 // ❌ rows (getopt_long_only) confirm the feature is not yet wired through goarg.
 //
 // To reproduce: go test -run TestTable -v
+
 package goarg
 
 import (
@@ -154,6 +155,7 @@ func TestTable_EmbeddedStructInheritance(t *testing.T) {
 	}
 	type Args struct {
 		Common
+
 		Name string `arg:"--name"`
 	}
 	var a Args
@@ -193,7 +195,7 @@ func TestTable_ErrHelpErrVersionSentinels(t *testing.T) {
 	}
 }
 
-func TestTable_BuiltinHelpVersionFlags(t *testing.T) {
+func TestTable_BuiltinHelpVersionFlags(_ *testing.T) {
 	type Args struct {
 		Name string `arg:"--name"`
 	}
@@ -206,10 +208,9 @@ func TestTable_BuiltinHelpVersionFlags(t *testing.T) {
 		Out:     os.Stderr,
 	}, &a)
 	_ = p.Parse([]string{"--version"})
-	if !exitCalled {
-		// Our implementation may handle --version differently (sentinel vs exit).
-		// Either way, --version should be recognized.
-	}
+	// Our implementation may handle --version differently (sentinel vs exit).
+	// Either way, --version should be recognized.
+	_ = exitCalled
 }
 
 func TestTable_SubcommandQuery(t *testing.T) {

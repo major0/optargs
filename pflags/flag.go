@@ -1,5 +1,3 @@
-// Package pflags provides a drop-in replacement for spf13/pflag that maintains
-// complete API compatibility while leveraging OptArgs Core for superior POSIX/GNU compliance.
 package pflags
 
 import (
@@ -24,6 +22,9 @@ const (
 	// PanicOnError will panic() if an error is found when parsing flags.
 	PanicOnError
 )
+
+// typeNameString is the Value.Type() name for string flags.
+const typeNameString = "string"
 
 // Value is the interface to the dynamic value stored in a flag.
 // (The default value is represented as a string.)
@@ -498,7 +499,7 @@ func (f *FlagSet) printDefaultsTo(w io.Writer) {
 			fmt.Fprint(w, line.prefix)
 		}
 		if !isZeroValue(line.flag, line.flag.DefValue) {
-			if line.flag.Value.Type() == "string" { //nolint:goconst // type name literal, constant would hurt readability
+			if line.flag.Value.Type() == typeNameString {
 				fmt.Fprintf(w, " (default %q)", line.flag.DefValue)
 			} else {
 				fmt.Fprintf(w, " (default %s)", line.flag.DefValue)

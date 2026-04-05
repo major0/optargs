@@ -236,7 +236,7 @@ type ErrorTranslator struct{}
 
 // TranslateError translates an error to go-arg compatible format.
 //
-//nolint:gocyclo,cyclop // error translation maps many optargs error types to go-arg format
+//nolint:gocyclo,cyclop,gocognit // error translation maps many optargs error types to go-arg format
 func (et *ErrorTranslator) TranslateError(err error, context ParseContext) error {
 	if err == nil {
 		return nil

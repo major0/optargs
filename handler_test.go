@@ -60,7 +60,7 @@ func errorsEqual(a, b []error) bool {
 func TestPropertyNilHandleBackwardCompat(t *testing.T) {
 	// Use only lowercase letters to avoid optstring prefix flags (+, :, -)
 	// and special characters that complicate config equivalence.
-	safeChars := []byte("abcdefghijklmnopqrstuvxyz") // exclude 'W' (gnuWords)
+	safeChars := []byte("abcdefghijklmnopqrstuvxyz") // exclude 'W' (gnuWords) // pragma: allowlist secret
 
 	property := func(seed int64) bool {
 		rng := rand.New(rand.NewSource(seed)) //nolint:gosec // deterministic seed for reproducible property tests
