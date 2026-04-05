@@ -7,11 +7,11 @@
 
 A Go implementation of POSIX [getopt(3)](https://pubs.opengroup.org/onlinepubs/9699919799/functions/getopt.html), GNU [getopt_long(3)](https://man7.org/linux/man-pages/man3/getopt.3.html), and [getopt_long_only(3)](https://man7.org/linux/man-pages/man3/getopt.3.html) with native subcommand support.
 
-OptArgs Core is the foundation for higher-level wrapper interfaces ([goarg](goarg/), [pflags](pflags/)).
+OptArgs Core is the foundation for API-compatible wrapper modules that serve as drop-in replacements for popular Go argument parsing libraries.
 
 ## Design
 
-OptArgs is a general-purpose, unopinionated parser that faithfully implements GNU/POSIX `getopt(3)`, `getopt_long(3)`, and `getopt_long_only(3)` behavior. It exposes the full API surface needed to construct opinionated parsers on top — [goarg](goarg/) and [pflags](pflags/) are two such layers, each matching the conventions of their upstream counterparts while gaining the correctness and features of the core engine.
+OptArgs is a general-purpose, unopinionated parser that faithfully implements GNU/POSIX `getopt(3)`, `getopt_long(3)`, and `getopt_long_only(3)` behavior. It exposes the full API surface needed to construct opinionated parsers on top — [goarg](goarg/) and [pflags](pflags/) are two such compatibility layers, each matching the API conventions of their upstream counterparts while gaining the correctness and features of the core engine.
 
 ## Features
 
@@ -24,12 +24,12 @@ OptArgs is a general-purpose, unopinionated parser that faithfully implements GN
 - Verbose and silent error modes, both working through subcommand chains
 - Zero dependencies
 
-### Wrapper Modules
+### Compatibility Modules
 
-| Module | Description |
-|--------|-------------|
-| [goarg](goarg/) | Struct-tag based argument parsing (alexflint/go-arg compatible) |
-| [pflags](pflags/) | Flag-method based parsing (spf13/pflag compatible) |
+| Module | Upstream | Description |
+|--------|----------|-------------|
+| [goarg](goarg/) | [alexflint/go-arg](https://github.com/alexflint/go-arg) | API-compatible drop-in replacement using struct tags |
+| [pflags](pflags/) | [spf13/pflag](https://github.com/spf13/pflag) | API-compatible drop-in replacement using flag methods |
 
 ## Install
 
