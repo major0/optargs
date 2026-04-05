@@ -18,3 +18,12 @@ jobs:
     with:
       prefix: 'v'
       ref-pattern: 'refs/heads/v'
+
+  release:
+    needs: semver
+    if: needs.semver.outputs.tag != ''
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write
+    with:
+      tag: ${{ needs.semver.outputs.tag }}
