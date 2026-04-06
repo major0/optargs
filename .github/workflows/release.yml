@@ -20,8 +20,11 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.series.outputs.tag }}
+      prev-tag: ${{ steps.prev.outputs.tag }}
+      is-stable: ${{ steps.check-stable.outputs.stable }}
     env:
-      # Resolve the tag: workflow_call passes it as input, tag-push has it in GITHUB_REF.
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - name: Checkout
@@ -46,6 +49,14 @@ jobs:
           "${{ steps.series.outputs.tag }}"
           "${{ steps.series.outputs.prefix }}"
 
+      - name: Check if stable release
+        id: check-stable
+        run: |
+          case "$RELEASE_TAG" in
+            *-rc*) echo "stable=false" >> "$GITHUB_OUTPUT" ;;
+            *)     echo "stable=true" >> "$GITHUB_OUTPUT" ;;
+          esac
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -54,3 +65,15 @@ jobs:
           "${{ steps.series.outputs.tag }}"
           "${{ steps.series.outputs.name }}"
           "${{ steps.prev.outputs.tag }}"
+
+  changelog:
+    name: Generate Changelog
+    needs: release
+    if: needs.release.outputs.is-stable == 'true' && needs.release.outputs.prev-tag != ''
+    uses: ./.github/workflows/changelog.yml
+    permissions:
+      contents: write
+    secrets: inherit  # pragma: allowlist secret
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+      previous-tag: ${{ needs.release.outputs.prev-tag }}

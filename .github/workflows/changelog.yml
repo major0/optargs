@@ -1,0 +1,58 @@
+name: Generate Changelog
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v0.4.0, goarg/v0.3.0)'
+        required: true
+        type: string
+      previous-tag:
+        description: 'Previous tag for diff range (e.g. v0.3.3, goarg/v0.2.0)'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+        type: string
+      previous-tag:
+        description: 'Previous tag for diff range'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  changelog:
+    name: Generate Release Notes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Generate changelog
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
+        run: |
+          .github/scripts/changelog-generate.sh \
+            "${{ inputs.tag }}" \
+            "${{ inputs.previous-tag }}"
+
+      - name: Update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${{ inputs.tag }}" \
+            --notes-file release-notes.md
