@@ -37,10 +37,7 @@ jobs:
 
       - name: Determine tag series
         id: series
-        env:
-          # Override GITHUB_REF so the script works for both trigger types.
-          GITHUB_REF: "refs/tags/${{ env.RELEASE_TAG }}"
-        run: .github/scripts/release-detect-series.sh
+        run: .github/scripts/release-detect-series.sh "$RELEASE_TAG"
 
       - name: Find previous tag in series
         id: prev

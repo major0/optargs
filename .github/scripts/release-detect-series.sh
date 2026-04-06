@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Determines the tag series (prefix and human-readable name) from GITHUB_REF.
+# Determines the tag series (prefix and human-readable name) from a tag string.
+# Args: TAG (optional — falls back to GITHUB_REF for direct tag-push triggers)
 # Outputs: tag, prefix, name
 
-TAG="${GITHUB_REF#refs/tags/}"
+TAG="${1:-${GITHUB_REF#refs/tags/}}"
 echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
 # Extract the series prefix
