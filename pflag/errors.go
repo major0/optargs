@@ -1,6 +1,12 @@
 package pflag
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+// ErrHelp is the error returned if the flag -help is invoked but no such flag is defined.
+var ErrHelp = errors.New("pflag: help requested")
 
 // NotExistError is the error returned when trying to access a flag that
 // does not exist in the FlagSet.

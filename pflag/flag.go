@@ -57,6 +57,7 @@ type Flag struct {
 	Value               Value                // value as set
 	DefValue            string               // default value (as text); for usage message
 	Changed             bool                 // If the user set the value (or if left to default)
+	NoOptDefVal         string               // default value (as text); if the flag is on the command line without any options
 	Hidden              bool                 // used by cobra.Command to allow flags to be hidden from help/usage text
 	Deprecated          string               // If this flag is deprecated, this string is the new or now thing to use
 	ShorthandDeprecated string               // If the shorthand of this flag is deprecated, this string is the message
@@ -97,6 +98,11 @@ type FlagSet struct {
 
 	// ParseErrorsAllowlist defines parsing errors that can be ignored.
 	ParseErrorsAllowlist ParseErrorsAllowlist
+
+	// ParseErrorsWhitelist defines parsing errors that can be ignored.
+	//
+	// Deprecated: use ParseErrorsAllowlist instead.
+	ParseErrorsWhitelist ParseErrorsAllowlist
 }
 
 // NormalizedName is a flag name that has been normalized according to rules

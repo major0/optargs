@@ -327,7 +327,7 @@ func (f *FlagSet) Parse(arguments []string) error {
 		if err != nil {
 			translated := translateError(err)
 			// Skip unknown flag errors if allowlisted
-			if f.ParseErrorsAllowlist.UnknownFlags {
+			if f.ParseErrorsAllowlist.UnknownFlags || f.ParseErrorsWhitelist.UnknownFlags {
 				notExistError := &NotExistError{}
 				if errors.As(translated, &notExistError) {
 					continue
