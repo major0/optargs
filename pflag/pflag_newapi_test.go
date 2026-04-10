@@ -134,3 +134,113 @@ func TestGetterInterfaceSatisfied(t *testing.T) {
 	_ = v
 	_ = fmt.Sprintf("Getter also satisfies Value: %s", v.String())
 }
+
+// --- Unit tests for ParseIPv4Mask ---
+
+// TestParseIPv4MaskValid tests valid dotted-quad strings produce correct 4-byte masks.
+// **Validates: Requirements 7.1, 7.2**
+func TestParseIPv4MaskValid(t *testing.T) {
+	tests := []struct {
+		input string
+		want  net.IPMask
+	}{
+		{"255.255.255.0", net.IPMask{255, 255, 255, 0}},
+		{"255.255.0.0", net.IPMask{255, 255, 0, 0}},
+		{"255.0.0.0", net.IPMask{255, 0, 0, 0}},
+		{"128.0.0.0", net.IPMask{128, 0, 0, 0}},
+		{"192.168.1.1", net.IPMask{192, 168, 1, 1}},
+		{"0.0.0.0", net.IPMask{0, 0, 0, 0}},
+		{"255.255.255.255", net.IPMask{255, 255, 255, 255}},
+		{"1.2.3.4", net.IPMask{1, 2, 3, 4}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := ParseIPv4Mask(tt.input)
+			if err != nil {
+				t.Fatalf("ParseIPv4Mask(%q) returned error: %v", tt.input, err)
+			}
+			if len(got) != 4 {
+				t.Fatalf("ParseIPv4Mask(%q) returned %d bytes, want 4", tt.input, len(got))
+			}
+			for i := range tt.want {
+				if got[i] != tt.want[i] {
+					t.Errorf("ParseIPv4Mask(%q) = %v, want %v", tt.input, got, tt.want)
+					break
+				}
+			}
+		})
+	}
+}
+
+// TestParseIPv4MaskInvalid tests that invalid strings return errors.
+// **Validates: Requirements 7.3**
+func TestParseIPv4MaskInvalid(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"empty", ""},
+		{"garbage", "not-an-ip"},
+		{"partial", "255.255"},
+		{"too_many_octets", "1.2.3.4.5"},
+		{"letters", "abc.def.ghi.jkl"},
+		{"negative", "-1.0.0.0"},
+		{"overflow", "256.0.0.0"},
+		{"spaces", "255 .255.255.0"},
+		{"trailing_dot", "255.255.255.0."},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ParseIPv4Mask(tt.input)
+			if err == nil {
+				t.Errorf("ParseIPv4Mask(%q) should return error for invalid input", tt.input)
+			}
+		})
+	}
+}
+
+// TestParseIPv4MaskRejectsIPv6 tests that IPv6 addresses return errors.
+// **Validates: Requirements 7.3**
+func TestParseIPv4MaskRejectsIPv6(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"loopback", "::1"},
+		{"full", "2001:db8::1"},
+		{"all_zeros", "::"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ParseIPv4Mask(tt.input)
+			if err == nil {
+				t.Errorf("ParseIPv4Mask(%q) should return error for IPv6 address", tt.input)
+			}
+		})
+	}
+}
+
+// TestParseIPv4MaskEdgeCases tests boundary values.
+// **Validates: Requirements 7.1, 7.2**
+func TestParseIPv4MaskEdgeCases(t *testing.T) {
+	// All zeros
+	mask, err := ParseIPv4Mask("0.0.0.0")
+	if err != nil {
+		t.Fatalf("ParseIPv4Mask(\"0.0.0.0\") error: %v", err)
+	}
+	if len(mask) != 4 || mask[0] != 0 || mask[1] != 0 || mask[2] != 0 || mask[3] != 0 {
+		t.Errorf("ParseIPv4Mask(\"0.0.0.0\") = %v, want [0 0 0 0]", mask)
+	}
+
+	// All ones
+	mask, err = ParseIPv4Mask("255.255.255.255")
+	if err != nil {
+		t.Fatalf("ParseIPv4Mask(\"255.255.255.255\") error: %v", err)
+	}
+	if len(mask) != 4 || mask[0] != 255 || mask[1] != 255 || mask[2] != 255 || mask[3] != 255 {
+		t.Errorf("ParseIPv4Mask(\"255.255.255.255\") = %v, want [255 255 255 255]", mask)
+	}
+}
