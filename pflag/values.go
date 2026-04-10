@@ -135,6 +135,14 @@ func (v *ipNetValue) String() string {
 
 func (v *ipNetValue) Type() string { return "ipNet" }
 
+// -- BytesHex value (delegates to optargs core).
+
+func newBytesHexValue(val []byte, p *[]byte) Value { return optargs.NewBytesHexValue(val, p) }
+
+// -- BytesBase64 value (delegates to optargs core).
+
+func newBytesBase64Value(val []byte, p *[]byte) Value { return optargs.NewBytesBase64Value(val, p) }
+
 // ParseIPv4Mask parses a dotted-quad string into a net.IPMask.
 func ParseIPv4Mask(s string) (net.IPMask, error) {
 	ip := net.ParseIP(s)

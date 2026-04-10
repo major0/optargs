@@ -1,6 +1,8 @@
 package pflag
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -292,4 +294,24 @@ func (f *FlagSet) GetStringToInt64(name string) (map[string]int64, error) {
 		result[k] = n
 	}
 	return result, nil
+}
+
+// --- Bytes getters ---.
+
+// GetBytesHex returns the []byte value of a flag with the given name.
+func (f *FlagSet) GetBytesHex(name string) ([]byte, error) {
+	s, err := f.getFlagValue(name, "bytesHex")
+	if err != nil {
+		return nil, err
+	}
+	return hex.DecodeString(s)
+}
+
+// GetBytesBase64 returns the []byte value of a flag with the given name.
+func (f *FlagSet) GetBytesBase64(name string) ([]byte, error) {
+	s, err := f.getFlagValue(name, "bytesBase64")
+	if err != nil {
+		return nil, err
+	}
+	return base64.StdEncoding.DecodeString(s)
 }

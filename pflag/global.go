@@ -465,6 +465,36 @@ func MarkNegatable(name string) error { return CommandLine.MarkNegatable(name) }
 func AddFlag(f *Flag)                 { CommandLine.AddFlag(f) }
 func AddFlagSet(newSet *FlagSet)      { CommandLine.AddFlagSet(newSet) }
 
+// --- BytesHex ---.
+
+func BytesHexVar(p *[]byte, name string, value []byte, usage string) {
+	CommandLine.BytesHexVar(p, name, value, usage)
+}
+func BytesHexVarP(p *[]byte, name, sh string, value []byte, usage string) {
+	CommandLine.BytesHexVarP(p, name, sh, value, usage)
+}
+func BytesHex(name string, value []byte, usage string) *[]byte {
+	return CommandLine.BytesHex(name, value, usage)
+}
+func BytesHexP(name, sh string, value []byte, usage string) *[]byte {
+	return CommandLine.BytesHexP(name, sh, value, usage)
+}
+
+// --- BytesBase64 ---.
+
+func BytesBase64Var(p *[]byte, name string, value []byte, usage string) {
+	CommandLine.BytesBase64Var(p, name, value, usage)
+}
+func BytesBase64VarP(p *[]byte, name, sh string, value []byte, usage string) {
+	CommandLine.BytesBase64VarP(p, name, sh, value, usage)
+}
+func BytesBase64(name string, value []byte, usage string) *[]byte {
+	return CommandLine.BytesBase64(name, value, usage)
+}
+func BytesBase64P(name, sh string, value []byte, usage string) *[]byte {
+	return CommandLine.BytesBase64P(name, sh, value, usage)
+}
+
 // --- Go flag interop ---.
 
 func AddGoFlag(goflag *flag.Flag)        { CommandLine.AddGoFlag(goflag) }

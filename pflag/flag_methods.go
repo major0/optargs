@@ -738,3 +738,41 @@ func (f *FlagSet) IPNetP(name, shorthand string, value net.IPNet, usage string) 
 	f.IPNetVarP(p, name, shorthand, value, usage)
 	return p
 }
+
+// -- BytesHex.
+
+func (f *FlagSet) BytesHexVar(p *[]byte, name string, value []byte, usage string) {
+	f.VarP(newBytesHexValue(value, p), name, "", usage)
+}
+func (f *FlagSet) BytesHexVarP(p *[]byte, name, shorthand string, value []byte, usage string) {
+	f.VarP(newBytesHexValue(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) BytesHex(name string, value []byte, usage string) *[]byte {
+	p := new([]byte)
+	f.BytesHexVarP(p, name, "", value, usage)
+	return p
+}
+func (f *FlagSet) BytesHexP(name, shorthand string, value []byte, usage string) *[]byte {
+	p := new([]byte)
+	f.BytesHexVarP(p, name, shorthand, value, usage)
+	return p
+}
+
+// -- BytesBase64.
+
+func (f *FlagSet) BytesBase64Var(p *[]byte, name string, value []byte, usage string) {
+	f.VarP(newBytesBase64Value(value, p), name, "", usage)
+}
+func (f *FlagSet) BytesBase64VarP(p *[]byte, name, shorthand string, value []byte, usage string) {
+	f.VarP(newBytesBase64Value(value, p), name, shorthand, usage)
+}
+func (f *FlagSet) BytesBase64(name string, value []byte, usage string) *[]byte {
+	p := new([]byte)
+	f.BytesBase64VarP(p, name, "", value, usage)
+	return p
+}
+func (f *FlagSet) BytesBase64P(name, shorthand string, value []byte, usage string) *[]byte {
+	p := new([]byte)
+	f.BytesBase64VarP(p, name, shorthand, value, usage)
+	return p
+}
