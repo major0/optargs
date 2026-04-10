@@ -88,3 +88,7 @@ type ParseErrorsAllowlist struct {
 	// UnknownFlags will ignore unknown flags errors and continue parsing.
 	UnknownFlags bool
 }
+
+// ParseErrorsWhitelist is a deprecated alias for ParseErrorsAllowlist.
+// Retained for backward compatibility with spf13/pflag consumers.
+type ParseErrorsWhitelist = ParseErrorsAllowlist

@@ -42,6 +42,13 @@ type SliceValue interface {
 	GetSlice() []string
 }
 
+// Getter is the interface for flag values that can return their value
+// as any. Identical to flag.Getter from the standard library.
+type Getter interface {
+	Value
+	Get() any
+}
+
 // Flag represents the state of a flag.
 type Flag struct {
 	Name                string               // name as it appears on command line

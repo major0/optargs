@@ -134,3 +134,16 @@ func (v *ipNetValue) String() string {
 }
 
 func (v *ipNetValue) Type() string { return "ipNet" }
+
+// ParseIPv4Mask parses a dotted-quad string into a net.IPMask.
+func ParseIPv4Mask(s string) (net.IPMask, error) {
+	ip := net.ParseIP(s)
+	if ip == nil {
+		return nil, fmt.Errorf("invalid IPv4 mask: %q", s)
+	}
+	ip4 := ip.To4()
+	if ip4 == nil {
+		return nil, fmt.Errorf("invalid IPv4 mask: %q", s)
+	}
+	return net.IPMask(ip4), nil
+}
