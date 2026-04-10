@@ -1,4 +1,4 @@
-module github.com/major0/optargs/pflags/compat
+module github.com/major0/optargs/pflag/compat
 
 go 1.23.0
 

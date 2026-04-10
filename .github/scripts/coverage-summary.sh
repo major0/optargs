@@ -24,9 +24,9 @@ ARTIFACTS_DIR="$1"
 		echo ""
 	fi
 
-	if [ -f "${ARTIFACTS_DIR}/pflags-coverage-reports/coverage.out" ]; then
-		echo "## PFlags Module"
-		go tool cover -func="${ARTIFACTS_DIR}/pflags-coverage-reports/coverage.out" | grep "total:" || echo "Coverage data not available"
+	if [ -f "${ARTIFACTS_DIR}/pflag-coverage-reports/coverage.out" ]; then
+		echo "## PFlag Module"
+		go tool cover -func="${ARTIFACTS_DIR}/pflag-coverage-reports/coverage.out" | grep "total:" || echo "Coverage data not available"
 		echo ""
 	fi
 } > coverage-summary.md

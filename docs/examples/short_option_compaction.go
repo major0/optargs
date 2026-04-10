@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/major0/optargs/pflags"
+	"github.com/major0/optargs/pflag"
 )
 
 func main() {
-	fs := pflags.NewFlagSet("compaction-example", pflags.ContinueOnError)
+	fs := pflag.NewFlagSet("compaction-example", pflag.ContinueOnError)
 
 	// Define various short options with different argument requirements
 	var (
@@ -85,8 +85,8 @@ func main() {
 }
 
 // Helper function to copy a FlagSet for multiple parsing examples
-func copyFlagSet(original *pflags.FlagSet) *pflags.FlagSet {
-	fs := pflags.NewFlagSet("copy", pflags.ContinueOnError)
+func copyFlagSet(original *pflag.FlagSet) *pflag.FlagSet {
+	fs := pflag.NewFlagSet("copy", pflag.ContinueOnError)
 
 	var (
 		verbose, force, extract, archive bool
@@ -106,7 +106,7 @@ func copyFlagSet(original *pflags.FlagSet) *pflags.FlagSet {
 }
 
 // Helper function to print flag values
-func printFlags(fs *pflags.FlagSet, flagNames ...string) {
+func printFlags(fs *pflag.FlagSet, flagNames ...string) {
 	for _, name := range flagNames {
 		flag := fs.Lookup(name)
 		if flag != nil && flag.Changed {

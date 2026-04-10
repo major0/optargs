@@ -1,11 +1,11 @@
-package pflags
+package pflag
 
 import "testing"
 
-// OptArgs-exclusive feature tests that aren't already covered in pflags_test.go.
+// OptArgs-exclusive feature tests that aren't already covered in pflag_test.go.
 // Most OptArgs features (POSIX compaction, boolean negation, short-only flags,
 // many-to-one mappings, GNU prefix matching, long-only mode, count flags) are
-// already tested in pflags_test.go. This file covers gaps only.
+// already tested in pflag_test.go. This file covers gaps only.
 
 // TestOptArgsBoolArgValuer tests that types implementing BoolTakesArg() control
 // whether the parser registers them as NoArgument or OptionalArgument.

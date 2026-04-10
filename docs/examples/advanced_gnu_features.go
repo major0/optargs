@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/major0/optargs/pflags"
+	"github.com/major0/optargs/pflag"
 )
 
 func main() {
-	fs := pflags.NewFlagSet("advanced", pflags.ContinueOnError)
+	fs := pflag.NewFlagSet("advanced", pflag.ContinueOnError)
 
 	// Special characters in option names (colons, equals)
 	var (

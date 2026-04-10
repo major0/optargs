@@ -6,5 +6,5 @@ set -euo pipefail
 echo "=== goarg golden files ==="
 find goarg/compat/testdata -name '*.golden.json' | wc -l
 
-echo "=== pflags golden files ==="
-find pflags/compat/testdata -name '*.golden.json' | wc -l
+echo "=== pflag golden files ==="
+find pflag/compat/testdata -name '*.golden.json' | wc -l

@@ -11,7 +11,7 @@ OptArgs Core is the foundation for API-compatible wrapper modules that serve as 
 
 ## Design
 
-OptArgs is a general-purpose, unopinionated parser that faithfully implements GNU/POSIX `getopt(3)`, `getopt_long(3)`, and `getopt_long_only(3)` behavior. It exposes the full API surface needed to construct opinionated parsers on top — [goarg](goarg/) and [pflags](pflags/) are two such compatibility layers, each matching the API conventions of their upstream counterparts while gaining the correctness and features of the core engine.
+OptArgs is a general-purpose, unopinionated parser that faithfully implements GNU/POSIX `getopt(3)`, `getopt_long(3)`, and `getopt_long_only(3)` behavior. It exposes the full API surface needed to construct opinionated parsers on top — [goarg](goarg/) and [pflag](pflag/) are two such compatibility layers, each matching the API conventions of their upstream counterparts while gaining the correctness and features of the core engine.
 
 ## Features
 
@@ -29,7 +29,7 @@ OptArgs is a general-purpose, unopinionated parser that faithfully implements GN
 | Module | Upstream | Description |
 |--------|----------|-------------|
 | [goarg](goarg/) | [alexflint/go-arg](https://github.com/alexflint/go-arg) | API-compatible drop-in replacement using struct tags |
-| [pflags](pflags/) | [spf13/pflag](https://github.com/spf13/pflag) | API-compatible drop-in replacement using flag methods |
+| [pflag](pflag/) | [spf13/pflag](https://github.com/spf13/pflag) | API-compatible drop-in replacement using flag methods |
 
 ## Install
 

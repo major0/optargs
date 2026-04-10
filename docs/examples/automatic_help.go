@@ -5,11 +5,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/major0/optargs/pflags"
+	"github.com/major0/optargs/pflag"
 )
 
 func main() {
-	fs := pflags.NewFlagSet("myapp", pflags.ContinueOnError)
+	fs := pflag.NewFlagSet("myapp", pflag.ContinueOnError)
 
 	// Define flags with descriptive usage text
 	var (

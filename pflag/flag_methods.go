@@ -1,4 +1,4 @@
-package pflags
+package pflag
 
 import (
 	"encoding"

@@ -55,20 +55,20 @@ jobs:
       artifact-name: goarg-coverage-reports
       codecov-flags: goarg-module
 
-  coverage-pflags:
-    name: PFlags Module Coverage
+  coverage-pflag:
+    name: PFlag Module Coverage
     needs: [detect-changes, coverage-optargs]
-    if: always() && needs.detect-changes.outputs.pflags-changed == 'true'
+    if: always() && needs.detect-changes.outputs.pflag-changed == 'true'
     uses: ./.github/workflows/module-coverage.yml
     with:
-      directory: pflags
-      artifact-name: pflags-coverage-reports
-      codecov-flags: pflags-module
+      directory: pflag
+      artifact-name: pflag-coverage-reports
+      codecov-flags: pflag-module
 
   coverage-summary:
     name: Combined Coverage Summary
     runs-on: ubuntu-latest
-    needs: [detect-changes, coverage-optargs, coverage-goarg, coverage-pflags]
+    needs: [detect-changes, coverage-optargs, coverage-goarg, coverage-pflag]
     if: always()
     steps:
     - uses: actions/checkout@v4

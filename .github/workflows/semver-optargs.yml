@@ -8,7 +8,7 @@ on:
     paths-ignore:
       - '.github/**'
       - 'goarg/**'
-      - 'pflags/**'
+      - 'pflag/**'
 
 jobs:
   semver:

@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       prefix:
-        description: 'Tag/release prefix (e.g. "v", "goarg/v", "pflags/v")'
+        description: 'Tag/release prefix (e.g. "v", "goarg/v", "pflag/v")'
         required: true
         type: string
       ref-pattern:

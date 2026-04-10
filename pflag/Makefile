@@ -1,8 +1,8 @@
 .PHONY: test coverage coverage-html coverage-func coverage-validate lint static-check fmt imports vet mod-tidy mod-verify build-check clean help pre-commit compat-test compat-update compat-diff
 
 help:
-	@echo "PFlags Wrapper"
-	@echo "=============="
+	@echo "pflag Wrapper"
+	@echo "============="
 	@echo ""
 	@echo "Targets:"
 	@echo "  test              - Run all tests"

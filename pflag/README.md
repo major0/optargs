@@ -1,11 +1,11 @@
-# pflags — pflag compatibility layer
+# pflag — pflag compatibility layer
 
 Drop-in replacement for [spf13/pflag](https://github.com/spf13/pflag)
 backed by OptArgs Core's POSIX/GNU getopt implementation.
 
 ## Feature Comparison
 
-| Feature | Upstream pflag | pflags/ (compat) |
+| Feature | Upstream pflag | pflag/ (compat) |
 |---------|:-:|:-:|
 | String/Bool/Int/Float/Duration flags | ✅ | ✅ |
 | Shorthand flags (-v) | ✅ | ✅ |
@@ -43,4 +43,4 @@ backed by OptArgs Core's POSIX/GNU getopt implementation.
 
 ¹ Inner error uses core's unified format instead of raw strconv errors.
   See `compat/expected_diffs.go` for all documented divergences.
-  Every ✅ and ❌ is backed by a test — see `compat/compat_test.go`, `pflags_test.go`, and `pflags_optargs_test.go`.
+  Every ✅ and ❌ is backed by a test — see `compat/compat_test.go`, `pflag_test.go`, and `pflag_optargs_test.go`.

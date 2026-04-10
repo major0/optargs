@@ -38,8 +38,8 @@ Help text shows all forms:
 ## OptArgs implementation
 
 ```go
-fs := pflags.NewFlagSet("app", pflags.ContinueOnError)
+fs := pflag.NewFlagSet("app", pflag.ContinueOnError)
 fs.BoolVar(&color, "color", true, "colorize output")
-pflags.MarkBoolPrefix("color", "enable", "disable")
+pflag.MarkBoolPrefix("color", "enable", "disable")
 // --enable-color sets true, --disable-color sets false
 ```

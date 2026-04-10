@@ -1,4 +1,4 @@
-// Intentionally duplicated in goarg/compat and pflags/compat — separate go.mod modules prevent sharing.
+// Intentionally duplicated in goarg/compat and pflag/compat — separate go.mod modules prevent sharing.
 package compat
 
 import (

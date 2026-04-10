@@ -11,7 +11,7 @@ echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 # Extract the series prefix
 case "$TAG" in
   goarg/v*)  PREFIX="goarg/v" ;;
-  pflags/v*) PREFIX="pflags/v" ;;
+  pflag/v*) PREFIX="pflag/v" ;;
   v*)        PREFIX="v" ;;
   *)         echo "::error::Unrecognized tag: $TAG"; exit 1 ;;
 esac
@@ -20,7 +20,7 @@ echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
 # Derive a human-readable name for the release title
 case "$PREFIX" in
   goarg/v)  NAME="goarg" ;;
-  pflags/v) NAME="pflags" ;;
+  pflag/v) NAME="pflag" ;;
   v)        NAME="optargs" ;;
 esac
 echo "name=$NAME" >> "$GITHUB_OUTPUT"

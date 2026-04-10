@@ -1,8 +1,8 @@
 package optargs
 
 // TypedValue is the core interface for typed flag values.
-// It is a superset of pflags' Value interface — any TypedValue
-// can be used where a pflags Value is expected.
+// It is a superset of pflag's Value interface — any TypedValue
+// can be used where a pflag Value is expected.
 type TypedValue interface {
 	// Set parses the string into the typed value.
 	Set(string) error
@@ -39,7 +39,7 @@ type Resetter interface {
 }
 
 // zeroStrings maps type names to their zero-value string representations.
-// Used by ZeroString and by pflags' isZeroValue for help text defaults.
+// Used by ZeroString and by pflag's isZeroValue for help text defaults.
 var zeroStrings = map[string]string{
 	"bool": "false", "duration": "0s", "float64": "0",
 	"float32": "0", "int": "0", "int8": "0", "int16": "0",

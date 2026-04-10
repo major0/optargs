@@ -1,5 +1,5 @@
 // Package compat documents expected behavioral differences between
-// github.com/major0/optargs/pflags and upstream github.com/spf13/pflag.
+// github.com/major0/optargs/pflag and upstream github.com/spf13/pflag.
 //
 // Each entry describes: scenario, upstream behavior, our behavior, rationale.
 package compat
@@ -8,7 +8,7 @@ package compat
 type ExpectedDiff struct {
 	Scenario  string // what the user does
 	Upstream  string // what spf13/pflag does
-	Ours      string // what optargs/pflags does
+	Ours      string // what optargs/pflag does
 	Rationale string // why we diverge
 }
 

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/major0/optargs/pflags"
+	"github.com/major0/optargs/pflag"
 )
 
 func main() {
-	fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
+	fs := pflag.NewFlagSet("example", pflag.ContinueOnError)
 
 	// Built-in slice support
 	var tags []string

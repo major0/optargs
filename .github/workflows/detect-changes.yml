@@ -9,9 +9,9 @@ on:
       goarg-changed:
         description: 'Whether goarg module changed'
         value: ${{ jobs.detect.outputs.goarg }}
-      pflags-changed:
-        description: 'Whether pflags module changed'
-        value: ${{ jobs.detect.outputs.pflags }}
+      pflag-changed:
+        description: 'Whether pflag module changed'
+        value: ${{ jobs.detect.outputs.pflag }}
 
 jobs:
   detect:
@@ -20,7 +20,7 @@ jobs:
     outputs:
       optargs: ${{ steps.changes.outputs.optargs }}
       goarg: ${{ steps.changes.outputs.goarg }}
-      pflags: ${{ steps.changes.outputs.pflags }}
+      pflag: ${{ steps.changes.outputs.pflag }}
     steps:
     - uses: actions/checkout@v4
       with:

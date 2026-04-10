@@ -40,8 +40,8 @@ values on negated flags behave predictably.
 ## OptArgs implementation
 
 ```go
-fs := pflags.NewFlagSet("app", pflags.ContinueOnError)
+fs := pflag.NewFlagSet("app", pflag.ContinueOnError)
 fs.BoolVar(&verbose, "verbose", false, "enable verbose output")
-pflags.MarkNegatable("verbose")
+pflag.MarkNegatable("verbose")
 // --verbose sets true, --no-verbose sets false
 ```

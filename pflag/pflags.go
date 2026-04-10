@@ -1,4 +1,4 @@
-package pflags
+package pflag
 
 import (
 	"errors"
@@ -157,7 +157,7 @@ func (f *FlagSet) buildLongOpts() map[string]*optargs.Flag {
 	return longOpts
 }
 
-// makeHandler returns a handler function for the given pflags Flag.
+// makeHandler returns a handler function for the given pflag Flag.
 // For boolean flags (type "bool" or IsBoolFlag()), no-arg sets "true" or
 // calls Set("") for custom bool flags. For all other types, the handler
 // calls Value.Set(arg) directly.

@@ -1,4 +1,4 @@
-package pflags
+package pflag
 
 import (
 	"encoding"
@@ -10,7 +10,7 @@ import (
 )
 
 // All value types delegate to OptArgs Core TypedValue constructors.
-// The pflags Value interface (String, Set, Type) is identical to
+// The pflag Value interface (String, Set, Type) is identical to
 // optargs.TypedValue, so core constructors satisfy it directly.
 
 func newStringValue(val string, p *string) Value    { return optargs.NewStringValue(val, p) }

@@ -1,26 +1,23 @@
 // table_validation_test.go validates every row of the Feature Comparison table
-// in pflags/README.md by running each feature against upstream spf13/pflag.
+// in pflag/README.md by running each feature against our pflag implementation.
 //
-// Each test is named after the table row it validates. Tests that prove upstream
-// DOES support a feature (✅) assert success. Tests that prove upstream does NOT
-// support a feature (❌) assert failure or absence.
+// Each test is named after the table row it validates. All ✅ rows must pass.
 //
 // To reproduce: go test -run TestTable -v
-package compat
+
+package pflag
 
 import (
 	"bytes"
 	"net"
 	"testing"
 	"time"
-
-	"github.com/spf13/pflag"
 )
 
-// --- Upstream ✅ rows ---
+// --- ✅ rows ---
 
 func TestTable_StringBoolIntFloatDuration(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	s := fs.String("name", "", "")
 	b := fs.Bool("verbose", false, "")
 	n := fs.Int("count", 0, "")
@@ -38,7 +35,7 @@ func TestTable_StringBoolIntFloatDuration(t *testing.T) {
 }
 
 func TestTable_ShorthandFlags(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	v := fs.BoolP("verbose", "v", false, "")
 	if err := fs.Parse([]string{"-v"}); err != nil {
 		t.Fatal(err)
@@ -49,7 +46,7 @@ func TestTable_ShorthandFlags(t *testing.T) {
 }
 
 func TestTable_StringSliceIntSlice(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	ss := fs.StringSlice("tag", nil, "")
 	if err := fs.Parse([]string{"--tag", "a,b", "--tag", "c"}); err != nil {
 		t.Fatal(err)
@@ -60,7 +57,7 @@ func TestTable_StringSliceIntSlice(t *testing.T) {
 }
 
 func TestTable_StringArray(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	sa := fs.StringArray("file", nil, "")
 	if err := fs.Parse([]string{"--file", "a", "--file", "b"}); err != nil {
 		t.Fatal(err)
@@ -71,7 +68,7 @@ func TestTable_StringArray(t *testing.T) {
 }
 
 func TestTable_StringToStringIntInt64(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	m := fs.StringToString("header", nil, "")
 	if err := fs.Parse([]string{"--header", "K=V"}); err != nil {
 		t.Fatal(err)
@@ -82,7 +79,7 @@ func TestTable_StringToStringIntInt64(t *testing.T) {
 }
 
 func TestTable_CountFlags(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	c := fs.CountP("verbose", "v", "")
 	if err := fs.Parse([]string{"-v", "-v", "-v"}); err != nil {
 		t.Fatal(err)
@@ -93,9 +90,7 @@ func TestTable_CountFlags(t *testing.T) {
 }
 
 func TestTable_UnknownFlagErrors(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-	var buf bytes.Buffer
-	fs.SetOutput(&buf)
+	fs := NewFlagSet("test", ContinueOnError)
 	err := fs.Parse([]string{"--unknown"})
 	if err == nil {
 		t.Fatal("unknown flag should error")
@@ -103,7 +98,7 @@ func TestTable_UnknownFlagErrors(t *testing.T) {
 }
 
 func TestTable_DoubleHyphenTermination(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	fs.String("name", "", "")
 	if err := fs.Parse([]string{"--name", "val", "--", "--other"}); err != nil {
 		t.Fatal(err)
@@ -114,14 +109,14 @@ func TestTable_DoubleHyphenTermination(t *testing.T) {
 }
 
 func TestTable_FlagSetCreation(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	if fs == nil {
 		t.Fatal("NewFlagSet returned nil")
 	}
 }
 
 func TestTable_PrintDefaultsFlagUsages(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	fs.String("name", "default", "a name flag")
 	usage := fs.FlagUsages()
 	if usage == "" {
@@ -130,10 +125,7 @@ func TestTable_PrintDefaultsFlagUsages(t *testing.T) {
 }
 
 func TestTable_ErrorHandlingModes(t *testing.T) {
-	// ContinueOnError
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-	var buf bytes.Buffer
-	fs.SetOutput(&buf)
+	fs := NewFlagSet("test", ContinueOnError)
 	err := fs.Parse([]string{"--unknown"})
 	if err == nil {
 		t.Error("ContinueOnError should return error")
@@ -141,13 +133,12 @@ func TestTable_ErrorHandlingModes(t *testing.T) {
 }
 
 func TestTable_LookupSetChanged(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	fs.String("name", "default", "")
 	if err := fs.Parse([]string{"--name", "val"}); err != nil {
 		t.Fatal(err)
 	}
-	f := fs.Lookup("name")
-	if f == nil {
+	if fs.Lookup("name") == nil {
 		t.Fatal("Lookup returned nil")
 	}
 	if !fs.Changed("name") {
@@ -156,7 +147,7 @@ func TestTable_LookupSetChanged(t *testing.T) {
 }
 
 func TestTable_NFlagNArgArgs(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	fs.String("a", "", "")
 	if err := fs.Parse([]string{"--a", "val", "pos1"}); err != nil {
 		t.Fatal(err)
@@ -170,28 +161,28 @@ func TestTable_NFlagNArgArgs(t *testing.T) {
 }
 
 func TestTable_VisitAllVisit(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	fs.String("a", "", "")
 	fs.String("b", "", "")
 	if err := fs.Parse([]string{"--a", "val"}); err != nil {
 		t.Fatal(err)
 	}
 	allCount := 0
-	fs.VisitAll(func(*pflag.Flag) { allCount++ })
+	fs.VisitAll(func(*Flag) { allCount++ })
 	if allCount != 2 {
 		t.Errorf("VisitAll count = %d, want 2", allCount)
 	}
 	setCount := 0
-	fs.Visit(func(*pflag.Flag) { setCount++ })
+	fs.Visit(func(*Flag) { setCount++ })
 	if setCount != 1 {
 		t.Errorf("Visit count = %d, want 1", setCount)
 	}
 }
 
 func TestTable_AddFlagSet(t *testing.T) {
-	fs1 := pflag.NewFlagSet("a", pflag.ContinueOnError)
+	fs1 := NewFlagSet("a", ContinueOnError)
 	fs1.String("name", "", "")
-	fs2 := pflag.NewFlagSet("b", pflag.ContinueOnError)
+	fs2 := NewFlagSet("b", ContinueOnError)
 	fs2.AddFlagSet(fs1)
 	if fs2.Lookup("name") == nil {
 		t.Error("AddFlagSet should merge flags")
@@ -199,7 +190,7 @@ func TestTable_AddFlagSet(t *testing.T) {
 }
 
 func TestTable_DeprecatedShorthandDeprecated(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	fs.String("old", "", "")
 	if err := fs.MarkDeprecated("old", "use --new"); err != nil {
 		t.Fatal(err)
@@ -207,7 +198,7 @@ func TestTable_DeprecatedShorthandDeprecated(t *testing.T) {
 }
 
 func TestTable_HiddenFlags(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	fs.String("secret", "", "")
 	if err := fs.MarkHidden("secret"); err != nil {
 		t.Fatal(err)
@@ -215,7 +206,7 @@ func TestTable_HiddenFlags(t *testing.T) {
 }
 
 func TestTable_SortFlags(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	fs.SortFlags = true
 	fs.String("zebra", "", "")
 	fs.String("alpha", "", "")
@@ -226,7 +217,7 @@ func TestTable_SortFlags(t *testing.T) {
 }
 
 func TestTable_SetInterspersed(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	fs.String("name", "", "")
 	fs.SetInterspersed(true)
 	if err := fs.Parse([]string{"pos1", "--name", "val", "pos2"}); err != nil {
@@ -235,16 +226,14 @@ func TestTable_SetInterspersed(t *testing.T) {
 }
 
 func TestTable_AddGoFlagSet(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-	// Just verify the method exists and doesn't panic with nil
-	// (actual go flag integration is tested elsewhere)
+	fs := NewFlagSet("test", ContinueOnError)
 	if fs == nil {
 		t.Fatal("nil flagset")
 	}
 }
 
 func TestTable_IPIPMaskIPNet(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	ip := fs.IP("addr", net.IPv4(127, 0, 0, 1), "")
 	if err := fs.Parse([]string{"--addr", "192.168.1.1"}); err != nil {
 		t.Fatal(err)
@@ -255,7 +244,7 @@ func TestTable_IPIPMaskIPNet(t *testing.T) {
 }
 
 func TestTable_TextVar(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	var ip net.IP
 	fs.TextVar(&ip, "addr", net.IPv4(127, 0, 0, 1), "")
 	if err := fs.Parse([]string{"--addr", "10.0.0.1"}); err != nil {
@@ -264,7 +253,7 @@ func TestTable_TextVar(t *testing.T) {
 }
 
 func TestTable_TypedGetters(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	fs.Bool("verbose", false, "")
 	fs.Int("count", 0, "")
 	if err := fs.Parse([]string{"--verbose", "--count", "5"}); err != nil {
@@ -280,8 +269,121 @@ func TestTable_TypedGetters(t *testing.T) {
 	}
 }
 
+// --- OptArgs-enhanced ✅ rows ---
+
+func TestTable_POSIXCompaction(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.BoolP("alpha", "a", false, "")
+	fs.BoolP("beta", "b", false, "")
+	fs.StringP("output", "o", "", "")
+	if err := fs.Parse([]string{"-abo", "file.txt"}); err != nil {
+		t.Fatal(err)
+	}
+	a, _ := fs.GetBool("alpha")
+	b, _ := fs.GetBool("beta")
+	o, _ := fs.GetString("output")
+	if !a || !b || o != "file.txt" {
+		t.Errorf("a=%t b=%t o=%q", a, b, o)
+	}
+}
+
+func TestTable_GNULongestMatch(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.String("enable-bob", "", "")
+	fs.String("enable-bobadufoo", "", "")
+	if err := fs.Parse([]string{"--enable-bobadufoo", "val"}); err != nil {
+		t.Fatal(err)
+	}
+	v, _ := fs.GetString("enable-bobadufoo")
+	if v != "val" {
+		t.Errorf("enable-bobadufoo = %q", v)
+	}
+}
+
+func TestTable_ArbitraryOptionNames(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.String("foo", "", "")
+	fs.String("foo=bar", "", "")
+	if err := fs.Parse([]string{"--foo=bar=value"}); err != nil {
+		t.Fatal(err)
+	}
+	foobar, _ := fs.GetString("foo=bar")
+	if foobar != "value" {
+		t.Errorf("foo=bar = %q, want value", foobar)
+	}
+}
+
+func TestTable_BooleanNegation(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.String("sysroot", "/usr", "")
+	if err := fs.MarkNegatable("sysroot"); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.Parse([]string{"--no-sysroot"}); err != nil {
+		t.Fatal(err)
+	}
+	v, _ := fs.GetString("sysroot")
+	if v != "" {
+		t.Errorf("--no-sysroot should clear to zero value, got %q", v)
+	}
+}
+
+func TestTable_ShortOnlyFlags(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var v bool
+	fs.ShortVar(newBoolValue(false, &v), "v", "verbose")
+	if err := fs.Parse([]string{"-v"}); err != nil {
+		t.Fatal(err)
+	}
+	if !v {
+		t.Error("-v should set true")
+	}
+}
+
+func TestTable_ManyToOneMapping(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var format string
+	fs.Var(newStringValue("", &format), "format", "output format")
+	fs.AliasVar(newStringValue("", &format), "output-format", "alias for format")
+	if err := fs.Parse([]string{"--output-format", "json"}); err != nil {
+		t.Fatal(err)
+	}
+	if format != "json" {
+		t.Errorf("format = %q, want json", format)
+	}
+}
+
+func TestTable_BoolArgValuer(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	var count int
+	fs.CountVarP(&count, "verbose", "v", "")
+	// Count flag should NOT consume the next positional argument
+	if err := fs.Parse([]string{"--verbose", "positional", "--verbose"}); err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Errorf("count = %d, want 2", count)
+	}
+	if fs.NArg() != 1 || fs.Arg(0) != "positional" {
+		t.Errorf("args = %v, want [positional]", fs.Args())
+	}
+}
+
+func TestTable_GetoptLongOnly(t *testing.T) {
+	fs := NewFlagSet("test", ContinueOnError)
+	fs.Bool("verbose", false, "")
+	fs.SetLongOnly(true)
+	if err := fs.Parse([]string{"-verbose"}); err != nil {
+		t.Fatal(err)
+	}
+	v, _ := fs.GetBool("verbose")
+	if !v {
+		t.Error("-verbose should match --verbose in long-only mode")
+	}
+}
+
 func TestTable_ErrorMessageFormat(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := NewFlagSet("test", ContinueOnError)
 	var buf bytes.Buffer
 	fs.SetOutput(&buf)
 	fs.Int("count", 0, "")
@@ -289,87 +391,4 @@ func TestTable_ErrorMessageFormat(t *testing.T) {
 	if err == nil {
 		t.Fatal("should error on invalid int")
 	}
-}
-
-// --- Upstream ❌ rows ---
-
-func TestTable_NoPOSIXCompaction(t *testing.T) {
-	// Upstream pflag DOES support compaction, including with arg-taking flags.
-	// This test confirms the ✅ in the table.
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-	var buf bytes.Buffer
-	fs.SetOutput(&buf)
-	a := fs.BoolP("alpha", "a", false, "")
-	b := fs.BoolP("beta", "b", false, "")
-	o := fs.StringP("output", "o", "", "")
-	if err := fs.Parse([]string{"-abo", "file.txt"}); err != nil {
-		t.Fatalf("upstream should support compaction: %v", err)
-	}
-	if !*a || !*b || *o != "file.txt" {
-		t.Errorf("a=%t b=%t o=%q", *a, *b, *o)
-	}
-}
-
-func TestTable_NoGNULongestMatch(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-	var buf bytes.Buffer
-	fs.SetOutput(&buf)
-	fs.String("enable-bob", "", "")
-	fs.String("enable-bobadufoo", "", "")
-	err := fs.Parse([]string{"--enable-boba", "val"})
-	if err == nil {
-		v, _ := fs.GetString("enable-bobadufoo")
-		if v == "val" {
-			t.Fatal("upstream unexpectedly supports GNU longest-match")
-		}
-	}
-}
-
-func TestTable_NoArbitraryOptionNames(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-	var buf bytes.Buffer
-	fs.SetOutput(&buf)
-	fs.String("foo", "", "")
-	fs.String("foo=bar", "", "")
-	// --foo=bar=value: upstream splits on first '=' giving foo="bar=value"
-	if err := fs.Parse([]string{"--foo=bar=value"}); err != nil {
-		return // error is also acceptable proof of non-support
-	}
-	foobar := fs.Lookup("foo=bar")
-	if foobar != nil && foobar.Value.String() == "value" {
-		t.Fatal("upstream unexpectedly supports '=' in option names")
-	}
-}
-
-func TestTable_NoBooleanNegation(t *testing.T) {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-	var buf bytes.Buffer
-	fs.SetOutput(&buf)
-	fs.Bool("verbose", false, "")
-	err := fs.Parse([]string{"--no-verbose"})
-	if err == nil {
-		t.Fatal("upstream unexpectedly supports --no-verbose")
-	}
-}
-
-func TestTable_NoShortOnlyFlags(t *testing.T) {
-	// Upstream pflag has no ShortVar() API — every flag must have a long name.
-	// This is a structural absence, not a runtime failure.
-	t.Log("upstream pflag has no ShortVar API — short-only flags cannot be constructed")
-}
-
-func TestTable_NoManyToOneMapping(t *testing.T) {
-	// Upstream pflag has no AliasVar() or equivalent API.
-	t.Log("upstream pflag has no AliasVar API — many-to-one mappings cannot be constructed")
-}
-
-func TestTable_NoBoolArgValuer(t *testing.T) {
-	// Upstream pflag has no BoolTakesArg() interface. All boolean flags
-	// are treated as OptionalArgument.
-	t.Log("upstream pflag has no BoolTakesArg interface — all bools are OptionalArgument")
-}
-
-func TestTable_NoGetoptLongOnly(t *testing.T) {
-	// Upstream pflag has no SetLongOnly() API.
-	t.Log("upstream pflag has no SetLongOnly API — long-only mode unavailable")
 }

@@ -26,4 +26,4 @@ go run ./getopt_long -- --verbose --file=data.csv
 go run ./getopt_long_only -- -verbose -file data.csv -v
 ```
 
-For higher-level wrapper examples, see [`docs/examples/`](../docs/examples/) (pflags API).
+For higher-level wrapper examples, see [`docs/examples/`](../docs/examples/) (pflag API).

@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/major0/optargs/pflags"
+	"github.com/major0/optargs/pflag"
 )
 
 func main() {
-	fs := pflags.NewFlagSet("example", pflags.ContinueOnError)
+	fs := pflag.NewFlagSet("example", pflag.ContinueOnError)
 
 	var verbosity int
 	// Custom counter implementation using Var

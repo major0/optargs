@@ -29,11 +29,11 @@ go run docs/examples/automatic_help.go
 
 Each example shows:
 
-- How to define flags using the pflags API
+- How to define flags using the pflag API
 - Command-line usage patterns
 - Expected output and behavior
 - Integration with OptArgs Core parsing
 
 ## API Compatibility
 
-All examples use the pflags API which maintains compatibility with spf13/pflag while leveraging OptArgs Core's POSIX/GNU compliance and advanced features.
+All examples use the pflag API which maintains compatibility with spf13/pflag while leveraging OptArgs Core's POSIX/GNU compliance and advanced features.

@@ -1,4 +1,4 @@
-package pflags
+package pflag
 
 import (
 	"bytes"
@@ -1769,7 +1769,7 @@ func TestAddGoFlagSet(t *testing.T) {
 	fs.AddGoFlagSet(nil)
 }
 
-// TestCopyToGoFlagSet tests copying pflags to a Go stdlib FlagSet.
+// TestCopyToGoFlagSet tests copying pflag flags to a Go stdlib FlagSet.
 func TestCopyToGoFlagSet(t *testing.T) {
 	pfs := NewFlagSet("test", ContinueOnError)
 	pfs.StringVar(new(string), "output", "default.txt", "output file")

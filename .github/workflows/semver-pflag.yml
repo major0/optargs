@@ -1,12 +1,12 @@
-name: Semver PFlags
+name: Semver PFlag
 
 on:
   create:
   push:
     branches:
-      - 'pflags/v[0-9]+.[0-9]+'
+      - 'pflag/v[0-9]+.[0-9]+'
     paths:
-      - 'pflags/**'
+      - 'pflag/**'
 
 jobs:
   semver:
@@ -14,8 +14,8 @@ jobs:
     permissions:
       contents: write
     with:
-      prefix: 'pflags/v'
-      ref-pattern: 'refs/heads/pflags/v'
+      prefix: 'pflag/v'
+      ref-pattern: 'refs/heads/pflag/v'
 
   release:
     needs: semver

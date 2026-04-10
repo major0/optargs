@@ -13,7 +13,7 @@ PREV="$2"
 # Derive the module name for context.
 case "$TAG" in
   goarg/v*)  MODULE="goarg" ;;
-  pflags/v*) MODULE="pflags" ;;
+  pflag/v*) MODULE="pflag" ;;
   v*)        MODULE="optargs (core)" ;;
   *)         MODULE="optargs" ;;
 esac

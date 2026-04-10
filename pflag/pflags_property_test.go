@@ -1,4 +1,4 @@
-package pflags
+package pflag
 
 import (
 	"strings"
@@ -22,7 +22,7 @@ func isValidLongOptName(s string) bool {
 }
 
 // TestProperty11_OptArgsCoreIntegrationFidelity tests that parsing through the
-// PFlags wrapper produces correct results for arbitrary valid flag names and values.
+// pflag wrapper produces correct results for arbitrary valid flag names and values.
 // This explores the input space beyond what table-driven tests enumerate —
 // specifically, random flag names that may contain unicode, punctuation, etc.
 // **Validates: Requirements 10.1, 10.2**

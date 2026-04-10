@@ -46,7 +46,7 @@ compaction.
 ## OptArgs implementation
 
 ```go
-fs := pflags.NewFlagSet("app", pflags.ContinueOnError)
+fs := pflag.NewFlagSet("app", pflag.ContinueOnError)
 fs.ShortBoolVar(&dryRun, "n", false, "dry run")
 fs.ShortBoolVar(&verbose, "v", false, "verbose output")
 // -n and -v work, no --dry-run or --verbose registered
