@@ -1,6 +1,8 @@
 package optargs
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -177,3 +179,53 @@ func (v *durationValue) Set(s string) error {
 
 func (v *durationValue) String() string { return v.p.String() }
 func (v *durationValue) Type() string   { return "duration" }
+
+// BytesHex value: stores *[]byte, encodes/decodes via encoding/hex.
+
+type bytesHexValue struct{ p *[]byte }
+
+// NewBytesHexValue returns a TypedValue backed by *p, initialized to val.
+func NewBytesHexValue(val []byte, p *[]byte) TypedValue {
+	if p == nil {
+		p = new([]byte)
+	}
+	*p = val
+	return &bytesHexValue{p: p}
+}
+
+func (v *bytesHexValue) Set(s string) error {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return fmt.Errorf("invalid bytesHex value: %w", err)
+	}
+	*v.p = b
+	return nil
+}
+
+func (v *bytesHexValue) String() string { return hex.EncodeToString(*v.p) }
+func (v *bytesHexValue) Type() string   { return "bytesHex" }
+
+// BytesBase64 value: stores *[]byte, encodes/decodes via encoding/base64 (standard encoding).
+
+type bytesBase64Value struct{ p *[]byte }
+
+// NewBytesBase64Value returns a TypedValue backed by *p, initialized to val.
+func NewBytesBase64Value(val []byte, p *[]byte) TypedValue {
+	if p == nil {
+		p = new([]byte)
+	}
+	*p = val
+	return &bytesBase64Value{p: p}
+}
+
+func (v *bytesBase64Value) Set(s string) error {
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return fmt.Errorf("invalid bytesBase64 value: %w", err)
+	}
+	*v.p = b
+	return nil
+}
+
+func (v *bytesBase64Value) String() string { return base64.StdEncoding.EncodeToString(*v.p) }
+func (v *bytesBase64Value) Type() string   { return "bytesBase64" }

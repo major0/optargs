@@ -51,6 +51,7 @@ var zeroStrings = map[string]string{
 	"float32Slice": "[]", "float64Slice": "[]", "durationSlice": "[]",
 	"stringArray": "[]", "count": "0",
 	"stringToString": "map[]", "stringToInt": "map[]", "stringToInt64": "map[]",
+	"bytesHex": "", "bytesBase64": "",
 }
 
 // ZeroString returns the zero-value string representation for a TypedValue
