@@ -52,6 +52,42 @@ func (v *sliceValue) Type() string { return v.typeName }
 // Reset clears the slice to its zero value (empty slice).
 func (v *sliceValue) Reset() { reflect.ValueOf(v.p).Elem().SetLen(0) }
 
+// Append parses a single element string and appends it to the slice.
+func (v *sliceValue) Append(s string) error {
+	converted, err := Convert(s, v.elemType)
+	if err != nil {
+		return err
+	}
+	pp := reflect.ValueOf(v.p).Elem()
+	pp.Set(reflect.Append(pp, reflect.ValueOf(converted)))
+	return nil
+}
+
+// Replace clears the slice and sets it to the parsed elements.
+func (v *sliceValue) Replace(ss []string) error {
+	pp := reflect.ValueOf(v.p).Elem()
+	dest := reflect.MakeSlice(pp.Type(), 0, len(ss))
+	for _, s := range ss {
+		converted, err := Convert(s, v.elemType)
+		if err != nil {
+			return err
+		}
+		dest = reflect.Append(dest, reflect.ValueOf(converted))
+	}
+	pp.Set(dest)
+	return nil
+}
+
+// GetSlice returns the string representation of each element.
+func (v *sliceValue) GetSlice() []string {
+	pp := reflect.ValueOf(v.p).Elem()
+	out := make([]string, pp.Len())
+	for i := range out {
+		out[i] = fmt.Sprintf("%v", pp.Index(i).Interface())
+	}
+	return out
+}
+
 // Slice constructors.
 
 // NewStringSliceValue returns a TypedValue backed by *p, initialized to val.
@@ -170,3 +206,36 @@ func (v *durationSliceValue) Type() string { return "durationSlice" }
 
 // Reset clears the duration slice to its zero value (empty slice).
 func (v *durationSliceValue) Reset() { *v.p = (*v.p)[:0] }
+
+// Append parses a single duration string and appends it to the slice.
+func (v *durationSliceValue) Append(s string) error {
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return fmt.Errorf("invalid value %q for type duration", s)
+	}
+	*v.p = append(*v.p, d)
+	return nil
+}
+
+// Replace clears the slice and sets it to the parsed duration elements.
+func (v *durationSliceValue) Replace(ss []string) error {
+	out := make([]time.Duration, 0, len(ss))
+	for _, s := range ss {
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			return fmt.Errorf("invalid value %q for type duration", s)
+		}
+		out = append(out, d)
+	}
+	*v.p = out
+	return nil
+}
+
+// GetSlice returns the string representation of each duration element.
+func (v *durationSliceValue) GetSlice() []string {
+	out := make([]string, len(*v.p))
+	for i, d := range *v.p {
+		out[i] = d.String()
+	}
+	return out
+}

@@ -15,7 +15,7 @@ func (v *goFlagValue) Set(s string) error { return v.inner.Set(s) }
 func (v *goFlagValue) Type() string       { return v.typeName }
 
 // PFlagFromGoFlag converts a Go stdlib flag.Flag to a pflag Flag.
-func PFlagFromGoFlag(goflag *flag.Flag) *Flag {
+func PFlagFromGoFlag(goflag *flag.Flag) *Flag { //nolint:revive // name matches spf13/pflag API
 	return &Flag{
 		Name:     goflag.Name,
 		Usage:    goflag.Usage,

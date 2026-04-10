@@ -34,6 +34,14 @@ type Value interface {
 	Type() string
 }
 
+// SliceValue is the interface for slice-typed flag values that support
+// programmatic append, replace, and retrieval operations.
+type SliceValue interface {
+	Append(string) error
+	Replace([]string) error
+	GetSlice() []string
+}
+
 // Flag represents the state of a flag.
 type Flag struct {
 	Name                string               // name as it appears on command line
